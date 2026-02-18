@@ -1,27 +1,36 @@
 {{define "content"}}
 <div class="mb-4 flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
-  <select name="status" class="input w-40"
-          hx-get="/procurement" hx-trigger="change" hx-target="#po-table" hx-swap="innerHTML">
-    <option value="">All Statuses</option>
-    <option value="draft" {{if eq .Status "draft"}}selected{{end}}>Draft</option>
-    <option value="sent" {{if eq .Status "sent"}}selected{{end}}>Sent</option>
-    <option value="received" {{if eq .Status "received"}}selected{{end}}>Received</option>
-    <option value="cancelled" {{if eq .Status "cancelled"}}selected{{end}}>Cancelled</option>
-  </select>
+  <h2 class="text-lg font-semibold">Purchase Orders</h2>
   <div class="flex gap-2">
-    <button class="btn btn-secondary" hx-post="/procurement/generate-from-wo" hx-target="#content" hx-confirm="Generate POs from WO shortages?">Generate from WO Shortage</button>
-    <a href="/procurement/new" class="btn btn-primary">+ New PO</a>
+    <button hx-get="/procurement/generate-from-wo" hx-target="#modal-content" hx-swap="innerHTML"
+            onclick="document.getElementById('modal').classList.remove('hidden')"
+            class="btn btn-secondary">🔄 Generate from WO Shortage</button>
+    <button hx-get="/procurement/new" hx-target="#modal-content" hx-swap="innerHTML"
+            onclick="document.getElementById('modal').classList.remove('hidden')"
+            class="btn btn-primary">+ New PO</button>
   </div>
 </div>
 
 <div class="card overflow-x-auto">
-  <div id="po-table">
-    {{template "po-table" .}}
+  <div id="pos-table">
+    {{template "pos-table" .}}
   </div>
 </div>
 {{end}}
 
-{{define "po-table"}}
+{{define "pos-table"}}
+{{if eq (len .POs) 0}}
+<div class="text-center py-12">
+  <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 100 4 2 2 0 000-4z"/>
+  </svg>
+  <p class="text-gray-500 font-medium">No purchase orders yet</p>
+  <p class="text-gray-400 text-sm mt-1">Create your first PO to get started</p>
+  <button hx-get="/procurement/new" hx-target="#modal-content" hx-swap="innerHTML"
+          onclick="document.getElementById('modal').classList.remove('hidden')"
+          class="btn btn-primary mt-4">+ New PO</button>
+</div>
+{{else}}
 <table class="w-full text-sm">
   <thead>
     <tr class="border-b border-gray-200 dark:border-gray-700 text-left">
@@ -34,16 +43,17 @@
   </thead>
   <tbody>
     {{range .POs}}
-    <tr class="table-row border-b border-gray-100 dark:border-gray-700" onclick="window.location='/procurement/{{.ID}}'">
+    <tr class="table-row border-b border-gray-100 dark:border-gray-700"
+        hx-get="/procurement/{{.ID}}" hx-target="#modal-content" hx-swap="innerHTML"
+        onclick="document.getElementById('modal').classList.remove('hidden')" style="cursor: pointer">
       <td class="px-3 py-2 font-mono text-blue-600">{{.ID}}</td>
       <td class="px-3 py-2">{{.VendorID}}</td>
-      <td class="px-3 py-2"><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
-      <td class="px-3 py-2 text-gray-500">{{if .ExpectedDate}}{{formatDate .ExpectedDate}}{{else}}—{{end}}</td>
+      <td class="px-3 py-2">{{badge .Status}}</td>
+      <td class="px-3 py-2">{{.ExpectedDate}}</td>
       <td class="px-3 py-2 text-gray-500">{{formatDate .CreatedAt}}</td>
     </tr>
-    {{else}}
-    <tr><td colspan="5" class="px-3 py-8 text-center text-gray-400">No purchase orders found</td></tr>
     {{end}}
   </tbody>
 </table>
+{{end}}
 {{end}}

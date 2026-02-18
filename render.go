@@ -43,9 +43,25 @@ type PageData struct {
 	// Quotes module
 	Quotes       []Quote
 	Quote        Quote
+	// Calendar module
+	CalendarData CalendarPageData
+	Year         int
+	Month        int
+	MonthName    string
 	// NCR module  
 	NCRs         []NCR
 	NCR          NCR
+	// Inventory
+	Inventory     []InventoryItem
+	InventoryItem InventoryItem
+	Transactions  []InventoryTransaction
+	LowStock      bool
+	// Procurement
+	POs       []PurchaseOrder
+	PO        PurchaseOrder
+	Vendors   []Vendor
+	Vendor    Vendor
+	WorkOrders []WorkOrder
 }
 
 type PartCostInfo struct {
@@ -69,6 +85,17 @@ type EmptyStateData struct {
 	Message     string
 	ActionURL   string
 	ActionLabel string
+}
+
+type CalendarPageData struct {
+	Weeks [][]CalendarDay
+}
+
+type CalendarDay struct {
+	Day     int
+	InMonth bool
+	Today   bool
+	Events  []CalendarEvent
 }
 
 func initTemplates() {

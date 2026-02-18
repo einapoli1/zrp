@@ -33,8 +33,7 @@ func requireAuth(next http.Handler) http.Handler {
 			strings.HasPrefix(path, "/auth/") ||
 			strings.HasPrefix(path, "/files/") ||
 			path == "/login" ||
-			path == "/api/v1/openapi.json" ||
-			strings.HasPrefix(path, "/docs") {
+			path == "/api/v1/openapi.json" {
 			next.ServeHTTP(w, r)
 			return
 		}
