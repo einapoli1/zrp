@@ -1,6 +1,17 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AppLayout } from "./layouts/AppLayout";
 import { Dashboard } from "./pages/Dashboard";
+import { Parts } from "./pages/Parts";
+import { PartDetail } from "./pages/PartDetail";
+import { ECOs } from "./pages/ECOs";
+import { ECODetail } from "./pages/ECODetail";
+import { Documents } from "./pages/Documents";
+import { Calendar } from "./pages/Calendar";
+import { Reports } from "./pages/Reports";
+import { Audit } from "./pages/Audit";
+import { Users } from "./pages/Users";
+import { APIKeys } from "./pages/APIKeys";
+import { EmailSettings } from "./pages/EmailSettings";
 
 // Placeholder components for other pages
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -29,9 +40,11 @@ function App() {
           <Route index element={<Dashboard />} />
           
           {/* Engineering */}
-          <Route path="/parts" element={<PlaceholderPage title="Parts" />} />
-          <Route path="/ecos" element={<PlaceholderPage title="ECOs" />} />
-          <Route path="/documents" element={<PlaceholderPage title="Documents" />} />
+          <Route path="/parts" element={<Parts />} />
+          <Route path="/parts/:ipn" element={<PartDetail />} />
+          <Route path="/ecos" element={<ECOs />} />
+          <Route path="/ecos/:id" element={<ECODetail />} />
+          <Route path="/documents" element={<Documents />} />
           <Route path="/testing" element={<PlaceholderPage title="Testing" />} />
           
           {/* Supply Chain */}
@@ -53,11 +66,14 @@ function App() {
           <Route path="/pricing" element={<PlaceholderPage title="Pricing" />} />
           
           {/* Reports */}
-          <Route path="/reports" element={<PlaceholderPage title="Reports" />} />
-          <Route path="/calendar" element={<PlaceholderPage title="Calendar" />} />
+          <Route path="/reports" element={<Reports />} />
+          <Route path="/calendar" element={<Calendar />} />
           
           {/* Admin */}
-          <Route path="/users" element={<PlaceholderPage title="Users" />} />
+          <Route path="/users" element={<Users />} />
+          <Route path="/audit" element={<Audit />} />
+          <Route path="/api-keys" element={<APIKeys />} />
+          <Route path="/email-settings" element={<EmailSettings />} />
           <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
         </Route>
       </Routes>

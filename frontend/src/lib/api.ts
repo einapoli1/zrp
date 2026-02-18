@@ -5,23 +5,67 @@ const API_BASE = '/api/v1';
 // Common types
 export interface ApiResponse<T> {
   data: T;
+  meta?: {
+    total: number;
+    page: number;
+    limit: number;
+  };
   error?: string;
 }
 
 export interface Part {
   ipn: string;
-  category: string;
+  fields: Record<string, string>;
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  count: number;
+  columns: string[];
+}
+
+export interface BOMNode {
+  ipn: string;
   description: string;
-  cost?: number;
-  price?: number;
-  lead_time?: number;
-  minimum_stock?: number;
-  current_stock?: number;
-  location?: string;
-  vendor?: string;
+  qty?: number;
+  ref?: string;
+  children: BOMNode[];
+}
+
+export interface PartCost {
+  ipn: string;
+  last_unit_price?: number;
+  po_id?: string;
+  last_ordered?: string;
+  bom_cost?: number;
+}
+
+// Document types for upload
+export interface Document {
+  id: string;
+  title: string;
+  category: string;
+  ipn: string;
+  revision: string;
   status: string;
+  content: string;
+  file_path: string;
+  created_by: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface Attachment {
+  id: string;
+  module: string;
+  record_id: string;
+  filename: string;
+  original_name: string;
+  size_bytes: number;
+  mime_type: string;
+  uploaded_by: string;
+  created_at: string;
 }
 
 export interface ECO {
@@ -30,8 +74,11 @@ export interface ECO {
   description: string;
   reason: string;
   status: string;
+  priority?: string;
+  affected_ipns?: string;
   created_by: string;
   created_at: string;
+  updated_at: string;
   approved_by?: string;
   approved_at?: string;
   implemented_at?: string;
@@ -39,23 +86,26 @@ export interface ECO {
 
 export interface WorkOrder {
   id: string;
-  title: string;
-  description: string;
+  assembly_ipn: string;
+  qty: number;
   status: string;
   priority: string;
-  assigned_to?: string;
-  due_date?: string;
+  notes?: string;
   created_at: string;
-  updated_at: string;
+  started_at?: string;
+  completed_at?: string;
 }
 
 export interface Vendor {
   id: string;
   name: string;
+  website?: string;
+  contact_name?: string;
   contact_email?: string;
   contact_phone?: string;
-  address?: string;
+  notes?: string;
   status: string;
+  lead_time_days: number;
   created_at: string;
 }
 
@@ -63,17 +113,140 @@ export interface PurchaseOrder {
   id: string;
   vendor_id: string;
   status: string;
-  total_amount: number;
+  notes?: string;
   created_at: string;
-  delivery_date?: string;
+  expected_date?: string;
+  received_at?: string;
+  lines?: POLine[];
+}
+
+export interface POLine {
+  id: number;
+  po_id: string;
+  ipn: string;
+  mpn?: string;
+  manufacturer?: string;
+  qty_ordered: number;
+  qty_received: number;
+  unit_price?: number;
+  notes?: string;
 }
 
 export interface InventoryItem {
   ipn: string;
-  current_stock: number;
-  minimum_stock: number;
+  qty_on_hand: number;
+  qty_reserved: number;
+  location?: string;
+  reorder_point: number;
+  reorder_qty: number;
+  description?: string;
+  mpn?: string;
+  updated_at: string;
+}
+
+export interface InventoryTransaction {
+  id: number;
+  ipn: string;
+  type: string;
+  qty: number;
+  reference?: string;
+  notes?: string;
+  created_at: string;
+}
+
+export interface NCR {
+  id: string;
+  title: string;
+  description: string;
+  ipn: string;
+  serial_number: string;
+  defect_type: string;
+  severity: string;
+  status: string;
+  root_cause: string;
+  corrective_action: string;
+  created_at: string;
+  resolved_at?: string;
+}
+
+export interface RMA {
+  id: string;
+  serial_number: string;
+  customer: string;
+  reason: string;
+  status: string;
+  defect_description: string;
+  resolution: string;
+  created_at: string;
+  received_at?: string;
+  resolved_at?: string;
+}
+
+export interface TestRecord {
+  id: number;
+  serial_number: string;
+  ipn: string;
+  firmware_version: string;
+  test_type: string;
+  result: string;
+  measurements: string;
+  notes: string;
+  tested_by: string;
+  tested_at: string;
+}
+
+export interface Device {
+  serial_number: string;
+  ipn: string;
+  firmware_version: string;
+  customer: string;
   location: string;
-  last_updated: string;
+  status: string;
+  install_date: string;
+  last_seen?: string;
+  notes: string;
+  created_at: string;
+}
+
+export interface FirmwareCampaign {
+  id: string;
+  name: string;
+  version: string;
+  category: string;
+  status: string;
+  target_filter: string;
+  notes: string;
+  created_at: string;
+  started_at?: string;
+  completed_at?: string;
+}
+
+export interface CampaignDevice {
+  campaign_id: string;
+  serial_number: string;
+  status: string;
+  updated_at?: string;
+}
+
+export interface Quote {
+  id: string;
+  customer: string;
+  status: string;
+  notes: string;
+  created_at: string;
+  valid_until: string;
+  accepted_at?: string;
+  lines?: QuoteLine[];
+}
+
+export interface QuoteLine {
+  id: number;
+  quote_id: string;
+  ipn: string;
+  description: string;
+  qty: number;
+  unit_price: number;
+  notes: string;
 }
 
 export interface DashboardStats {
@@ -82,6 +255,57 @@ export interface DashboardStats {
   active_work_orders: number;
   pending_ecos: number;
   total_inventory_value: number;
+}
+
+export interface CalendarEvent {
+  id: string;
+  type: 'work_order' | 'purchase_order' | 'quote';
+  title: string;
+  date: string;
+  status: string;
+}
+
+export interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  user: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  details: string;
+  ip_address?: string;
+}
+
+export interface User {
+  id: string;
+  username: string;
+  email: string;
+  role: 'admin' | 'user' | 'readonly';
+  status: 'active' | 'inactive';
+  last_login?: string;
+  created_at: string;
+}
+
+export interface APIKey {
+  id: string;
+  name: string;
+  key_prefix: string;
+  full_key?: string;
+  status: 'active' | 'revoked';
+  created_at: string;
+  last_used?: string;
+  created_by: string;
+}
+
+export interface EmailConfig {
+  enabled: boolean;
+  smtp_host: string;
+  smtp_port: number;
+  smtp_security: 'none' | 'tls' | 'ssl';
+  smtp_username: string;
+  smtp_password: string;
+  from_address: string;
+  from_name: string;
 }
 
 // API client class
@@ -126,12 +350,36 @@ class ApiClient {
   }
 
   // Parts
-  async getParts(): Promise<Part[]> {
-    return this.request('/parts');
+  async getParts(params?: { 
+    category?: string; 
+    q?: string; 
+    page?: number; 
+    limit?: number; 
+  }): Promise<ApiResponse<Part[]>> {
+    const searchParams = new URLSearchParams();
+    if (params?.category) searchParams.set('category', params.category);
+    if (params?.q) searchParams.set('q', params.q);
+    if (params?.page) searchParams.set('page', params.page.toString());
+    if (params?.limit) searchParams.set('limit', params.limit.toString());
+    
+    const url = `/parts${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.request(url);
   }
 
   async getPart(ipn: string): Promise<Part> {
     return this.request(`/parts/${ipn}`);
+  }
+
+  async getCategories(): Promise<Category[]> {
+    return this.request('/parts/categories');
+  }
+
+  async getPartBOM(ipn: string): Promise<BOMNode> {
+    return this.request(`/parts/${ipn}/bom`);
+  }
+
+  async getPartCost(ipn: string): Promise<PartCost> {
+    return this.request(`/parts/${ipn}/cost`);
   }
 
   async createPart(part: Partial<Part>): Promise<Part> {
@@ -155,11 +403,12 @@ class ApiClient {
   }
 
   // ECOs
-  async getECOs(): Promise<ECO[]> {
-    return this.request('/ecos');
+  async getECOs(status?: string): Promise<ECO[]> {
+    const url = `/ecos${status ? `?status=${status}` : ''}`;
+    return this.request(url);
   }
 
-  async getECO(id: string): Promise<ECO> {
+  async getECO(id: string): Promise<ECO & { affected_parts?: any[] }> {
     return this.request(`/ecos/${id}`);
   }
 
@@ -177,15 +426,22 @@ class ApiClient {
     });
   }
 
-  async approveECO(id: string): Promise<void> {
+  async approveECO(id: string): Promise<ECO> {
     return this.request(`/ecos/${id}/approve`, {
       method: 'POST',
     });
   }
 
-  async implementECO(id: string): Promise<void> {
+  async implementECO(id: string): Promise<ECO> {
     return this.request(`/ecos/${id}/implement`, {
       method: 'POST',
+    });
+  }
+
+  async rejectECO(id: string): Promise<ECO> {
+    return this.request(`/ecos/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ status: 'rejected' }),
     });
   }
 
@@ -210,6 +466,22 @@ class ApiClient {
       method: 'PUT',
       body: JSON.stringify(workOrder),
     });
+  }
+
+  async getWorkOrderBOM(id: string): Promise<{
+    wo_id: string;
+    assembly_ipn: string;
+    qty: number;
+    bom: Array<{
+      ipn: string;
+      description: string;
+      qty_required: number;
+      qty_on_hand: number;
+      shortage: number;
+      status: string;
+    }>;
+  }> {
+    return this.request(`/workorders/${id}/bom`);
   }
 
   // Vendors
@@ -242,16 +514,37 @@ class ApiClient {
   }
 
   // Inventory
-  async getInventory(): Promise<InventoryItem[]> {
-    return this.request('/inventory');
+  async getInventory(lowStock?: boolean): Promise<InventoryItem[]> {
+    const query = lowStock ? '?low_stock=true' : '';
+    return this.request(`/inventory${query}`);
   }
 
   async getInventoryItem(ipn: string): Promise<InventoryItem> {
     return this.request(`/inventory/${ipn}`);
   }
 
-  async getInventoryHistory(ipn: string): Promise<any[]> {
+  async getInventoryHistory(ipn: string): Promise<InventoryTransaction[]> {
     return this.request(`/inventory/${ipn}/history`);
+  }
+
+  async createInventoryTransaction(transaction: {
+    ipn: string;
+    type: string;
+    qty: number;
+    reference?: string;
+    notes?: string;
+  }): Promise<void> {
+    return this.request('/inventory/transact', {
+      method: 'POST',
+      body: JSON.stringify(transaction),
+    });
+  }
+
+  async bulkDeleteInventory(ipns: string[]): Promise<void> {
+    return this.request('/inventory/bulk-delete', {
+      method: 'DELETE',
+      body: JSON.stringify({ ipns }),
+    });
   }
 
   // Purchase Orders
@@ -274,6 +567,338 @@ class ApiClient {
     return this.request(`/pos/${id}`, {
       method: 'PUT',
       body: JSON.stringify(po),
+    });
+  }
+
+  async receivePurchaseOrder(id: string, lines: { id: number; qty: number }[]): Promise<PurchaseOrder> {
+    return this.request(`/pos/${id}/receive`, {
+      method: 'POST',
+      body: JSON.stringify({ lines }),
+    });
+  }
+
+  async generatePOFromWorkOrder(woId: string, vendorId: string): Promise<{ po_id: string; lines: number }> {
+    return this.request('/pos/generate', {
+      method: 'POST',
+      body: JSON.stringify({ wo_id: woId, vendor_id: vendorId }),
+    });
+  }
+
+  // NCRs
+  async getNCRs(): Promise<NCR[]> {
+    return this.request('/ncrs');
+  }
+
+  async getNCR(id: string): Promise<NCR> {
+    return this.request(`/ncrs/${id}`);
+  }
+
+  async createNCR(ncr: Partial<NCR>): Promise<NCR> {
+    return this.request('/ncrs', {
+      method: 'POST',
+      body: JSON.stringify(ncr),
+    });
+  }
+
+  async updateNCR(id: string, ncr: Partial<NCR> & { create_eco?: boolean }): Promise<NCR> {
+    return this.request(`/ncrs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(ncr),
+    });
+  }
+
+  // RMAs
+  async getRMAs(): Promise<RMA[]> {
+    return this.request('/rmas');
+  }
+
+  async getRMA(id: string): Promise<RMA> {
+    return this.request(`/rmas/${id}`);
+  }
+
+  async createRMA(rma: Partial<RMA>): Promise<RMA> {
+    return this.request('/rmas', {
+      method: 'POST',
+      body: JSON.stringify(rma),
+    });
+  }
+
+  async updateRMA(id: string, rma: Partial<RMA>): Promise<RMA> {
+    return this.request(`/rmas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(rma),
+    });
+  }
+
+  // Testing
+  async getTestRecords(): Promise<TestRecord[]> {
+    return this.request('/testing');
+  }
+
+  async getTestRecord(id: number): Promise<TestRecord> {
+    return this.request(`/testing/${id}`);
+  }
+
+  async createTestRecord(testRecord: Partial<TestRecord>): Promise<TestRecord> {
+    return this.request('/testing', {
+      method: 'POST',
+      body: JSON.stringify(testRecord),
+    });
+  }
+
+  // Devices
+  async getDevices(): Promise<Device[]> {
+    return this.request('/devices');
+  }
+
+  async getDevice(serialNumber: string): Promise<Device> {
+    return this.request(`/devices/${serialNumber}`);
+  }
+
+  async createDevice(device: Partial<Device>): Promise<Device> {
+    return this.request('/devices', {
+      method: 'POST',
+      body: JSON.stringify(device),
+    });
+  }
+
+  async updateDevice(serialNumber: string, device: Partial<Device>): Promise<Device> {
+    return this.request(`/devices/${serialNumber}`, {
+      method: 'PUT',
+      body: JSON.stringify(device),
+    });
+  }
+
+  async importDevices(file: File): Promise<{ success: number; errors: string[] }> {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch(`${API_BASE}/devices/import`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Import failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async exportDevices(): Promise<Blob> {
+    const response = await fetch(`${API_BASE}/devices/export`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.statusText}`);
+    }
+
+    return response.blob();
+  }
+
+  // Firmware Campaigns
+  async getFirmwareCampaigns(): Promise<FirmwareCampaign[]> {
+    return this.request('/firmware');
+  }
+
+  async getFirmwareCampaign(id: string): Promise<FirmwareCampaign> {
+    return this.request(`/firmware/${id}`);
+  }
+
+  async createFirmwareCampaign(campaign: Partial<FirmwareCampaign>): Promise<FirmwareCampaign> {
+    return this.request('/firmware', {
+      method: 'POST',
+      body: JSON.stringify(campaign),
+    });
+  }
+
+  async updateFirmwareCampaign(id: string, campaign: Partial<FirmwareCampaign>): Promise<FirmwareCampaign> {
+    return this.request(`/firmware/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(campaign),
+    });
+  }
+
+  async getCampaignDevices(campaignId: string): Promise<CampaignDevice[]> {
+    return this.request(`/firmware/${campaignId}/devices`);
+  }
+
+  // Quotes
+  async getQuotes(): Promise<Quote[]> {
+    return this.request('/quotes');
+  }
+
+  async getQuote(id: string): Promise<Quote> {
+    return this.request(`/quotes/${id}`);
+  }
+
+  async createQuote(quote: Partial<Quote>): Promise<Quote> {
+    return this.request('/quotes', {
+      method: 'POST',
+      body: JSON.stringify(quote),
+    });
+  }
+
+  async updateQuote(id: string, quote: Partial<Quote>): Promise<Quote> {
+    return this.request(`/quotes/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(quote),
+    });
+  }
+
+  async exportQuotePDF(id: string): Promise<Blob> {
+    const response = await fetch(`${API_BASE}/quotes/${id}/pdf`, {
+      method: 'GET',
+    });
+
+    if (!response.ok) {
+      throw new Error(`PDF export failed: ${response.statusText}`);
+    }
+
+    return response.blob();
+  }
+
+  // Documents
+  async getDocuments(): Promise<(Document & { attachment_count?: number })[]> {
+    return this.request('/docs');
+  }
+
+  async getDocument(id: string): Promise<Document & { attachments?: Attachment[] }> {
+    return this.request(`/docs/${id}`);
+  }
+
+  async createDocument(doc: Partial<Document>): Promise<Document> {
+    return this.request('/docs', {
+      method: 'POST',
+      body: JSON.stringify(doc),
+    });
+  }
+
+  async updateDocument(id: string, doc: Partial<Document>): Promise<Document> {
+    return this.request(`/docs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(doc),
+    });
+  }
+
+  async uploadAttachment(file: File, module: string, recordId: string): Promise<Attachment> {
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('module', module);
+    formData.append('record_id', recordId);
+    
+    const response = await fetch(`${API_BASE}/attachments`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Upload failed: ${response.statusText}`);
+    }
+
+    return response.json();
+  }
+
+  async downloadAttachment(id: string): Promise<Blob> {
+    const response = await fetch(`${API_BASE}/attachments/${id}/download`);
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.statusText}`);
+    }
+    return response.blob();
+  }
+
+  // Calendar
+  async getCalendarEvents(year: number, month: number): Promise<CalendarEvent[]> {
+    return this.request(`/calendar/events?year=${year}&month=${month}`);
+  }
+
+  // Audit Log
+  async getAuditLogs(params?: {
+    search?: string;
+    entityType?: string;
+    user?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ entries: AuditLogEntry[]; total: number }> {
+    const queryParams = new URLSearchParams();
+    if (params?.search) queryParams.append('search', params.search);
+    if (params?.entityType) queryParams.append('entity_type', params.entityType);
+    if (params?.user) queryParams.append('user', params.user);
+    if (params?.page) queryParams.append('page', params.page.toString());
+    if (params?.limit) queryParams.append('limit', params.limit.toString());
+
+    return this.request(`/audit?${queryParams.toString()}`);
+  }
+
+  // Users
+  async getUsers(): Promise<User[]> {
+    return this.request('/users');
+  }
+
+  async getUser(id: string): Promise<User> {
+    return this.request(`/users/${id}`);
+  }
+
+  async createUser(user: {
+    username: string;
+    email: string;
+    password: string;
+    role: string;
+  }): Promise<User> {
+    return this.request('/users', {
+      method: 'POST',
+      body: JSON.stringify(user),
+    });
+  }
+
+  async updateUser(id: string, user: Partial<User>): Promise<User> {
+    return this.request(`/users/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(user),
+    });
+  }
+
+  async deleteUser(id: string): Promise<void> {
+    return this.request(`/users/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // API Keys
+  async getAPIKeys(): Promise<APIKey[]> {
+    return this.request('/api-keys');
+  }
+
+  async createAPIKey(name: string): Promise<APIKey> {
+    return this.request('/api-keys', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  }
+
+  async revokeAPIKey(id: string): Promise<void> {
+    return this.request(`/api-keys/${id}/revoke`, {
+      method: 'POST',
+    });
+  }
+
+  // Email Settings
+  async getEmailConfig(): Promise<EmailConfig> {
+    return this.request('/email/config');
+  }
+
+  async updateEmailConfig(config: EmailConfig): Promise<EmailConfig> {
+    return this.request('/email/config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async testEmail(testEmail: string): Promise<{ success: boolean; message: string }> {
+    return this.request('/email/test', {
+      method: 'POST',
+      body: JSON.stringify({ test_email: testEmail }),
     });
   }
 }
