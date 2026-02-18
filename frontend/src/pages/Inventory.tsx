@@ -4,7 +4,6 @@ import {
   Package, 
   AlertTriangle, 
   Plus, 
-  Filter,
   MoreHorizontal,
   Trash2
 } from "lucide-react";
@@ -74,7 +73,8 @@ export function Inventory() {
   const fetchParts = async () => {
     try {
       const data = await api.getParts();
-      setParts(data.map(p => ({ ipn: p.ipn, description: p.description })));
+      const partsArray = Array.isArray(data) ? data : [];
+      setParts(partsArray.map(p => ({ ipn: p.ipn, description: p.description })));
     } catch (error) {
       console.error("Failed to fetch parts:", error);
     }

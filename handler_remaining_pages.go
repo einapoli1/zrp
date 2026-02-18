@@ -377,7 +377,7 @@ func pageNCRsList(w http.ResponseWriter, r *http.Request) {
 	if ncrs == nil { ncrs = []NCR{} }
 
 	data := PageData{Title: "NCRs", ActiveNav: "ncr", User: user, NCRs: ncrs, Status: status, Severity: severity}
-	pf := []string{"templates/ncrs/list.html"}
+	pf := []string{"templates/ncr/list.html"}
 	if isHTMX(r) { renderPartial(w, pf, "ncr-table", data); return }
 	render(w, pf, "layout", data)
 }
@@ -394,14 +394,14 @@ func pageNCRDetail(w http.ResponseWriter, r *http.Request, id string) {
 	n.ResolvedAt = sp(ra)
 
 	data := PageData{Title: "NCR: " + n.ID, ActiveNav: "ncr", User: user, NCR: n}
-	render(w, []string{"templates/ncrs/detail.html"}, "layout", data)
+	render(w, []string{"templates/ncr/detail.html"}, "layout", data)
 }
 
 func pageNCRNew(w http.ResponseWriter, r *http.Request) {
 	user := getCurrentUser(r)
 	if user == nil { http.Redirect(w, r, "/login", http.StatusSeeOther); return }
 	data := PageData{Title: "New NCR", ActiveNav: "ncr", User: user}
-	render(w, []string{"templates/ncrs/form.html"}, "layout", data)
+	render(w, []string{"templates/ncr/form.html"}, "layout", data)
 }
 
 func pageNCRCreate(w http.ResponseWriter, r *http.Request) {

@@ -15,7 +15,19 @@ export interface ApiResponse<T> {
 
 export interface Part {
   ipn: string;
-  fields: Record<string, string>;
+  category?: string;
+  description?: string;
+  cost?: number;
+  price?: number;
+  lead_time?: number;
+  minimum_stock?: number;
+  current_stock?: number;
+  location?: string;
+  vendor?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+  fields?: Record<string, string>;
 }
 
 export interface Category {

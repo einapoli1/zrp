@@ -20,7 +20,7 @@ export function Quotes() {
     customer: "",
     notes: "",
     valid_until: "",
-    lines: [] as Partial<QuoteLine>[],
+    lines: [] as Array<Omit<QuoteLine, 'id' | 'quote_id'>>,
   });
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function Quotes() {
         customer: formData.customer,
         notes: formData.notes,
         valid_until: formData.valid_until,
-        lines: formData.lines.filter(line => line.ipn && line.qty && line.unit_price),
+        lines: formData.lines.filter(line => line.ipn && line.qty && line.unit_price) as QuoteLine[],
       });
       setQuotes([newQuote, ...quotes]);
       setCreateDialogOpen(false);
@@ -78,7 +78,7 @@ export function Quotes() {
     });
   };
 
-  const updateLineItem = (index: number, field: keyof QuoteLine, value: any) => {
+  const updateLineItem = (index: number, field: keyof Omit<QuoteLine, 'id' | 'quote_id'>, value: any) => {
     const updatedLines = [...formData.lines];
     updatedLines[index] = { ...updatedLines[index], [field]: value };
     setFormData({ ...formData, lines: updatedLines });

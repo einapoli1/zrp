@@ -160,6 +160,16 @@ func initTemplates() {
 		},
 		"minus": func(a, b int) int { return a - b },
 		"plus":  func(a, b int) int { return a + b },
+		"sub": func(a, b float64) float64 { return a - b },
+		"dict": func(pairs ...interface{}) map[string]interface{} {
+			m := make(map[string]interface{})
+			for i := 0; i+1 < len(pairs); i += 2 {
+				if k, ok := pairs[i].(string); ok {
+					m[k] = pairs[i+1]
+				}
+			}
+			return m
+		},
 	}
 	log.Println("Template functions initialized")
 }

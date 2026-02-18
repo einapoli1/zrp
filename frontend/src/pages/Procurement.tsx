@@ -5,7 +5,6 @@ import {
   Plus, 
   FileText,
   Clock,
-  CheckCircle,
   Package
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -37,7 +36,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
-import { api, type PurchaseOrder, type POLine, type Vendor } from "../lib/api";
+import { api, type PurchaseOrder, type Vendor } from "../lib/api";
 
 export function Procurement() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
@@ -46,11 +45,20 @@ export function Procurement() {
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
 
+  interface POLineForm {
+    ipn: string;
+    mpn: string;
+    manufacturer: string;
+    qty_ordered: string;
+    unit_price: string;
+    notes: string;
+  }
+
   const [poForm, setPoForm] = useState({
     vendor_id: "",
     notes: "",
     expected_date: "",
-    lines: [{ ipn: "", mpn: "", manufacturer: "", qty_ordered: "", unit_price: "", notes: "" }] as Partial<POLine>[]
+    lines: [{ ipn: "", mpn: "", manufacturer: "", qty_ordered: "", unit_price: "", notes: "" }] as POLineForm[]
   });
 
   useEffect(() => {
@@ -83,7 +91,8 @@ export function Procurement() {
   const fetchParts = async () => {
     try {
       const data = await api.getParts();
-      setParts(data.map(p => ({ ipn: p.ipn, description: p.description })));
+      const partsArray = Array.isArray(data) ? data : [];
+      setParts(partsArray.map(p => ({ ipn: p.ipn, description: p.description })));
     } catch (error) {
       console.error("Failed to fetch parts:", error);
     }
@@ -92,11 +101,16 @@ export function Procurement() {
   const handleCreatePO = async () => {
     try {
       const lines = poForm.lines.filter(line => line.ipn && line.qty_ordered).map(line => ({
-        ...line,
-        qty_ordered: parseFloat(line.qty_ordered as string),
-        unit_price: parseFloat(line.unit_price as string) || 0,
-        qty_received: 0
-      })) as POLine[];
+        ipn: line.ipn,
+        mpn: line.mpn,
+        manufacturer: line.manufacturer,
+        qty_ordered: parseFloat(line.qty_ordered) || 0,
+        unit_price: parseFloat(line.unit_price) || 0,
+        qty_received: 0,
+        notes: line.notes,
+        id: 0, // Will be set by backend
+        po_id: "" // Will be set by backend
+      }));
 
       await api.createPurchaseOrder({
         vendor_id: poForm.vendor_id,
@@ -139,7 +153,7 @@ export function Procurement() {
     }
   };
 
-  const updateLineItem = (index: number, field: keyof POLine, value: string) => {
+  const updateLineItem = (index: number, field: keyof POLineForm, value: string) => {
     setPoForm(prev => ({
       ...prev,
       lines: prev.lines.map((line, i) => 
@@ -326,7 +340,7 @@ export function Procurement() {
                             <Label>Qty</Label>
                             <Input
                               type="number"
-                              value={line.qty_ordered || ""}
+                              value={line.qty_ordered}
                               onChange={(e) => updateLineItem(index, 'qty_ordered', e.target.value)}
                               placeholder="0"
                             />
@@ -336,7 +350,7 @@ export function Procurement() {
                             <Input
                               type="number"
                               step="0.01"
-                              value={line.unit_price || ""}
+                              value={line.unit_price}
                               onChange={(e) => updateLineItem(index, 'unit_price', e.target.value)}
                               placeholder="0.00"
                             />
@@ -344,7 +358,7 @@ export function Procurement() {
                           <div className="col-span-1">
                             <Label>Notes</Label>
                             <Input
-                              value={line.notes || ""}
+                              value={line.notes}
                               onChange={(e) => updateLineItem(index, 'notes', e.target.value)}
                               placeholder="Notes"
                             />

@@ -7,7 +7,6 @@ import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Label } from "../components/ui/label";
-import { Separator } from "../components/ui/separator";
 import { Checkbox } from "../components/ui/checkbox";
 import { AlertTriangle, ArrowLeft, FileText, Save } from "lucide-react";
 import { api, type NCR } from "../lib/api";

@@ -1,6 +1,25 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AppLayout } from "./layouts/AppLayout";
 import { Dashboard } from "./pages/Dashboard";
+import { Inventory } from "./pages/Inventory";
+import { InventoryDetail } from "./pages/InventoryDetail";
+import { Procurement } from "./pages/Procurement";
+import { PODetail } from "./pages/PODetail";
+import { Vendors } from "./pages/Vendors";
+import { VendorDetail } from "./pages/VendorDetail";
+import { WorkOrders } from "./pages/WorkOrders";
+import { WorkOrderDetail } from "./pages/WorkOrderDetail";
+import { NCRs } from "./pages/NCRs";
+import { NCRDetail } from "./pages/NCRDetail";
+import { RMAs } from "./pages/RMAs";
+import { RMADetail } from "./pages/RMADetail";
+import { Testing } from "./pages/Testing";
+import { Devices } from "./pages/Devices";
+import { DeviceDetail } from "./pages/DeviceDetail";
+import { Firmware } from "./pages/Firmware";
+import { FirmwareDetail } from "./pages/FirmwareDetail";
+import { Quotes } from "./pages/Quotes";
+import { QuoteDetail } from "./pages/QuoteDetail";
 import { Parts } from "./pages/Parts";
 import { PartDetail } from "./pages/PartDetail";
 import { ECOs } from "./pages/ECOs";
@@ -45,24 +64,33 @@ function App() {
           <Route path="/ecos" element={<ECOs />} />
           <Route path="/ecos/:id" element={<ECODetail />} />
           <Route path="/documents" element={<Documents />} />
-          <Route path="/testing" element={<PlaceholderPage title="Testing" />} />
+          <Route path="/testing" element={<Testing />} />
+          <Route path="/ncrs" element={<NCRs />} />
+          <Route path="/ncrs/:id" element={<NCRDetail />} />
+          <Route path="/rmas" element={<RMAs />} />
+          <Route path="/rmas/:id" element={<RMADetail />} />
+          <Route path="/devices" element={<Devices />} />
+          <Route path="/devices/:serialNumber" element={<DeviceDetail />} />
+          <Route path="/firmware" element={<Firmware />} />
+          <Route path="/firmware/:id" element={<FirmwareDetail />} />
+          <Route path="/quotes" element={<Quotes />} />
+          <Route path="/quotes/:id" element={<QuoteDetail />} />
           
           {/* Supply Chain */}
-          <Route path="/vendors" element={<PlaceholderPage title="Vendors" />} />
-          <Route path="/purchase-orders" element={<PlaceholderPage title="Purchase Orders" />} />
-          <Route path="/procurement" element={<PlaceholderPage title="Procurement" />} />
+          <Route path="/vendors" element={<Vendors />} />
+          <Route path="/vendors/:id" element={<VendorDetail />} />
+          <Route path="/purchase-orders" element={<Procurement />} />
+          <Route path="/purchase-orders/:id" element={<PODetail />} />
+          <Route path="/procurement" element={<Procurement />} />
           
           {/* Manufacturing */}
-          <Route path="/work-orders" element={<PlaceholderPage title="Work Orders" />} />
-          <Route path="/inventory" element={<PlaceholderPage title="Inventory" />} />
-          <Route path="/ncrs" element={<PlaceholderPage title="NCRs" />} />
+          <Route path="/work-orders" element={<WorkOrders />} />
+          <Route path="/work-orders/:id" element={<WorkOrderDetail />} />
+          <Route path="/inventory" element={<Inventory />} />
+          <Route path="/inventory/:ipn" element={<InventoryDetail />} />
           
           {/* Field & Service */}
-          <Route path="/rmas" element={<PlaceholderPage title="RMAs" />} />
           <Route path="/field-reports" element={<PlaceholderPage title="Field Reports" />} />
-          
-          {/* Sales */}
-          <Route path="/quotes" element={<PlaceholderPage title="Quotes" />} />
           <Route path="/pricing" element={<PlaceholderPage title="Pricing" />} />
           
           {/* Reports */}

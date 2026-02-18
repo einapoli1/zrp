@@ -191,6 +191,121 @@ func main() {
 		handleListWorkOrders(w, r)
 	})
 
+	// Inventory
+	mux.HandleFunc("/inventory", pageInventoryList)
+	mux.HandleFunc("/inventory/receive-form", pageInventoryReceiveForm)
+	mux.HandleFunc("/inventory/receive", pageInventoryReceive)
+	mux.HandleFunc("/inventory/", func(w http.ResponseWriter, r *http.Request) {
+		ipn := strings.TrimPrefix(r.URL.Path, "/inventory/")
+		if ipn == "" { pageInventoryList(w, r); return }
+		pageInventoryDetail(w, r, ipn)
+	})
+
+	// Procurement
+	mux.HandleFunc("/procurement", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageProcurementCreate(w, r); return }
+		pageProcurementList(w, r)
+	})
+	mux.HandleFunc("/procurement/new", pageProcurementNew)
+	mux.HandleFunc("/procurement/generate-from-wo", func(w http.ResponseWriter, r *http.Request) {
+		handleGeneratePOFromWO(w, r)
+	})
+	mux.HandleFunc("/procurement/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/procurement/")
+		if id == "" { pageProcurementList(w, r); return }
+		pageProcurementDetail(w, r, id)
+	})
+
+	// NCRs
+	mux.HandleFunc("/ncr", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageNCRCreate(w, r); return }
+		pageNCRsList(w, r)
+	})
+	mux.HandleFunc("/ncr/new", pageNCRNew)
+	mux.HandleFunc("/ncr/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/ncr/")
+		if id == "" { pageNCRsList(w, r); return }
+		pageNCRDetail(w, r, id)
+	})
+
+	// Test Records
+	mux.HandleFunc("/testing", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageTestingCreate(w, r); return }
+		pageTestingList(w, r)
+	})
+	mux.HandleFunc("/testing/new", pageTestingNew)
+
+	// RMAs
+	mux.HandleFunc("/rma", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageRMACreate(w, r); return }
+		pageRMAsList(w, r)
+	})
+	mux.HandleFunc("/rma/new", pageRMANew)
+	mux.HandleFunc("/rma/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/rma/")
+		if id == "" { pageRMAsList(w, r); return }
+		pageRMADetail(w, r, id)
+	})
+
+	// Devices
+	mux.HandleFunc("/devices", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageDeviceCreate(w, r); return }
+		pageDevicesList(w, r)
+	})
+	mux.HandleFunc("/devices/new", pageDeviceNew)
+	mux.HandleFunc("/devices/", func(w http.ResponseWriter, r *http.Request) {
+		sn := strings.TrimPrefix(r.URL.Path, "/devices/")
+		if sn == "" { pageDevicesList(w, r); return }
+		pageDeviceDetail(w, r, sn)
+	})
+
+	// Firmware Campaigns
+	mux.HandleFunc("/firmware", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageFirmwareCreate(w, r); return }
+		pageFirmwareList(w, r)
+	})
+	mux.HandleFunc("/firmware/new", pageFirmwareNew)
+	mux.HandleFunc("/firmware/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/firmware/")
+		if id == "" { pageFirmwareList(w, r); return }
+		pageFirmwareDetail(w, r, id)
+	})
+
+	// Audit Log
+	mux.HandleFunc("/audit", pageAuditList)
+
+	// Users
+	mux.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageUserCreate(w, r); return }
+		pageUsersList(w, r)
+	})
+	mux.HandleFunc("/users/new", pageUserNew)
+
+	// API Keys
+	mux.HandleFunc("/apikeys", pageAPIKeysList)
+	mux.HandleFunc("/apikeys/generate", pageAPIKeyGenerate)
+
+	// Email Settings
+	mux.HandleFunc("/email", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageEmailSettingsUpdate(w, r); return }
+		pageEmailSettings(w, r)
+	})
+
+	// Documents
+	mux.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageDocCreate(w, r); return }
+		pageDocsList(w, r)
+	})
+	mux.HandleFunc("/docs/new", pageDocNew)
+	mux.HandleFunc("/docs/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/docs/")
+		if id == "" { pageDocsList(w, r); return }
+		pageDocDetail(w, r, id)
+	})
+
+	// Global search
+	mux.HandleFunc("/search", pageSearch)
+
 	// SPA fallback
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
@@ -232,24 +347,6 @@ func main() {
 	mux.HandleFunc("/auth/me", func(w http.ResponseWriter, r *http.Request) {
 		handleMe(w, r)
 	})
-
-	// React frontend - serve static files if frontend/dist exists
-	if _, err := os.Stat("frontend/dist"); err == nil {
-		// Serve static assets (JS, CSS, etc.)
-		mux.Handle("/assets/", http.StripPrefix("/assets/", http.FileServer(http.Dir("frontend/dist/assets"))))
-		
-		// Serve React app for all non-API routes
-		mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-			// Skip API routes and existing static routes
-			if strings.HasPrefix(r.URL.Path, "/api/") || strings.HasPrefix(r.URL.Path, "/static/") || strings.HasPrefix(r.URL.Path, "/auth/") {
-				http.NotFound(w, r)
-				return
-			}
-			
-			// For the React app, serve index.html for all routes (client-side routing)
-			http.ServeFile(w, r, "frontend/dist/index.html")
-		})
-	}
 
 	// API routes - using a simple router
 	mux.HandleFunc("/api/v1/", func(w http.ResponseWriter, r *http.Request) {
