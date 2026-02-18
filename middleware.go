@@ -37,6 +37,20 @@ func requireAuth(next http.Handler) http.Handler {
 			return
 		}
 
+		// Check Bearer token first
+		authHeader := r.Header.Get("Authorization")
+		if strings.HasPrefix(authHeader, "Bearer ") {
+			token := strings.TrimPrefix(authHeader, "Bearer ")
+			if validateBearerToken(token) {
+				next.ServeHTTP(w, r)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(401)
+			json.NewEncoder(w).Encode(map[string]string{"error": "Invalid API key", "code": "UNAUTHORIZED"})
+			return
+		}
+
 		// Check session cookie
 		cookie, err := r.Cookie("zrp_session")
 		if err != nil {

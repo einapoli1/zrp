@@ -54,6 +54,13 @@
   .badge-passed { @apply bg-green-100 text-green-800; }
   .modal-overlay { @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50; }
   .modal-content { @apply bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto; }
+  @media (max-width: 767px) {
+    .modal-content { max-width: 100% !important; margin: 0.5rem; }
+    #sidebar { position: fixed; left: -100%; top: 0; bottom: 0; z-index: 40; transition: left 0.3s; }
+    #sidebar.open { left: 0; }
+    #sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 39; }
+    #sidebar.open + #sidebar-overlay, #sidebar-overlay.open { display: block; }
+  }
   .btn { @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer; }
   .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700; }
   .btn-secondary { @apply bg-gray-200 text-gray-700 hover:bg-gray-300; }
@@ -89,7 +96,7 @@
 
 <div id="app" class="flex h-full hidden">
   <!-- Sidebar -->
-  <aside id="sidebar" class="w-64 bg-gray-900 flex flex-col flex-shrink-0 overflow-y-auto">
+  <aside id="sidebar" class="w-64 bg-gray-900 flex flex-col flex-shrink-0 overflow-y-auto md:relative">
     <div class="px-4 py-5 flex items-center gap-3">
       <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">Z</div>
       <span class="text-white font-bold text-lg">ZRP</span>
@@ -120,25 +127,41 @@
       <a class="sidebar-link" data-route="quotes" onclick="navigate('quotes')">💰 Quotes</a>
       <div class="sidebar-group">Admin</div>
       <a class="sidebar-link" data-route="audit" onclick="navigate('audit')">📋 Audit Log</a>
+      <a class="sidebar-link" data-route="apikeys" onclick="navigate('apikeys')">🔑 API Keys</a>
     </nav>
   </aside>
 
+  <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
   <!-- Main -->
   <div class="flex-1 flex flex-col overflow-hidden">
     <!-- Top bar -->
-    <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-3 flex items-center justify-between">
-      <h1 id="page-title" class="text-lg font-semibold text-gray-800">Dashboard</h1>
+    <header class="bg-white shadow-sm border-b border-gray-200 px-4 md:px-6 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="relative">
+        <button id="hamburger" class="md:hidden text-gray-600 p-1" onclick="toggleSidebar()">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <h1 id="page-title" class="text-lg font-semibold text-gray-800">Dashboard</h1>
+      </div>
+      <div class="flex items-center gap-2 md:gap-3">
+        <div class="relative hidden md:block">
           <input id="global-search" type="text" placeholder="Search parts, ECOs, devices..." class="input w-72" autocomplete="off">
           <div id="search-dropdown" class="absolute right-0 z-50 w-96 bg-white border border-gray-200 rounded-lg shadow-xl mt-1 max-h-96 overflow-y-auto hidden"></div>
         </div>
-        <span id="user-display" class="text-sm text-gray-600"></span>
+        <!-- Notification Bell -->
+        <div class="relative">
+          <button id="notif-bell" class="relative p-1 text-gray-500 hover:text-gray-700" onclick="toggleNotifications()">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+            <span id="notif-count" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold"></span>
+          </button>
+          <div id="notif-dropdown" class="hidden absolute right-0 z-50 w-80 bg-white border border-gray-200 rounded-lg shadow-xl mt-1 max-h-96 overflow-y-auto"></div>
+        </div>
+        <span id="user-display" class="text-sm text-gray-600 hidden md:inline"></span>
         <button onclick="doLogout()" class="btn btn-secondary text-xs">Sign Out</button>
       </div>
     </header>
     <!-- Content -->
-    <main id="content" class="flex-1 overflow-y-auto p-6 bg-gray-50"></main>
+    <main id="content" class="flex-1 overflow-y-auto p-3 md:p-6 bg-gray-50"></main>
+    <footer class="bg-gray-50 border-t px-4 py-1 text-xs text-gray-400 text-right hidden md:block">Press <kbd class="bg-gray-200 px-1 rounded">?</kbd> for keyboard shortcuts</footer>
   </div>
 </div>
 
@@ -209,7 +232,7 @@ const moduleNames = {
   dashboard: 'Dashboard', parts: 'Parts (PLM)', ecos: 'ECOs', docs: 'Documents',
   inventory: 'Inventory', procurement: 'Purchase Orders', vendors: 'Vendors',
   workorders: 'Work Orders', testing: 'Test Records', ncr: 'NCRs',
-  devices: 'Devices', firmware: 'Firmware', rma: 'RMAs', quotes: 'Quotes', audit: 'Audit Log'
+  devices: 'Devices', firmware: 'Firmware', rma: 'RMAs', quotes: 'Quotes', audit: 'Audit Log', apikeys: 'API Keys'
 };
 
 function navigate(route) {
@@ -379,6 +402,130 @@ async function doLogout() {
 
 window.addEventListener('hashchange', handleRoute);
 window.addEventListener('load', checkAuth);
+
+// Mobile sidebar toggle
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  sb.classList.toggle('open');
+  ov.classList.toggle('open');
+}
+
+// Close sidebar on navigation (mobile)
+const origNavigate = navigate;
+window.navigate = function(route) {
+  const sb = document.getElementById('sidebar');
+  if (sb.classList.contains('open')) toggleSidebar();
+  origNavigate(route);
+};
+
+// Notifications
+let notifInterval;
+async function loadNotifications() {
+  try {
+    const res = await api('GET', 'notifications?unread=true');
+    const notifs = res.data || [];
+    const badge = document.getElementById('notif-count');
+    if (notifs.length > 0) {
+      badge.textContent = notifs.length > 99 ? '99+' : notifs.length;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+    return notifs;
+  } catch(e) { return []; }
+}
+
+async function toggleNotifications() {
+  const dd = document.getElementById('notif-dropdown');
+  if (!dd.classList.contains('hidden')) { dd.classList.add('hidden'); return; }
+  const notifs = await loadNotifications();
+  const items = (await api('GET', 'notifications?unread=true')).data || [];
+  if (items.length === 0) {
+    dd.innerHTML = '<div class="p-4 text-center text-gray-400 text-sm">No new notifications</div>';
+  } else {
+    dd.innerHTML = items.map(n => {
+      const sevColor = n.severity === 'error' ? 'border-l-red-500' : n.severity === 'warning' ? 'border-l-yellow-500' : 'border-l-blue-500';
+      const timeAgo = new Date(n.created_at).toLocaleString();
+      return `<div class="px-3 py-2 hover:bg-gray-50 cursor-pointer border-l-4 ${sevColor}" data-notif-id="${n.id}" data-notif-module="${n.module || ''}">
+        <div class="text-sm font-medium">${n.title}</div>
+        <div class="text-xs text-gray-500">${n.message || ''}</div>
+        <div class="text-xs text-gray-400 mt-1">${timeAgo}</div>
+      </div>`;
+    }).join('');
+  }
+  dd.classList.remove('hidden');
+  dd.querySelectorAll('[data-notif-id]').forEach(el => {
+    el.onclick = async () => {
+      await fetch('/api/v1/notifications/' + el.dataset.notifId + '/read', { method: 'POST' });
+      if (el.dataset.notifModule) navigate(el.dataset.notifModule);
+      dd.classList.add('hidden');
+      loadNotifications();
+    };
+  });
+}
+
+// Poll notifications every 60s
+setInterval(loadNotifications, 60000);
+setTimeout(loadNotifications, 2000);
+
+// Close notification dropdown on outside click
+document.addEventListener('click', (e) => {
+  const dd = document.getElementById('notif-dropdown');
+  const bell = document.getElementById('notif-bell');
+  if (dd && bell && !dd.contains(e.target) && !bell.contains(e.target)) {
+    dd.classList.add('hidden');
+  }
+});
+
+// Keyboard Shortcuts
+let gPending = false;
+document.addEventListener('keydown', (e) => {
+  // Don't trigger in inputs
+  const tag = e.target.tagName;
+  const isInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || e.target.isContentEditable;
+
+  if (e.key === '/' && !isInput) {
+    e.preventDefault();
+    const search = document.getElementById('global-search');
+    if (search) search.focus();
+    return;
+  }
+
+  if (isInput) return;
+
+  if (e.key === '?') {
+    e.preventDefault();
+    showModal('Keyboard Shortcuts', `
+      <div class="space-y-2 text-sm">
+        <div class="flex justify-between"><span class="font-mono bg-gray-100 px-2 py-0.5 rounded">/</span><span>Focus search</span></div>
+        <div class="flex justify-between"><span class="font-mono bg-gray-100 px-2 py-0.5 rounded">n</span><span>New item in current module</span></div>
+        <div class="flex justify-between"><span class="font-mono bg-gray-100 px-2 py-0.5 rounded">g → d</span><span>Go to Dashboard</span></div>
+        <div class="flex justify-between"><span class="font-mono bg-gray-100 px-2 py-0.5 rounded">g → p</span><span>Go to Parts</span></div>
+        <div class="flex justify-between"><span class="font-mono bg-gray-100 px-2 py-0.5 rounded">g → e</span><span>Go to ECOs</span></div>
+        <div class="flex justify-between"><span class="font-mono bg-gray-100 px-2 py-0.5 rounded">g → i</span><span>Go to Inventory</span></div>
+        <div class="flex justify-between"><span class="font-mono bg-gray-100 px-2 py-0.5 rounded">g → w</span><span>Go to Work Orders</span></div>
+        <div class="flex justify-between"><span class="font-mono bg-gray-100 px-2 py-0.5 rounded">?</span><span>Show this help</span></div>
+      </div>
+    `);
+    return;
+  }
+
+  if (e.key === 'n' && !isInput) {
+    const btn = document.querySelector('#content button');
+    if (btn && (btn.textContent.includes('New') || btn.textContent.includes('+'))) btn.click();
+    return;
+  }
+
+  if (gPending) {
+    gPending = false;
+    const gMap = { d: 'dashboard', p: 'parts', e: 'ecos', i: 'inventory', w: 'workorders' };
+    if (gMap[e.key]) { e.preventDefault(); navigate(gMap[e.key]); }
+    return;
+  }
+
+  if (e.key === 'g') { gPending = true; setTimeout(() => gPending = false, 1000); return; }
+});
 </script>
 </body>
 </html>

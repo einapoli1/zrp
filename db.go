@@ -158,6 +158,28 @@ func runMigrations() error {
 			summary TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
+		`CREATE TABLE IF NOT EXISTS api_keys (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			key_hash TEXT NOT NULL,
+			key_prefix TEXT NOT NULL,
+			created_by TEXT DEFAULT 'admin',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			last_used DATETIME,
+			expires_at DATETIME,
+			enabled INTEGER DEFAULT 1
+		)`,
+		`CREATE TABLE IF NOT EXISTS notifications (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			type TEXT NOT NULL,
+			severity TEXT DEFAULT 'info',
+			title TEXT NOT NULL,
+			message TEXT,
+			record_id TEXT,
+			module TEXT,
+			read_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
 	}
 	for _, t := range tables {
 		if _, err := db.Exec(t); err != nil {

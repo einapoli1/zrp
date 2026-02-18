@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 )
 
 var partsDir string
@@ -23,6 +24,16 @@ func main() {
 		log.Fatal("DB init failed:", err)
 	}
 	seedDB()
+
+	// Start background notification generator (run once after short delay, then every 5 min)
+	go func() {
+		time.Sleep(5 * time.Second)
+		generateNotifications()
+		for {
+			time.Sleep(5 * time.Minute)
+			generateNotifications()
+		}
+	}()
 
 	mux := http.NewServeMux()
 
@@ -255,6 +266,22 @@ func main() {
 			handleUpdateQuote(w, r, parts[1])
 		case parts[0] == "quotes" && len(parts) == 3 && parts[2] == "cost" && r.Method == "GET":
 			handleQuoteCost(w, r, parts[1])
+
+		// API Keys
+		case parts[0] == "apikeys" && len(parts) == 1 && r.Method == "GET":
+			handleListAPIKeys(w, r)
+		case parts[0] == "apikeys" && len(parts) == 1 && r.Method == "POST":
+			handleCreateAPIKey(w, r)
+		case parts[0] == "apikeys" && len(parts) == 2 && r.Method == "DELETE":
+			handleDeleteAPIKey(w, r, parts[1])
+		case parts[0] == "apikeys" && len(parts) == 2 && r.Method == "PUT":
+			handleToggleAPIKey(w, r, parts[1])
+
+		// Notifications
+		case parts[0] == "notifications" && len(parts) == 1 && r.Method == "GET":
+			handleListNotifications(w, r)
+		case parts[0] == "notifications" && len(parts) == 3 && parts[2] == "read" && r.Method == "POST":
+			handleMarkNotificationRead(w, r, parts[1])
 
 		default:
 			json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
