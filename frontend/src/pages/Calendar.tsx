@@ -3,23 +3,16 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
-
-interface CalendarEvent {
-  id: string;
-  type: 'work_order' | 'purchase_order' | 'quote';
-  title: string;
-  date: string;
-  status: string;
-}
+import { api, type CalendarEvent } from "../lib/api";
 
 const months = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
 
-const typeConfig = {
-  work_order: { label: 'Work Order', color: 'bg-blue-500', textColor: 'text-blue-700', bgColor: 'bg-blue-50' },
-  purchase_order: { label: 'Purchase Order', color: 'bg-green-500', textColor: 'text-green-700', bgColor: 'bg-green-50' },
+const typeConfig: Record<string, { label: string; color: string; textColor: string; bgColor: string }> = {
+  workorder: { label: 'Work Order', color: 'bg-blue-500', textColor: 'text-blue-700', bgColor: 'bg-blue-50' },
+  po: { label: 'Purchase Order', color: 'bg-green-500', textColor: 'text-green-700', bgColor: 'bg-green-50' },
   quote: { label: 'Quote', color: 'bg-purple-500', textColor: 'text-purple-700', bgColor: 'bg-purple-50' },
 };
 
@@ -54,40 +47,8 @@ function Calendar() {
     const fetchCalendarData = async () => {
       try {
         setLoading(true);
-        
-        // Mock data - replace with real API calls
-        const mockEvents: CalendarEvent[] = [
-          {
-            id: '1',
-            type: 'work_order',
-            title: 'Assembly Line Maintenance',
-            date: new Date(currentYear, currentMonth, 5).toISOString(),
-            status: 'scheduled'
-          },
-          {
-            id: '2',
-            type: 'purchase_order',
-            title: 'Component Delivery',
-            date: new Date(currentYear, currentMonth, 12).toISOString(),
-            status: 'pending'
-          },
-          {
-            id: '3',
-            type: 'quote',
-            title: 'Customer Quote Due',
-            date: new Date(currentYear, currentMonth, 18).toISOString(),
-            status: 'pending'
-          },
-          {
-            id: '4',
-            type: 'work_order',
-            title: 'Quality Inspection',
-            date: new Date(currentYear, currentMonth, 25).toISOString(),
-            status: 'scheduled'
-          },
-        ];
-        
-        setEvents(mockEvents);
+        const data = await api.getCalendarEvents(currentYear, currentMonth + 1);
+        setEvents(data);
       } catch (error) {
         console.error("Failed to fetch calendar data:", error);
       } finally {
@@ -108,10 +69,12 @@ function Calendar() {
   };
 
   const getEventsForDate = (date: Date) => {
-    return events.filter(event => {
-      const eventDate = new Date(event.date);
-      return eventDate.toDateString() === date.toDateString();
-    });
+    const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return events.filter(event => event.date === dateStr);
+  };
+
+  const getTypeConfig = (type: string) => {
+    return typeConfig[type] || { label: type, color: 'bg-gray-500', textColor: 'text-gray-700', bgColor: 'bg-gray-50' };
   };
 
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
@@ -201,7 +164,7 @@ function Calendar() {
                           {dayEvents.slice(0, 2).map(event => (
                             <div
                               key={event.id}
-                              className={`w-2 h-2 rounded-full mb-1 ${typeConfig[event.type].color}`}
+                              className={`w-2 h-2 rounded-full mb-1 ${getTypeConfig(event.type).color}`}
                             />
                           ))}
                           {dayEvents.length > 2 && (
@@ -239,16 +202,16 @@ function Calendar() {
                     selectedDateEvents.map(event => (
                       <div
                         key={event.id}
-                        className={`p-3 rounded-lg ${typeConfig[event.type].bgColor}`}
+                        className={`p-3 rounded-lg ${getTypeConfig(event.type).bgColor}`}
                       >
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
                             <div className="font-medium text-sm">{event.title}</div>
                             <Badge 
                               variant="secondary" 
-                              className={`mt-1 ${typeConfig[event.type].textColor}`}
+                              className={`mt-1 ${getTypeConfig(event.type).textColor}`}
                             >
-                              {typeConfig[event.type].label}
+                              {getTypeConfig(event.type).label}
                             </Badge>
                           </div>
                         </div>
@@ -271,8 +234,8 @@ function Calendar() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                {Object.entries(typeConfig).map(([type, config]) => (
-                  <div key={type} className="flex items-center gap-2">
+                {Object.entries(typeConfig).map(([_type, config]) => (
+                  <div key={config.label} className="flex items-center gap-2">
                     <div className={`w-3 h-3 rounded-full ${config.color}`} />
                     <span className="text-sm">{config.label}</span>
                   </div>

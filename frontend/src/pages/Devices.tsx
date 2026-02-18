@@ -3,9 +3,11 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { Textarea } from "../components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Smartphone, Plus, Upload, Download } from "lucide-react";
 import { api, type Device } from "../lib/api";
@@ -18,6 +20,32 @@ function Devices() {
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<{ success: number; errors: string[] } | null>(null);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [deviceForm, setDeviceForm] = useState({
+    serial_number: "",
+    ipn: "",
+    firmware_version: "",
+    customer: "",
+    location: "",
+    status: "active",
+    notes: "",
+  });
+
+  const handleCreateDevice = async () => {
+    setCreating(true);
+    try {
+      await api.createDevice(deviceForm);
+      setCreateDialogOpen(false);
+      setDeviceForm({ serial_number: "", ipn: "", firmware_version: "", customer: "", location: "", status: "active", notes: "" });
+      const data = await api.getDevices();
+      setDevices(data);
+    } catch (error) {
+      console.error("Failed to create device:", error);
+    } finally {
+      setCreating(false);
+    }
+  };
 
   useEffect(() => {
     const fetchDevices = async () => {
@@ -182,10 +210,96 @@ function Devices() {
               </div>
             </DialogContent>
           </Dialog>
-          <Button onClick={() => navigate("/devices/new")}>
-            <Plus className="h-4 w-4 mr-2" />
-            Add Device
-          </Button>
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Device
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[500px]">
+              <DialogHeader>
+                <DialogTitle>Add New Device</DialogTitle>
+              </DialogHeader>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="serial_number">Serial Number *</Label>
+                  <Input
+                    id="serial_number"
+                    value={deviceForm.serial_number}
+                    onChange={(e) => setDeviceForm(prev => ({ ...prev, serial_number: e.target.value }))}
+                    placeholder="e.g. SN-001"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dev_ipn">IPN</Label>
+                  <Input
+                    id="dev_ipn"
+                    value={deviceForm.ipn}
+                    onChange={(e) => setDeviceForm(prev => ({ ...prev, ipn: e.target.value }))}
+                    placeholder="Internal part number"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="firmware_version">Firmware Version</Label>
+                  <Input
+                    id="firmware_version"
+                    value={deviceForm.firmware_version}
+                    onChange={(e) => setDeviceForm(prev => ({ ...prev, firmware_version: e.target.value }))}
+                    placeholder="e.g. 1.0.0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dev_status">Status</Label>
+                  <Select value={deviceForm.status} onValueChange={(v) => setDeviceForm(prev => ({ ...prev, status: v }))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="maintenance">Maintenance</SelectItem>
+                      <SelectItem value="retired">Retired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dev_customer">Customer</Label>
+                  <Input
+                    id="dev_customer"
+                    value={deviceForm.customer}
+                    onChange={(e) => setDeviceForm(prev => ({ ...prev, customer: e.target.value }))}
+                    placeholder="Customer name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="dev_location">Location</Label>
+                  <Input
+                    id="dev_location"
+                    value={deviceForm.location}
+                    onChange={(e) => setDeviceForm(prev => ({ ...prev, location: e.target.value }))}
+                    placeholder="Location"
+                  />
+                </div>
+                <div className="col-span-2 space-y-2">
+                  <Label htmlFor="dev_notes">Notes</Label>
+                  <Textarea
+                    id="dev_notes"
+                    value={deviceForm.notes}
+                    onChange={(e) => setDeviceForm(prev => ({ ...prev, notes: e.target.value }))}
+                    placeholder="Optional notes"
+                    rows={2}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setCreateDialogOpen(false)} disabled={creating}>Cancel</Button>
+                <Button onClick={handleCreateDevice} disabled={creating || !deviceForm.serial_number}>
+                  {creating ? "Creating..." : "Add Device"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 

@@ -270,11 +270,11 @@ export interface DashboardStats {
 }
 
 export interface CalendarEvent {
-  id: string;
-  type: 'work_order' | 'purchase_order' | 'quote';
-  title: string;
   date: string;
-  status: string;
+  type: string;
+  id: string;
+  title: string;
+  color: string;
 }
 
 export interface AuditLogEntry {
@@ -822,7 +822,7 @@ class ApiClient {
 
   // Calendar
   async getCalendarEvents(year: number, month: number): Promise<CalendarEvent[]> {
-    return this.request(`/calendar/events?year=${year}&month=${month}`);
+    return this.request(`/calendar?year=${year}&month=${month}`);
   }
 
   // Audit Log
