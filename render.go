@@ -48,6 +48,9 @@ type PageData struct {
 	Year         int
 	Month        int
 	MonthName    string
+	// Reports module
+	ReportData   interface{}
+	Days         int
 	// NCR module  
 	NCRs         []NCR
 	NCR          NCR
@@ -62,6 +65,33 @@ type PageData struct {
 	Vendors   []Vendor
 	Vendor    Vendor
 	WorkOrders []WorkOrder
+	// Workorders
+	WorkOrder     WorkOrder
+	// Test Records
+	Tests         []TestRecord
+	// RMAs
+	RMAs          []RMA
+	RMA           RMA
+	// Devices
+	Devices       []Device
+	Device        Device
+	// Firmware
+	Campaigns       []FirmwareCampaign
+	Campaign        FirmwareCampaign
+	CampaignDevices []CampaignDevice
+	// Admin
+	AuditEntries  []AuditEntry
+	UserList      []UserFull
+	APIKeyList    []APIKeyEntry
+	EmailCfg      EmailConfigData
+	Documents     []Document
+	Document      Document
+	ReportList    []ReportCard
+	// Form helpers
+	AllVendors    []Vendor
+	AllAssemblies []Part
+	Severity      string
+	VendorPrices  []VendorPriceEntry
 }
 
 type PartCostInfo struct {
@@ -183,4 +213,43 @@ func makePagination(page, total, limit int, baseURL, target string, extraParams 
 		Start: start, End: end, BaseURL: baseURL, Target: target,
 		ExtraParams: template.HTML(extraParams), Pages: pages,
 	}
+}
+
+// Types for remaining modules
+type VendorPriceEntry struct {
+	ID           int
+	IPN          string
+	VendorID     string
+	VendorName   string
+	MPN          string
+	UnitPrice    float64
+	MinQty       int
+	LeadTimeDays int
+	ValidUntil   string
+	CreatedAt    string
+}
+
+type ReportCard struct {
+	Name        string
+	Description string
+	URL         string
+	Icon        string
+}
+
+type APIKeyEntry struct {
+	ID        int
+	Name      string
+	KeyPrefix string
+	Active    int
+	CreatedAt string
+	LastUsed  string
+}
+
+type EmailConfigData struct {
+	SMTPHost     string
+	SMTPPort     int
+	SMTPUser     string
+	SMTPPassword string
+	FromAddress  string
+	Enabled      int
 }

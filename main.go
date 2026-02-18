@@ -123,6 +123,13 @@ func main() {
 
 	mux.HandleFunc("/calendar", pageCalendar)
 
+	mux.HandleFunc("/reports", pageReportsList)
+	mux.HandleFunc("/reports/inventory-valuation", pageReportInventoryValuation)
+	mux.HandleFunc("/reports/open-ecos", pageReportOpenECOs)
+	mux.HandleFunc("/reports/wo-throughput", pageReportWOThroughput)
+	mux.HandleFunc("/reports/low-stock", pageReportLowStock)
+	mux.HandleFunc("/reports/ncr-summary", pageReportNCRSummary)
+
 	// Vendors
 	mux.HandleFunc("/vendors", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {

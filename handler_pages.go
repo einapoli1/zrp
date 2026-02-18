@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -744,6 +745,294 @@ func pageCalendar(w http.ResponseWriter, r *http.Request) {
 	pageFiles := []string{"templates/calendar/index.html"}
 	if isHTMX(r) {
 		renderPartial(w, pageFiles, "calendar-content", data)
+		return
+	}
+	render(w, pageFiles, "layout", data)
+}
+
+// Reports page handlers
+func pageReportsList(w http.ResponseWriter, r *http.Request) {
+	user := getCurrentUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	data := PageData{
+		Title:     "Reports",
+		ActiveNav: "reports",
+		User:      user,
+	}
+
+	pageFiles := []string{"templates/reports/list.html"}
+	render(w, pageFiles, "layout", data)
+}
+
+func pageReportInventoryValuation(w http.ResponseWriter, r *http.Request) {
+	user := getCurrentUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	// Get report data from the existing API handler
+	rows, err := db.Query(`
+		SELECT i.ipn, COALESCE(i.description,''), COALESCE(i.mpn,''), i.qty_on_hand,
+			COALESCE((SELECT pl.unit_price FROM po_lines pl JOIN purchase_orders po ON pl.po_id=po.id
+				WHERE pl.ipn=i.ipn ORDER BY po.created_at DESC LIMIT 1), 0) as unit_price,
+			COALESCE((SELECT pl.po_id FROM po_lines pl JOIN purchase_orders po ON pl.po_id=po.id
+				WHERE pl.ipn=i.ipn ORDER BY po.created_at DESC LIMIT 1), '') as po_ref
+		FROM inventory i ORDER BY i.ipn`)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	defer rows.Close()
+
+	catMap := map[string][]InvValuationItem{}
+	var catOrder []string
+	for rows.Next() {
+		var item InvValuationItem
+		var mpn string
+		rows.Scan(&item.IPN, &item.Desc, &mpn, &item.QtyOnHand, &item.UnitPrice, &item.PORef)
+		item.Subtotal = item.QtyOnHand * item.UnitPrice
+		// Derive category from IPN prefix
+		item.Category = ipnCategory(item.IPN)
+		if _, ok := catMap[item.Category]; !ok {
+			catOrder = append(catOrder, item.Category)
+		}
+		catMap[item.Category] = append(catMap[item.Category], item)
+	}
+
+	report := InvValuationReport{}
+	for _, cat := range catOrder {
+		items := catMap[cat]
+		grp := InvValuationGroup{Category: cat, Items: items}
+		for _, it := range items {
+			grp.Subtotal += it.Subtotal
+		}
+		report.GrandTotal += grp.Subtotal
+		report.Groups = append(report.Groups, grp)
+	}
+
+	data := PageData{
+		Title:      "Inventory Valuation Report",
+		ActiveNav:  "reports",
+		User:       user,
+		ReportData: report,
+	}
+
+	pageFiles := []string{"templates/reports/inventory-valuation.html"}
+	if isHTMX(r) {
+		renderPartial(w, pageFiles, "inventory-valuation-report", data)
+		return
+	}
+	render(w, pageFiles, "layout", data)
+}
+
+func pageReportOpenECOs(w http.ResponseWriter, r *http.Request) {
+	user := getCurrentUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	rows, err := db.Query(`SELECT id, title, status, priority, created_by, created_at FROM ecos WHERE status IN ('draft','review') ORDER BY
+		CASE priority WHEN 'critical' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 WHEN 'low' THEN 3 ELSE 4 END, created_at`)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	defer rows.Close()
+	var items []OpenECOItem
+	now := time.Now()
+	for rows.Next() {
+		var e OpenECOItem
+		rows.Scan(&e.ID, &e.Title, &e.Status, &e.Priority, &e.CreatedBy, &e.CreatedAt)
+		if t, err := time.Parse("2006-01-02 15:04:05", e.CreatedAt); err == nil {
+			e.AgeDays = int(now.Sub(t).Hours() / 24)
+		}
+		items = append(items, e)
+	}
+	if items == nil {
+		items = []OpenECOItem{}
+	}
+
+	data := PageData{
+		Title:      "Open ECOs Report",
+		ActiveNav:  "reports",
+		User:       user,
+		ReportData: items,
+	}
+
+	pageFiles := []string{"templates/reports/open-ecos.html"}
+	if isHTMX(r) {
+		renderPartial(w, pageFiles, "open-ecos-report", data)
+		return
+	}
+	render(w, pageFiles, "layout", data)
+}
+
+func pageReportWOThroughput(w http.ResponseWriter, r *http.Request) {
+	user := getCurrentUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	days := 30
+	if d := r.URL.Query().Get("days"); d != "" {
+		if v, err := strconv.Atoi(d); err == nil && (v == 30 || v == 60 || v == 90) {
+			days = v
+		}
+	}
+	since := time.Now().AddDate(0, 0, -days).Format("2006-01-02 15:04:05")
+
+	rows, err := db.Query(`SELECT status, started_at, completed_at FROM work_orders WHERE completed_at IS NOT NULL AND completed_at >= ?`, since)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	defer rows.Close()
+
+	report := WOThroughputReport{Days: days, CountByStatus: map[string]int{}}
+	var totalCycleHours float64
+	cycleCount := 0
+	for rows.Next() {
+		var status string
+		var startedAt, completedAt *string
+		rows.Scan(&status, &startedAt, &completedAt)
+		report.CountByStatus[status]++
+		report.TotalCompleted++
+		if startedAt != nil && completedAt != nil {
+			if st, err1 := time.Parse("2006-01-02 15:04:05", *startedAt); err1 == nil {
+				if ct, err2 := time.Parse("2006-01-02 15:04:05", *completedAt); err2 == nil {
+					totalCycleHours += ct.Sub(st).Hours()
+					cycleCount++
+				}
+			}
+		}
+	}
+	if cycleCount > 0 {
+		report.AvgCycleTimeDays = math.Round(totalCycleHours/float64(cycleCount)/24*100) / 100
+	}
+
+	data := PageData{
+		Title:      "WO Throughput Report",
+		ActiveNav:  "reports",
+		User:       user,
+		ReportData: report,
+		Days:       days,
+	}
+
+	pageFiles := []string{"templates/reports/wo-throughput.html"}
+	if isHTMX(r) {
+		renderPartial(w, pageFiles, "wo-throughput-report", data)
+		return
+	}
+	render(w, pageFiles, "layout", data)
+}
+
+func pageReportLowStock(w http.ResponseWriter, r *http.Request) {
+	user := getCurrentUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	rows, err := db.Query(`SELECT ipn, COALESCE(description,''), qty_on_hand, reorder_point, reorder_qty FROM inventory WHERE qty_on_hand < reorder_point AND reorder_point > 0 ORDER BY (reorder_point - qty_on_hand) DESC`)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	defer rows.Close()
+	var items []LowStockItem
+	for rows.Next() {
+		var it LowStockItem
+		rows.Scan(&it.IPN, &it.Description, &it.QtyOnHand, &it.ReorderPoint, &it.ReorderQty)
+		it.SuggestedOrder = it.ReorderQty
+		if it.SuggestedOrder == 0 {
+			it.SuggestedOrder = it.ReorderPoint - it.QtyOnHand
+		}
+		items = append(items, it)
+	}
+	if items == nil {
+		items = []LowStockItem{}
+	}
+
+	data := PageData{
+		Title:      "Low Stock Report",
+		ActiveNav:  "reports",
+		User:       user,
+		ReportData: items,
+	}
+
+	pageFiles := []string{"templates/reports/low-stock.html"}
+	if isHTMX(r) {
+		renderPartial(w, pageFiles, "low-stock-report", data)
+		return
+	}
+	render(w, pageFiles, "layout", data)
+}
+
+func pageReportNCRSummary(w http.ResponseWriter, r *http.Request) {
+	user := getCurrentUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	report := NCRSummaryReport{BySeverity: map[string]int{}, ByDefectType: map[string]int{}}
+
+	// Open NCRs
+	rows, err := db.Query(`SELECT COALESCE(severity,'unknown'), COALESCE(defect_type,'unknown') FROM ncrs WHERE status NOT IN ('closed','resolved')`)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var sev, dt string
+		rows.Scan(&sev, &dt)
+		report.BySeverity[sev]++
+		report.ByDefectType[dt]++
+		report.TotalOpen++
+	}
+
+	// Avg resolve time from resolved NCRs
+	rrows, err := db.Query(`SELECT created_at, resolved_at FROM ncrs WHERE resolved_at IS NOT NULL`)
+	if err == nil {
+		defer rrows.Close()
+		var totalHours float64
+		count := 0
+		for rrows.Next() {
+			var ca string
+			var ra *string
+			rrows.Scan(&ca, &ra)
+			if ra != nil {
+				if ct, e1 := time.Parse("2006-01-02 15:04:05", ca); e1 == nil {
+					if rt, e2 := time.Parse("2006-01-02 15:04:05", *ra); e2 == nil {
+						totalHours += rt.Sub(ct).Hours()
+						count++
+					}
+				}
+			}
+		}
+		if count > 0 {
+			report.AvgResolveDays = math.Round(totalHours/float64(count)/24*100) / 100
+		}
+	}
+
+	data := PageData{
+		Title:      "NCR Summary Report",
+		ActiveNav:  "reports",
+		User:       user,
+		ReportData: report,
+	}
+
+	pageFiles := []string{"templates/reports/ncr-summary.html"}
+	if isHTMX(r) {
+		renderPartial(w, pageFiles, "ncr-summary-report", data)
 		return
 	}
 	render(w, pageFiles, "layout", data)
