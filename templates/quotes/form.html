@@ -1,48 +1,27 @@
-{{define "quote-form"}}
-<div class="modal-backdrop">
-  <div class="modal">
-    <div class="modal-header">
-      <h3>{{if .Quote.ID}}Edit Quote: {{.Quote.ID}}{{else}}New Quote{{end}}</h3>
-      <button class="modal-close">&times;</button>
-    </div>
-    <div class="modal-body">
-      <form hx-post="{{if .Quote.ID}}/quotes/{{.Quote.ID}}{{else}}/quotes{{end}}" hx-target="#modal" hx-swap="innerHTML">
-        <div class="space-y-4">
-          <div>
-            <label class="label">Customer</label>
-            <input type="text" name="customer" class="input w-full" value="{{.Quote.Customer}}" required>
-          </div>
-          <div>
-            <label class="label">Valid Until</label>
-            <input type="date" name="valid_until" class="input w-full" value="{{.Quote.ValidUntil}}">
-          </div>
-          <div>
-            <label class="label">Status</label>
-            <select name="status" class="input w-full">
-              <option value="draft" {{if eq .Quote.Status "draft"}}selected{{end}}>Draft</option>
-              <option value="sent" {{if eq .Quote.Status "sent"}}selected{{end}}>Sent</option>
-              <option value="accepted" {{if eq .Quote.Status "accepted"}}selected{{end}}>Accepted</option>
-              <option value="rejected" {{if eq .Quote.Status "rejected"}}selected{{end}}>Rejected</option>
-            </select>
-          </div>
-          <div>
-            <label class="label">Notes</label>
-            <textarea name="notes" class="input w-full" rows="3">{{.Quote.Notes}}</textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-backdrop').remove()">Cancel</button>
-          <button type="submit" class="btn btn-primary">{{if .Quote.ID}}Update{{else}}Create{{end}} Quote</button>
-        </div>
-      </form>
-    </div>
-  </div>
+{{define "content"}}
+<div class="mb-4">
+  <a href="/quotes" class="text-sm text-blue-600 hover:underline">← Back to Quotes</a>
 </div>
 
-<script>
-document.querySelector('.modal-close').onclick = () => document.querySelector('.modal-backdrop').remove();
-document.querySelector('.modal-backdrop').onclick = (e) => {
-  if (e.target === e.currentTarget) document.querySelector('.modal-backdrop').remove();
-};
-</script>
+<div class="card" style="max-width:600px">
+  <h2 class="text-lg font-semibold mb-4">New Quote</h2>
+  <form hx-post="/quotes" hx-target="#content">
+    <div class="form-group">
+      <label class="label">Customer</label>
+      <input type="text" name="customer" class="input w-full" required>
+    </div>
+    <div class="form-group">
+      <label class="label">Valid Until</label>
+      <input type="date" name="valid_until" class="input w-full">
+    </div>
+    <div class="form-group">
+      <label class="label">Notes</label>
+      <textarea name="notes" class="input w-full" rows="3"></textarea>
+    </div>
+    <div class="flex gap-2 justify-end">
+      <a href="/quotes" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Create Quote</button>
+    </div>
+  </form>
+</div>
 {{end}}

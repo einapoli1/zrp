@@ -1,97 +1,73 @@
 {{define "content"}}
 <div class="mb-4">
-  <a href="/quotes" class="text-blue-600 hover:underline text-sm">&larr; Back to Quotes</a>
+  <a href="/quotes" class="text-sm text-blue-600 hover:underline">← Back to Quotes</a>
 </div>
 
-<div class="card mb-6">
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="text-xl font-bold font-mono">{{.Quote.ID}}</h2>
-    <div class="flex gap-2">
-      {{if eq .Quote.Status "draft"}}
-        <span class="badge badge-secondary">Draft</span>
-      {{else if eq .Quote.Status "sent"}}
-        <span class="badge badge-info">Sent</span>
-      {{else if eq .Quote.Status "accepted"}}
-        <span class="badge badge-success">Accepted</span>
-      {{else if eq .Quote.Status "rejected"}}
-        <span class="badge badge-error">Rejected</span>
+<div class="card mb-4">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-lg font-semibold">{{.Quote.ID}}</h2>
+    <span class="badge badge-{{.Quote.Status}}">{{.Quote.Status}}</span>
+  </div>
+
+  <div class="detail-grid mb-4">
+    <div>
+      <div class="detail-label">Customer</div>
+      <div class="detail-value">{{.Quote.Customer}}</div>
+    </div>
+    <div>
+      <div class="detail-label">Valid Until</div>
+      <div class="detail-value">{{if .Quote.ValidUntil}}{{formatDate .Quote.ValidUntil}}{{else}}—{{end}}</div>
+    </div>
+    <div>
+      <div class="detail-label">Created</div>
+      <div class="detail-value">{{formatDate .Quote.CreatedAt}}</div>
+    </div>
+    <div>
+      <div class="detail-label">Accepted</div>
+      <div class="detail-value">{{if .Quote.AcceptedAt}}{{formatDate (deref .Quote.AcceptedAt)}}{{else}}—{{end}}</div>
+    </div>
+  </div>
+
+  {{if .Quote.Notes}}<p class="text-sm text-gray-600 mb-4">{{.Quote.Notes}}</p>{{end}}
+
+  {{if .QuoteCost}}
+  <div class="card bg-blue-50 dark:bg-blue-900/20 p-3 mb-4">
+    <h4 class="text-sm font-semibold mb-2">Margin Analysis</h4>
+    <div class="flex gap-6">
+      <div>
+        <span class="text-xs text-gray-500">Quote Total</span>
+        <div class="font-bold">${{printf "%.2f" .QuoteCost.QuoteTotal}}</div>
+      </div>
+    </div>
+  </div>
+  {{end}}
+</div>
+
+<div class="card">
+  <h3 class="text-base font-semibold mb-3">Line Items</h3>
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-gray-200 dark:border-gray-700 text-left">
+        <th class="px-3 py-2 font-medium text-gray-500">IPN</th>
+        <th class="px-3 py-2 font-medium text-gray-500">Description</th>
+        <th class="px-3 py-2 font-medium text-gray-500 text-right">Qty</th>
+        <th class="px-3 py-2 font-medium text-gray-500 text-right">Unit Price</th>
+        <th class="px-3 py-2 font-medium text-gray-500 text-right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Quote.Lines}}
+      <tr class="border-b border-gray-100 dark:border-gray-700">
+        <td class="px-3 py-2 font-mono text-blue-600"><a href="/parts/{{.IPN}}">{{.IPN}}</a></td>
+        <td class="px-3 py-2">{{.Description}}</td>
+        <td class="px-3 py-2 text-right">{{.Qty}}</td>
+        <td class="px-3 py-2 text-right">${{printf "%.2f" .UnitPrice}}</td>
+        <td class="px-3 py-2 text-right font-medium">${{printf "%.2f" .UnitPrice}}</td>
+      </tr>
       {{else}}
-        <span class="badge badge-secondary">{{.Quote.Status}}</span>
+      <tr><td colspan="5" class="px-3 py-4 text-center text-gray-400">No line items</td></tr>
       {{end}}
-    </div>
-  </div>
-
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-    <div>
-      <label class="label">Customer</label>
-      <p class="text-sm text-gray-800 dark:text-gray-200">{{.Quote.Customer}}</p>
-    </div>
-    <div>
-      <label class="label">Valid Until</label>
-      <p class="text-sm text-gray-800 dark:text-gray-200">{{if .Quote.ValidUntil}}{{.Quote.ValidUntil}}{{else}}&mdash;{{end}}</p>
-    </div>
-    <div>
-      <label class="label">Created</label>
-      <p class="text-sm text-gray-800 dark:text-gray-200">{{if .Quote.CreatedAt}}{{slice .Quote.CreatedAt 0 10}}{{end}}</p>
-    </div>
-    <div>
-      <label class="label">Status</label>
-      <p class="text-sm text-gray-800 dark:text-gray-200">{{.Quote.Status}}</p>
-    </div>
-  </div>
-
-  {{if .Quote.Notes}}
-  <div class="mb-4">
-    <label class="label">Notes</label>
-    <p class="text-sm text-gray-800 dark:text-gray-200">{{.Quote.Notes}}</p>
-  </div>
-  {{end}}
-
-  <div class="flex gap-2">
-    <button class="btn btn-primary" hx-get="/quotes/{{.Quote.ID}}/edit" hx-target="#modal" hx-swap="innerHTML">Edit Quote</button>
-    <button class="btn btn-secondary" hx-get="/quotes/{{.Quote.ID}}/margin" hx-target="#margin-panel" hx-swap="innerHTML">📊 Margin Analysis</button>
-    <a href="/api/v1/quotes/{{.Quote.ID}}/pdf" target="_blank" class="btn btn-secondary">🖨️ Print Quote</a>
-  </div>
+    </tbody>
+  </table>
 </div>
-
-<div class="card mb-6">
-  <h3 class="text-lg font-semibold mb-4">Line Items</h3>
-  {{if .Quote.Lines}}
-  <div class="overflow-x-auto">
-    <table class="w-full text-sm">
-      <thead>
-        <tr class="border-b border-gray-200 dark:border-gray-700 text-left">
-          <th class="px-3 py-2 font-medium text-gray-500">IPN</th>
-          <th class="px-3 py-2 font-medium text-gray-500">Description</th>
-          <th class="px-3 py-2 font-medium text-gray-500 text-center">Qty</th>
-          <th class="px-3 py-2 font-medium text-gray-500 text-right">Unit Price</th>
-          <th class="px-3 py-2 font-medium text-gray-500 text-right">Total</th>
-        </tr>
-      </thead>
-      <tbody>
-        {{$total := 0.0}}
-        {{range .Quote.Lines}}
-        {{$lineTotal := mul .Qty .UnitPrice}}
-        {{$total = add $total $lineTotal}}
-        <tr class="border-b border-gray-100 dark:border-gray-700">
-          <td class="px-3 py-2 font-mono">{{.IPN}}</td>
-          <td class="px-3 py-2">{{if .Description}}{{.Description}}{{else}}&mdash;{{end}}</td>
-          <td class="px-3 py-2 text-center">{{.Qty}}</td>
-          <td class="px-3 py-2 text-right">${{printf "%.2f" .UnitPrice}}</td>
-          <td class="px-3 py-2 text-right">${{printf "%.2f" $lineTotal}}</td>
-        </tr>
-        {{end}}
-        <tr class="border-t-2 border-gray-200 dark:border-gray-600 font-bold">
-          <td colspan="4" class="px-3 py-2 text-right">Total:</td>
-          <td class="px-3 py-2 text-right">${{printf "%.2f" $total}}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
-  {{else}}
-  {{template "empty-state" (dict "Message" "No line items" "ActionURL" "" "ActionLabel" "")}}
-  {{end}}
-</div>
-
-<div id="margin-panel" class="hidden"></div>
 {{end}}

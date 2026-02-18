@@ -105,6 +105,200 @@ func main() {
 		pageECOsList(w, r)
 	})
 
+	// Inventory
+	mux.HandleFunc("/inventory", pageInventoryList)
+	mux.HandleFunc("/inventory/receive-form", pageInventoryReceiveForm)
+	mux.HandleFunc("/inventory/receive", pageInventoryReceive)
+	mux.HandleFunc("/inventory/", func(w http.ResponseWriter, r *http.Request) {
+		ipn := strings.TrimPrefix(r.URL.Path, "/inventory/")
+		if ipn == "" { pageInventoryList(w, r); return }
+		pageInventoryDetail(w, r, ipn)
+	})
+
+	// Procurement / Purchase Orders
+	mux.HandleFunc("/procurement", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageProcurementCreate(w, r); return }
+		pageProcurementList(w, r)
+	})
+	mux.HandleFunc("/procurement/new", pageProcurementNew)
+	mux.HandleFunc("/procurement/generate-from-wo", pageProcurementGenFromWO)
+	mux.HandleFunc("/procurement/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/procurement/")
+		if id == "" { pageProcurementList(w, r); return }
+		pageProcurementDetail(w, r, id)
+	})
+
+	// Vendors
+	mux.HandleFunc("/vendors", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageVendorCreate(w, r); return }
+		pageVendorsList(w, r)
+	})
+	mux.HandleFunc("/vendors/new", pageVendorNew)
+	mux.HandleFunc("/vendors/", func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/vendors/")
+		parts := strings.Split(path, "/")
+		if r.Method == "DELETE" && len(parts) >= 1 { pageVendorDelete(w, r, parts[0]); return }
+		if len(parts) == 2 && parts[1] == "edit" { pageVendorEdit(w, r, parts[0]); return }
+		if len(parts) == 2 && parts[1] == "update" && r.Method == "POST" { pageVendorUpdate(w, r, parts[0]); return }
+		if len(parts) >= 1 && parts[0] != "" { pageVendorDetail(w, r, parts[0]); return }
+		pageVendorsList(w, r)
+	})
+
+	// Work Orders
+	mux.HandleFunc("/workorders", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageWorkOrderCreate(w, r); return }
+		pageWorkOrdersList(w, r)
+	})
+	mux.HandleFunc("/workorders/new", pageWorkOrderNew)
+	mux.HandleFunc("/workorders/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/workorders/")
+		if id == "" { pageWorkOrdersList(w, r); return }
+		pageWorkOrderDetail(w, r, id)
+	})
+
+	// NCRs
+	mux.HandleFunc("/ncr", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageNCRCreate(w, r); return }
+		pageNCRsList(w, r)
+	})
+	mux.HandleFunc("/ncr/new", pageNCRNew)
+	mux.HandleFunc("/ncr/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/ncr/")
+		if id == "" { pageNCRsList(w, r); return }
+		pageNCRDetail(w, r, id)
+	})
+
+	// Test Records
+	mux.HandleFunc("/testing", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageTestingCreate(w, r); return }
+		pageTestingList(w, r)
+	})
+	mux.HandleFunc("/testing/new", pageTestingNew)
+
+	// RMAs
+	mux.HandleFunc("/rma", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageRMACreate(w, r); return }
+		pageRMAsList(w, r)
+	})
+	mux.HandleFunc("/rma/new", pageRMANew)
+	mux.HandleFunc("/rma/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/rma/")
+		if id == "" { pageRMAsList(w, r); return }
+		pageRMADetail(w, r, id)
+	})
+
+	// Devices
+	mux.HandleFunc("/devices", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageDeviceCreate(w, r); return }
+		pageDevicesList(w, r)
+	})
+	mux.HandleFunc("/devices/new", pageDeviceNew)
+	mux.HandleFunc("/devices/", func(w http.ResponseWriter, r *http.Request) {
+		sn := strings.TrimPrefix(r.URL.Path, "/devices/")
+		if sn == "" { pageDevicesList(w, r); return }
+		pageDeviceDetail(w, r, sn)
+	})
+
+	// Firmware Campaigns
+	mux.HandleFunc("/firmware", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageFirmwareCreate(w, r); return }
+		pageFirmwareList(w, r)
+	})
+	mux.HandleFunc("/firmware/new", pageFirmwareNew)
+	mux.HandleFunc("/firmware/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/firmware/")
+		if id == "" { pageFirmwareList(w, r); return }
+		pageFirmwareDetail(w, r, id)
+	})
+
+	// Quotes
+	mux.HandleFunc("/quotes", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageQuoteCreate(w, r); return }
+		pageQuotesList(w, r)
+	})
+	mux.HandleFunc("/quotes/new", pageQuoteNew)
+	mux.HandleFunc("/quotes/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/quotes/")
+		if id == "" { pageQuotesList(w, r); return }
+		pageQuoteDetail(w, r, id)
+	})
+
+	// Calendar
+	mux.HandleFunc("/calendar", pageCalendar)
+
+	// Reports
+	mux.HandleFunc("/reports", pageReports)
+
+	// Audit Log
+	mux.HandleFunc("/audit", pageAuditList)
+
+	// Users
+	mux.HandleFunc("/users", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageUserCreate(w, r); return }
+		pageUsersList(w, r)
+	})
+	mux.HandleFunc("/users/new", pageUserNew)
+
+	// API Keys
+	mux.HandleFunc("/apikeys", pageAPIKeysList)
+	mux.HandleFunc("/apikeys/generate", pageAPIKeyGenerate)
+
+	// Email Settings
+	mux.HandleFunc("/email", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageEmailSettingsUpdate(w, r); return }
+		pageEmailSettings(w, r)
+	})
+
+	// Documents
+	mux.HandleFunc("/docs", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" { pageDocCreate(w, r); return }
+		pageDocsList(w, r)
+	})
+	mux.HandleFunc("/docs/new", pageDocNew)
+	mux.HandleFunc("/docs/", func(w http.ResponseWriter, r *http.Request) {
+		id := strings.TrimPrefix(r.URL.Path, "/docs/")
+		if id == "" { pageDocsList(w, r); return }
+		pageDocDetail(w, r, id)
+	})
+
+	// Inventory
+	mux.HandleFunc("/inventory", func(w http.ResponseWriter, r *http.Request) {
+		handleListInventory(w, r)
+	})
+
+	// Procurement
+	mux.HandleFunc("/procurement", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			handleCreatePO(w, r)
+			return
+		}
+		handleListPOs(w, r)
+	})
+	mux.HandleFunc("/procurement/new", handleProcurementNewForm)
+	mux.HandleFunc("/procurement/generate-from-wo", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			handleGeneratePOFromWO(w, r)
+			return
+		}
+		handleProcurementGenerateWOForm(w, r)
+	})
+	mux.HandleFunc("/procurement/", func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/procurement/")
+		parts := strings.Split(path, "/")
+		if len(parts) == 2 && parts[1] == "receive" && r.Method == "POST" {
+			handleReceivePO(w, r, parts[0])
+			return
+		}
+		if len(parts) >= 1 && parts[0] != "" {
+			handleGetPO(w, r, parts[0])
+			return
+		}
+		handleListPOs(w, r)
+	})
+
+	// Global search (for header bar)
+	mux.HandleFunc("/search", pageSearch)
+
 	// SPA fallback
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {

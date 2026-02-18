@@ -40,7 +40,10 @@ type PageData struct {
 	Total        int
 	Pagination   PaginationData
 	Activities   []AuditEntry
-	// NCR module
+	// Quotes module
+	Quotes       []Quote
+	Quote        Quote
+	// NCR module  
 	NCRs         []NCR
 	NCR          NCR
 }
