@@ -6,16 +6,25 @@ import (
 )
 
 func handleListDocs(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query("SELECT id,title,COALESCE(category,''),COALESCE(ipn,''),revision,status,COALESCE(content,''),COALESCE(file_path,''),created_by,created_at,updated_at FROM documents ORDER BY created_at DESC")
+	rows, err := db.Query(`SELECT d.id, d.title, COALESCE(d.category,''), COALESCE(d.ipn,''), d.revision, d.status,
+		COALESCE(d.content,''), COALESCE(d.file_path,''), d.created_by, d.created_at, d.updated_at,
+		COALESCE(a.cnt, 0)
+		FROM documents d
+		LEFT JOIN (SELECT record_id, COUNT(*) as cnt FROM attachments WHERE module='document' GROUP BY record_id) a ON a.record_id = d.id
+		ORDER BY d.created_at DESC`)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	defer rows.Close()
-	var items []Document
+	type DocWithCount struct {
+		Document
+		AttachmentCount int `json:"attachment_count"`
+	}
+	var items []DocWithCount
 	for rows.Next() {
-		var d Document
-		rows.Scan(&d.ID, &d.Title, &d.Category, &d.IPN, &d.Revision, &d.Status, &d.Content, &d.FilePath, &d.CreatedBy, &d.CreatedAt, &d.UpdatedAt)
+		var d DocWithCount
+		rows.Scan(&d.ID, &d.Title, &d.Category, &d.IPN, &d.Revision, &d.Status, &d.Content, &d.FilePath, &d.CreatedBy, &d.CreatedAt, &d.UpdatedAt, &d.AttachmentCount)
 		items = append(items, d)
 	}
-	if items == nil { items = []Document{} }
+	if items == nil { items = []DocWithCount{} }
 	jsonResp(w, items)
 }
 
@@ -24,7 +33,25 @@ func handleGetDoc(w http.ResponseWriter, r *http.Request, id string) {
 	err := db.QueryRow("SELECT id,title,COALESCE(category,''),COALESCE(ipn,''),revision,status,COALESCE(content,''),COALESCE(file_path,''),created_by,created_at,updated_at FROM documents WHERE id=?", id).
 		Scan(&d.ID, &d.Title, &d.Category, &d.IPN, &d.Revision, &d.Status, &d.Content, &d.FilePath, &d.CreatedBy, &d.CreatedAt, &d.UpdatedAt)
 	if err != nil { jsonErr(w, "not found", 404); return }
-	jsonResp(w, d)
+
+	// Fetch attachments
+	attRows, err := db.Query("SELECT id, module, record_id, filename, original_name, size_bytes, mime_type, uploaded_by, created_at FROM attachments WHERE module='document' AND record_id=? ORDER BY created_at DESC", id)
+	var atts []Attachment
+	if err == nil {
+		defer attRows.Close()
+		for attRows.Next() {
+			var a Attachment
+			attRows.Scan(&a.ID, &a.Module, &a.RecordID, &a.Filename, &a.OriginalName, &a.SizeBytes, &a.MimeType, &a.UploadedBy, &a.CreatedAt)
+			atts = append(atts, a)
+		}
+	}
+	if atts == nil { atts = []Attachment{} }
+
+	type DocWithAttachments struct {
+		Document
+		Attachments []Attachment `json:"attachments"`
+	}
+	jsonResp(w, DocWithAttachments{Document: d, Attachments: atts})
 }
 
 func handleCreateDoc(w http.ResponseWriter, r *http.Request) {

@@ -133,6 +133,7 @@
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
         Dashboard
       </a>
+      <a class="sidebar-link" data-route="calendar" onclick="navigate('calendar')">📅 Calendar</a>
       <div class="sidebar-group">Engineering</div>
       <a class="sidebar-link" data-route="parts" onclick="navigate('parts')">📦 Parts (PLM)</a>
       <a class="sidebar-link" data-route="ecos" onclick="navigate('ecos')">🔄 ECOs</a>
@@ -212,6 +213,55 @@ async function api(method, path, body) {
 }
 
 // Toast
+// Bulk operations helper
+function setupBulkOps(container, endpoint, actions, getIdFn) {
+  const selected = new Set();
+  function updateBar() {
+    let bar = container.querySelector('.bulk-bar');
+    if (selected.size === 0) { if (bar) bar.remove(); return; }
+    if (!bar) {
+      bar = document.createElement('div');
+      bar.className = 'bulk-bar fixed bottom-4 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-xl shadow-2xl flex items-center gap-3 z-50';
+      container.appendChild(bar);
+    }
+    bar.innerHTML = `<span class="text-sm font-medium">${selected.size} selected</span>` +
+      actions.map(a => `<button class="btn text-sm ${a.class||'bg-blue-600 hover:bg-blue-700 text-white'}" data-action="${a.action}">${a.label}</button>`).join('') +
+      `<button class="btn btn-secondary text-sm" data-action="clear">Clear</button>`;
+    bar.querySelectorAll('[data-action]').forEach(btn => {
+      btn.onclick = async () => {
+        const action = btn.dataset.action;
+        if (action === 'clear') { selected.clear(); container.querySelectorAll('.bulk-cb').forEach(cb => cb.checked = false); container.querySelector('.bulk-cb-all')&&(container.querySelector('.bulk-cb-all').checked=false); updateBar(); return; }
+        if (!confirm(`Apply "${action}" to ${selected.size} items?`)) return;
+        try {
+          const res = await api('POST', endpoint, {ids: [...selected], action});
+          const d = res.data || {};
+          toast(`${d.success||0} succeeded, ${d.failed||0} failed`);
+          selected.clear();
+          if (bar) bar.remove();
+          // Trigger reload via custom event
+          container.dispatchEvent(new Event('bulk-reload'));
+        } catch(e) { toast(e.message, 'error'); }
+      };
+    });
+  }
+  return {
+    selected,
+    checkbox: (id) => `<input type="checkbox" class="bulk-cb cursor-pointer" data-bulk-id="${id}" onclick="event.stopPropagation()" onchange="this.closest('[data-bulk-container]').__bulkToggle(this)">`,
+    headerCheckbox: () => `<input type="checkbox" class="bulk-cb-all cursor-pointer" onchange="this.closest('[data-bulk-container]').__bulkToggleAll(this)">`,
+    init: () => {
+      container.setAttribute('data-bulk-container', '1');
+      container.__bulkToggle = (cb) => {
+        if (cb.checked) selected.add(cb.dataset.bulkId); else selected.delete(cb.dataset.bulkId);
+        updateBar();
+      };
+      container.__bulkToggleAll = (cb) => {
+        container.querySelectorAll('.bulk-cb').forEach(c => { c.checked = cb.checked; if (cb.checked) selected.add(c.dataset.bulkId); else selected.delete(c.dataset.bulkId); });
+        updateBar();
+      };
+    }
+  };
+}
+
 function toast(msg, type = 'success') {
   const el = document.createElement('div');
   el.className = `toast ${type === 'error' ? 'bg-red-600' : 'bg-green-600'}`;
@@ -261,7 +311,7 @@ function getModalValues(overlay) {
 // Routing
 const modules = {};
 const moduleNames = {
-  dashboard: 'Dashboard', parts: 'Parts (PLM)', ecos: 'ECOs', docs: 'Documents',
+  dashboard: 'Dashboard', calendar: 'Calendar', parts: 'Parts (PLM)', ecos: 'ECOs', docs: 'Documents',
   inventory: 'Inventory', procurement: 'Purchase Orders', vendors: 'Vendors',
   workorders: 'Work Orders', testing: 'Test Records', ncr: 'NCRs',
   devices: 'Devices', firmware: 'Firmware', rma: 'RMAs', quotes: 'Quotes', users: 'Users', audit: 'Audit Log', apikeys: 'API Keys'

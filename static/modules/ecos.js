@@ -1,5 +1,11 @@
 window.module_ecos = {
   render: async (container) => {
+    const bulk = setupBulkOps(container, 'ecos/bulk', [
+      {action:'approve', label:'✓ Approve', class:'bg-green-600 hover:bg-green-700 text-white'},
+      {action:'reject', label:'✗ Reject', class:'bg-yellow-600 hover:bg-yellow-700 text-white'},
+      {action:'implement', label:'🚀 Implement', class:'bg-blue-600 hover:bg-blue-700 text-white'},
+      {action:'delete', label:'🗑 Delete', class:'bg-red-600 hover:bg-red-700 text-white'},
+    ]);
     async function load() {
       const res = await api('GET', 'ecos');
       const items = res.data || [];
@@ -9,11 +15,13 @@ window.module_ecos = {
           <button class="btn btn-primary" onclick="window._ecoCreate()">+ New ECO</button>
         </div>
         <table class="w-full text-sm"><thead><tr class="border-b text-left text-gray-500">
+          <th class="pb-2 w-8">${bulk.headerCheckbox()}</th>
           <th class="pb-2">ID</th><th class="pb-2">Title</th><th class="pb-2">Status</th><th class="pb-2">Priority</th><th class="pb-2">Created</th>
         </tr></thead><tbody>
           ${items.map(e => `<tr class="table-row border-b border-gray-100" onclick="window._ecoEdit('${e.id}')">
+            <td class="py-2">${bulk.checkbox(e.id)}</td>
             <td class="py-2 font-mono text-blue-600">${e.id}</td>
-            <td class="py-2">${e.title}</td>
+            <td class="py-2">${e.title}${e.ncr_id ? ' <span class="badge bg-purple-100 text-purple-800">From '+e.ncr_id+'</span>' : ''}</td>
             <td class="py-2">${badge(e.status)}</td>
             <td class="py-2">${badge(e.priority)}</td>
             <td class="py-2 text-gray-500">${e.created_at?.substring(0,10)}</td>
@@ -21,7 +29,9 @@ window.module_ecos = {
         </tbody></table>
         ${items.length===0?'<p class="text-center text-gray-400 py-4">No ECOs</p>':''}
       </div>`;
+      bulk.init();
     }
+    container.addEventListener('bulk-reload', load);
     const formHTML = (e={}) => `
       <div class="space-y-3">
         <div><label class="label">Title</label><input class="input" data-field="title" value="${e.title||''}"></div>
@@ -45,7 +55,8 @@ window.module_ecos = {
     window._ecoEdit = async (id) => {
       const res = await api('GET', 'ecos/' + id);
       const e = res.data;
-      const overlay = showModal('Edit ECO: ' + id, formHTML(e) + `
+      const ncrBadge = e.ncr_id ? `<div class="mb-3"><span class="badge bg-purple-100 text-purple-800 cursor-pointer" onclick="navigate('ncr')">From ${e.ncr_id}</span></div>` : '';
+      const overlay = showModal('Edit ECO: ' + id, ncrBadge + formHTML(e) + `
         <div class="flex gap-2 mt-4">
           ${e.status==='review'||e.status==='draft'?`<button class="btn btn-success" id="eco-approve">✓ Approve</button>`:''}
           ${e.status==='approved'?`<button class="btn btn-primary" id="eco-implement">🚀 Implement</button>`:''}

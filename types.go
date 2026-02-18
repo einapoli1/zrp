@@ -25,6 +25,7 @@ type ECO struct {
 	UpdatedAt    string  `json:"updated_at"`
 	ApprovedAt   *string `json:"approved_at"`
 	ApprovedBy   *string `json:"approved_by"`
+	NcrID        string  `json:"ncr_id,omitempty"`
 }
 
 type Document struct {

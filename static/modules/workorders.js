@@ -1,5 +1,10 @@
 window.module_workorders = {
   render: async (container) => {
+    const bulk = setupBulkOps(container, 'workorders/bulk', [
+      {action:'complete', label:'✓ Complete', class:'bg-green-600 hover:bg-green-700 text-white'},
+      {action:'cancel', label:'✗ Cancel', class:'bg-yellow-600 hover:bg-yellow-700 text-white'},
+      {action:'delete', label:'🗑 Delete', class:'bg-red-600 hover:bg-red-700 text-white'},
+    ]);
     async function load() {
       const res = await api('GET', 'workorders');
       const items = res.data || [];
@@ -9,9 +14,11 @@ window.module_workorders = {
           <button class="btn btn-primary" onclick="window._woCreate()">+ New Work Order</button>
         </div>
         <table class="w-full text-sm"><thead><tr class="border-b text-left text-gray-500">
+          <th class="pb-2 w-8">${bulk.headerCheckbox()}</th>
           <th class="pb-2">WO #</th><th class="pb-2">Assembly</th><th class="pb-2">Qty</th><th class="pb-2">Status</th><th class="pb-2">Priority</th><th class="pb-2">Created</th>
         </tr></thead><tbody>
           ${items.map(w => `<tr class="table-row border-b border-gray-100" onclick="window._woEdit('${w.id}')">
+            <td class="py-2">${bulk.checkbox(w.id)}</td>
             <td class="py-2 font-mono text-blue-600">${w.id}</td><td class="py-2">${w.assembly_ipn}</td>
             <td class="py-2">${w.qty}</td><td class="py-2">${badge(w.status)}</td>
             <td class="py-2">${badge(w.priority)}</td><td class="py-2 text-gray-500">${w.created_at?.substring(0,10)}</td>
@@ -19,7 +26,9 @@ window.module_workorders = {
         </tbody></table>
         ${items.length===0?'<p class="text-center text-gray-400 py-4">No work orders</p>':''}
       </div>`;
+      bulk.init();
     }
+    container.addEventListener('bulk-reload', load);
     const form = (w={}) => `<div class="space-y-3">
       <div><label class="label">Assembly IPN</label><input class="input" data-field="assembly_ipn" value="${w.assembly_ipn||''}"></div>
       <div class="grid grid-cols-3 gap-3">
@@ -54,10 +63,8 @@ window.module_workorders = {
           <th class="pb-1 text-left">IPN</th><th class="pb-1 text-left">Description</th><th class="pb-1 text-right">Required</th><th class="pb-1 text-right">On Hand</th><th class="pb-1 text-right">Shortage</th><th class="pb-1 text-center">Status</th>
         </tr></thead><tbody>
           ${lines.map(l=>`<tr class="border-b border-gray-100 ${rowColor(l.status)}">
-            <td class="py-1 font-mono">${l.ipn}</td>
-            <td class="py-1 text-gray-600">${l.description||''}</td>
-            <td class="py-1 text-right">${l.qty_required}</td>
-            <td class="py-1 text-right">${l.qty_on_hand}</td>
+            <td class="py-1 font-mono">${l.ipn}</td><td class="py-1 text-gray-600">${l.description||''}</td>
+            <td class="py-1 text-right">${l.qty_required}</td><td class="py-1 text-right">${l.qty_on_hand}</td>
             <td class="py-1 text-right font-medium ${l.shortage>0?'text-red-600':''}">${l.shortage}</td>
             <td class="py-1 text-center">${statusIcon(l.status)} ${l.status}</td>
           </tr>`).join('')}

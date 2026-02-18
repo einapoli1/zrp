@@ -127,7 +127,13 @@ func main() {
 		case parts[0] == "categories" && len(parts) == 4 && parts[2] == "columns" && r.Method == "DELETE":
 			handleDeleteColumn(w, r, parts[1], parts[3])
 
+		// Calendar
+		case parts[0] == "calendar" && len(parts) == 1 && r.Method == "GET":
+			handleCalendar(w, r)
+
 		// ECOs
+		case parts[0] == "ecos" && len(parts) == 2 && parts[1] == "bulk" && r.Method == "POST":
+			handleBulkECOs(w, r)
 		case parts[0] == "ecos" && len(parts) == 1 && r.Method == "GET":
 			handleListECOs(w, r)
 		case parts[0] == "ecos" && len(parts) == 1 && r.Method == "POST":
@@ -166,6 +172,8 @@ func main() {
 			handleDeleteVendor(w, r, parts[1])
 
 		// Inventory
+		case parts[0] == "inventory" && len(parts) == 2 && parts[1] == "bulk" && r.Method == "POST":
+			handleBulkInventory(w, r)
 		case parts[0] == "inventory" && len(parts) == 1 && r.Method == "GET":
 			handleListInventory(w, r)
 		case parts[0] == "inventory" && len(parts) == 2 && parts[1] == "transact" && r.Method == "POST":
@@ -190,6 +198,8 @@ func main() {
 			handleReceivePO(w, r, parts[1])
 
 		// Work Orders
+		case parts[0] == "workorders" && len(parts) == 2 && parts[1] == "bulk" && r.Method == "POST":
+			handleBulkWorkOrders(w, r)
 		case parts[0] == "workorders" && len(parts) == 1 && r.Method == "GET":
 			handleListWorkOrders(w, r)
 		case parts[0] == "workorders" && len(parts) == 1 && r.Method == "POST":
@@ -212,6 +222,8 @@ func main() {
 			handleGetTests(w, r, parts[1])
 
 		// NCRs
+		case parts[0] == "ncrs" && len(parts) == 2 && parts[1] == "bulk" && r.Method == "POST":
+			handleBulkNCRs(w, r)
 		case parts[0] == "ncrs" && len(parts) == 1 && r.Method == "GET":
 			handleListNCRs(w, r)
 		case parts[0] == "ncrs" && len(parts) == 1 && r.Method == "POST":
@@ -222,6 +234,8 @@ func main() {
 			handleUpdateNCR(w, r, parts[1])
 
 		// Devices
+		case parts[0] == "devices" && len(parts) == 2 && parts[1] == "bulk" && r.Method == "POST":
+			handleBulkDevices(w, r)
 		case parts[0] == "devices" && len(parts) == 2 && parts[1] == "export" && r.Method == "GET":
 			handleExportDevices(w, r)
 		case parts[0] == "devices" && len(parts) == 2 && parts[1] == "import" && r.Method == "POST":
@@ -258,6 +272,8 @@ func main() {
 			handleMarkCampaignDevice(w, r, parts[1], parts[3])
 
 		// RMAs
+		case parts[0] == "rmas" && len(parts) == 2 && parts[1] == "bulk" && r.Method == "POST":
+			handleBulkRMAs(w, r)
 		case parts[0] == "rmas" && len(parts) == 1 && r.Method == "GET":
 			handleListRMAs(w, r)
 		case parts[0] == "rmas" && len(parts) == 1 && r.Method == "POST":

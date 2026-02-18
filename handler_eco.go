@@ -10,7 +10,7 @@ import (
 
 func handleListECOs(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
-	query := "SELECT id,title,description,status,priority,COALESCE(affected_ipns,''),created_by,created_at,updated_at,approved_at,approved_by FROM ecos"
+	query := "SELECT id,title,description,status,priority,COALESCE(affected_ipns,''),created_by,created_at,updated_at,approved_at,approved_by,COALESCE(ncr_id,'') FROM ecos"
 	var args []interface{}
 	if status != "" {
 		query += " WHERE status=?"
@@ -26,7 +26,7 @@ func handleListECOs(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var e ECO
 		var aa, ab sql.NullString
-		rows.Scan(&e.ID, &e.Title, &e.Description, &e.Status, &e.Priority, &e.AffectedIPNs, &e.CreatedBy, &e.CreatedAt, &e.UpdatedAt, &aa, &ab)
+		rows.Scan(&e.ID, &e.Title, &e.Description, &e.Status, &e.Priority, &e.AffectedIPNs, &e.CreatedBy, &e.CreatedAt, &e.UpdatedAt, &aa, &ab, &e.NcrID)
 		e.ApprovedAt = sp(aa); e.ApprovedBy = sp(ab)
 		items = append(items, e)
 	}
@@ -37,8 +37,8 @@ func handleListECOs(w http.ResponseWriter, r *http.Request) {
 func handleGetECO(w http.ResponseWriter, r *http.Request, id string) {
 	var e ECO
 	var aa, ab sql.NullString
-	err := db.QueryRow("SELECT id,title,description,status,priority,COALESCE(affected_ipns,''),created_by,created_at,updated_at,approved_at,approved_by FROM ecos WHERE id=?", id).
-		Scan(&e.ID, &e.Title, &e.Description, &e.Status, &e.Priority, &e.AffectedIPNs, &e.CreatedBy, &e.CreatedAt, &e.UpdatedAt, &aa, &ab)
+	err := db.QueryRow("SELECT id,title,description,status,priority,COALESCE(affected_ipns,''),created_by,created_at,updated_at,approved_at,approved_by,COALESCE(ncr_id,'') FROM ecos WHERE id=?", id).
+		Scan(&e.ID, &e.Title, &e.Description, &e.Status, &e.Priority, &e.AffectedIPNs, &e.CreatedBy, &e.CreatedAt, &e.UpdatedAt, &aa, &ab, &e.NcrID)
 	if err != nil { jsonErr(w, "not found", 404); return }
 	e.ApprovedAt = sp(aa); e.ApprovedBy = sp(ab)
 
@@ -76,6 +76,7 @@ func handleGetECO(w http.ResponseWriter, r *http.Request, id string) {
 		"affected_parts": affectedParts, "created_by": e.CreatedBy,
 		"created_at": e.CreatedAt, "updated_at": e.UpdatedAt,
 		"approved_at": e.ApprovedAt, "approved_by": e.ApprovedBy,
+		"ncr_id": e.NcrID,
 	}
 	jsonResp(w, resp)
 }

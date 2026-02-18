@@ -202,6 +202,7 @@ func runMigrations() error {
 		"ALTER TABLE inventory ADD COLUMN description TEXT DEFAULT ''",
 		"ALTER TABLE inventory ADD COLUMN mpn TEXT DEFAULT ''",
 		"ALTER TABLE users ADD COLUMN active INTEGER DEFAULT 1",
+		"ALTER TABLE ecos ADD COLUMN ncr_id TEXT DEFAULT ''",
 	}
 	for _, s := range alterStmts {
 		db.Exec(s) // ignore errors (column already exists)

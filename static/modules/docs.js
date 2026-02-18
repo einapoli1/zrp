@@ -9,11 +9,12 @@ window.module_docs = {
           <button class="btn btn-primary" onclick="window._docCreate()">+ New Document</button>
         </div>
         <table class="w-full text-sm"><thead><tr class="border-b text-left text-gray-500">
-          <th class="pb-2">ID</th><th class="pb-2">Title</th><th class="pb-2">Category</th><th class="pb-2">Rev</th><th class="pb-2">Status</th>
+          <th class="pb-2">ID</th><th class="pb-2">Title</th><th class="pb-2">Category</th><th class="pb-2">Rev</th><th class="pb-2">Status</th><th class="pb-2">📎</th>
         </tr></thead><tbody>
           ${items.map(d => `<tr class="table-row border-b border-gray-100" onclick="window._docEdit('${d.id}')">
             <td class="py-2 font-mono text-blue-600">${d.id}</td><td class="py-2">${d.title}</td>
             <td class="py-2">${d.category||''}</td><td class="py-2">${d.revision}</td><td class="py-2">${badge(d.status)}</td>
+            <td class="py-2 text-center">${d.attachment_count ? '📎 '+d.attachment_count : ''}</td>
           </tr>`).join('')}
         </tbody></table>
         ${items.length===0?'<p class="text-center text-gray-400 py-4">No documents</p>':''}
@@ -38,10 +39,12 @@ window.module_docs = {
     });
     window._docEdit = async (id) => {
       const d = (await api('GET', 'docs/' + id)).data;
-      const o = showModal('Edit: ' + id, form(d) + (d.status!=='approved'?`<button class="btn btn-success mt-3" id="doc-approve">✓ Approve</button>`:''), async (o) => {
+      const legacyFile = d.file_path ? `<div class="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">📄 Legacy file: <code>${d.file_path}</code></div>` : '';
+      const o = showModal('Edit: ' + id, form(d) + legacyFile + (d.status!=='approved'?`<button class="btn btn-success mt-3" id="doc-approve">✓ Approve</button>`:'') + attachmentsSection('document', id), async (o) => {
         try { await api('PUT', 'docs/' + id, getModalValues(o)); toast('Updated'); o.remove(); load(); } catch(e) { toast(e.message,'error'); }
       });
       o.querySelector('#doc-approve')?.addEventListener('click', async () => { await api('POST','docs/'+id+'/approve'); toast('Approved'); o.remove(); load(); });
+      initAttachments(o, 'document', id);
     };
     load();
   }
