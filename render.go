@@ -40,6 +40,9 @@ type PageData struct {
 	Total        int
 	Pagination   PaginationData
 	Activities   []AuditEntry
+	// NCR module
+	NCRs         []NCR
+	NCR          NCR
 }
 
 type PartCostInfo struct {
@@ -81,7 +84,7 @@ func initTemplates() {
 		},
 		"truncate": func(s string, n int) string {
 			if len(s) <= n { return s }
-			return s[:n] + "…"
+			return s[:n] + "\xe2\x80\xa6"
 		},
 		"safeHTML": func(s string) template.HTML { return template.HTML(s) },
 		"deref": func(s *string) string {
