@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  zrp:
+    image: zrp:0.2.0
+    container_name: zrp
+    ports:
+      - "9000:9000"
+    volumes:
+      - zrp-data:/app/data
+      - zrp-uploads:/app/uploads
+    environment:
+      - ZRP_COMPANY_NAME=ZRP Manufacturing
+      - ZRP_COMPANY_EMAIL=admin@zrp.local
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:9000/api/v1/health", "||", "exit", "1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.zrp.rule=Host(`zrp.local`)"
+      - "traefik.http.services.zrp.loadbalancer.server.port=9000"
+
+volumes:
+  zrp-data:
+    driver: local
+  zrp-uploads:
+    driver: local
+
+networks:
+  default:
+    external: false
