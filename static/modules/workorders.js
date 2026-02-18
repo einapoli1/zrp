@@ -46,10 +46,19 @@ window.module_workorders = {
       document.getElementById('wo-bom')?.addEventListener('click', async () => {
         const bom = (await api('GET','workorders/'+id+'/bom')).data;
         const lines = bom.bom||[];
-        showModal('BOM for '+bom.assembly_ipn+' (×'+bom.wo_qty+')', `<table class="w-full text-sm"><thead><tr class="border-b text-gray-500">
-          <th class="pb-1 text-left">IPN</th><th class="pb-1">Required</th><th class="pb-1">On Hand</th><th class="pb-1">Status</th>
+        const rowColor = (s) => s==='ok'?'bg-green-50':s==='low'?'bg-yellow-50':'bg-red-50';
+        const statusIcon = (s) => s==='ok'?'✅':s==='low'?'⚠️':'❌';
+        showModal('BOM for '+bom.assembly_ipn+' (×'+bom.qty+')', `<table class="w-full text-sm"><thead><tr class="border-b text-gray-500">
+          <th class="pb-1 text-left">IPN</th><th class="pb-1 text-left">Description</th><th class="pb-1 text-right">Required</th><th class="pb-1 text-right">On Hand</th><th class="pb-1 text-right">Shortage</th><th class="pb-1 text-center">Status</th>
         </tr></thead><tbody>
-          ${lines.map(l=>`<tr class="border-b border-gray-100"><td class="py-1 font-mono">${l.ipn}</td><td class="py-1 text-center">${l.qty_required}</td><td class="py-1 text-center">${l.qty_on_hand}</td><td class="py-1 text-center">${l.available?'✅':'❌'}</td></tr>`).join('')}
+          ${lines.map(l=>`<tr class="border-b border-gray-100 ${rowColor(l.status)}">
+            <td class="py-1 font-mono">${l.ipn}</td>
+            <td class="py-1 text-gray-600">${l.description||''}</td>
+            <td class="py-1 text-right">${l.qty_required}</td>
+            <td class="py-1 text-right">${l.qty_on_hand}</td>
+            <td class="py-1 text-right font-medium ${l.shortage>0?'text-red-600':''}">${l.shortage}</td>
+            <td class="py-1 text-center">${statusIcon(l.status)} ${l.status}</td>
+          </tr>`).join('')}
         </tbody></table>${lines.length===0?'<p class="text-gray-400 text-center py-2">No BOM data</p>':''}`);
       });
     };

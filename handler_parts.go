@@ -200,6 +200,25 @@ func handleDeleteColumn(w http.ResponseWriter, r *http.Request, catID, colName s
 	jsonResp(w, map[string]string{"status": "column delete not yet implemented for CSV backend"})
 }
 
+// getPartByIPN looks up a single IPN across all CSV categories and returns its fields
+func getPartByIPN(pmDir, ipn string) (map[string]string, error) {
+	if pmDir == "" {
+		return nil, fmt.Errorf("no parts directory configured")
+	}
+	cats, _, err := loadPartsFromDir()
+	if err != nil {
+		return nil, err
+	}
+	for _, parts := range cats {
+		for _, p := range parts {
+			if p.IPN == ipn {
+				return p.Fields, nil
+			}
+		}
+	}
+	return nil, fmt.Errorf("part not found: %s", ipn)
+}
+
 func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	d := DashboardData{}
 	db.QueryRow("SELECT COUNT(*) FROM ecos WHERE status NOT IN ('implemented','rejected')").Scan(&d.OpenECOs)

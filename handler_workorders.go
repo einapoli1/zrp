@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -60,32 +61,50 @@ func handleUpdateWorkOrder(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 func handleWorkOrderBOM(w http.ResponseWriter, r *http.Request, id string) {
-	// Get the assembly IPN for this WO
 	var assemblyIPN string
 	var qty int
 	err := db.QueryRow("SELECT assembly_ipn,qty FROM work_orders WHERE id=?", id).Scan(&assemblyIPN, &qty)
 	if err != nil { jsonErr(w, "not found", 404); return }
 
-	// Return a simple BOM structure (would need gitplm BOM data for real implementation)
 	type BOMLine struct {
-		IPN       string  `json:"ipn"`
-		Qty       float64 `json:"qty_required"`
-		OnHand    float64 `json:"qty_on_hand"`
-		Available bool    `json:"available"`
+		IPN         string  `json:"ipn"`
+		Description string  `json:"description"`
+		QtyRequired float64 `json:"qty_required"`
+		QtyOnHand   float64 `json:"qty_on_hand"`
+		Shortage    float64 `json:"shortage"`
+		Status      string  `json:"status"`
 	}
-	// Check inventory for any items we know about
+	// Get inventory items and enrich with part descriptions
 	rows, _ := db.Query("SELECT ipn, qty_on_hand FROM inventory")
 	var bom []BOMLine
 	if rows != nil {
 		defer rows.Close()
 		for rows.Next() {
 			var bl BOMLine
-			rows.Scan(&bl.IPN, &bl.OnHand)
-			bl.Qty = float64(qty) // simplified
-			bl.Available = bl.OnHand >= bl.Qty
+			rows.Scan(&bl.IPN, &bl.QtyOnHand)
+			bl.QtyRequired = float64(qty) // simplified: 1 per unit × WO qty
+			bl.Shortage = bl.QtyRequired - bl.QtyOnHand
+			if bl.Shortage < 0 { bl.Shortage = 0 }
+			if bl.QtyOnHand >= bl.QtyRequired {
+				bl.Status = "ok"
+			} else if bl.QtyOnHand > 0 {
+				bl.Status = "low"
+			} else {
+				bl.Status = "shortage"
+			}
+			// Try to get description from parts DB
+			fields, err := getPartByIPN(partsDir, bl.IPN)
+			if err == nil {
+				for k, v := range fields {
+					if strings.EqualFold(k, "description") || strings.EqualFold(k, "desc") {
+						bl.Description = v
+						break
+					}
+				}
+			}
 			bom = append(bom, bl)
 		}
 	}
 	if bom == nil { bom = []BOMLine{} }
-	jsonResp(w, map[string]interface{}{"assembly_ipn": assemblyIPN, "wo_qty": qty, "bom": bom})
+	jsonResp(w, map[string]interface{}{"wo_id": id, "assembly_ipn": assemblyIPN, "qty": qty, "bom": bom})
 }

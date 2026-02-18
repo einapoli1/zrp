@@ -64,6 +64,10 @@ func main() {
 		parts := strings.Split(path, "/")
 
 		switch {
+		// Global Search
+		case parts[0] == "search" && len(parts) == 1 && r.Method == "GET":
+			handleGlobalSearch(w, r)
+
 		// Dashboard
 		case path == "dashboard" && r.Method == "GET":
 			handleDashboard(w, r)
