@@ -134,7 +134,8 @@ window.module_ecos = {
     window._ecoEdit = async (id) => {
       const res = await api('GET', 'ecos/' + id);
       const e = res.data;
-      const overlay = showModal('Edit ECO: ' + id, formHTML(e) +
+      const ncrBadge = e.ncr_id ? `<div class="mb-3"><span class="badge bg-purple-100 text-purple-800 cursor-pointer" onclick="navigate('ncr')">From ${e.ncr_id}</span></div>` : '';
+      const overlay = showModal('Edit ECO: ' + id, ncrBadge + formHTML(e) +
         affectedPartsTable(e.affected_parts) + `
         <div class="flex gap-2 mt-4">
           ${e.status==='review'||e.status==='draft'?`<button class="btn btn-success" id="eco-approve">✓ Approve</button>`:''}

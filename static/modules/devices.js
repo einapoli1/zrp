@@ -1,5 +1,9 @@
 window.module_devices = {
   render: async (container) => {
+    const bulk = setupBulkOps(container, 'devices/bulk', [
+      {action:'decommission', label:'⛔ Decommission', class:'bg-yellow-600 hover:bg-yellow-700 text-white'},
+      {action:'delete', label:'🗑 Delete', class:'bg-red-600 hover:bg-red-700 text-white'},
+    ]);
     async function load() {
       const res = await api('GET', 'devices');
       const items = res.data || [];
@@ -14,9 +18,11 @@ window.module_devices = {
           </div>
         </div>
         <table class="w-full text-sm"><thead><tr class="border-b text-left text-gray-500">
+          <th class="pb-2 w-8">${bulk.headerCheckbox()}</th>
           <th class="pb-2">Serial</th><th class="pb-2">IPN</th><th class="pb-2">Customer</th><th class="pb-2">FW</th><th class="pb-2">Status</th><th class="pb-2">Location</th>
         </tr></thead><tbody>
           ${items.map(d => `<tr class="table-row border-b border-gray-100" onclick="window._devEdit('${d.serial_number}')">
+            <td class="py-2">${bulk.checkbox(d.serial_number)}</td>
             <td class="py-2 font-mono text-blue-600">${d.serial_number}</td><td class="py-2">${d.ipn}</td>
             <td class="py-2">${d.customer||''}</td><td class="py-2">${d.firmware_version||''}</td>
             <td class="py-2">${badge(d.status)}</td><td class="py-2">${d.location||''}</td>
@@ -24,7 +30,9 @@ window.module_devices = {
         </tbody></table>
         ${items.length===0?'<p class="text-center text-gray-400 py-4">No devices</p>':''}
       </div>`;
+      bulk.init();
     }
+    container.addEventListener('bulk-reload', load);
     const form = (d={}) => `<div class="space-y-3">
       <div><label class="label">Serial Number</label><input class="input" data-field="serial_number" value="${d.serial_number||''}" ${d.serial_number?'readonly':''}></div>
       <div><label class="label">IPN</label><input class="input" data-field="ipn" value="${d.ipn||''}"></div>
@@ -41,20 +49,14 @@ window.module_devices = {
       <div><label class="label">Install Date</label><input class="input" type="date" data-field="install_date" value="${d.install_date||''}"></div>
       <div><label class="label">Notes</label><textarea class="input" data-field="notes" rows="2">${d.notes||''}</textarea></div>
     </div>`;
-    window._devExportCSV = () => {
-      window.location.href = '/api/v1/devices/export';
-    };
+    window._devExportCSV = () => { window.location.href = '/api/v1/devices/export'; };
     window._devImportCSV = async (input) => {
-      const file = input.files[0];
-      if (!file) return;
-      const fd = new FormData();
-      fd.append('file', file);
+      const file = input.files[0]; if (!file) return;
+      const fd = new FormData(); fd.append('file', file);
       try {
         const res = await fetch('/api/v1/devices/import', { method: 'POST', body: fd });
-        const json = await res.json();
-        const d = json.data || json;
-        const errCount = (d.errors||[]).length;
-        toast(`Imported ${d.imported||0} devices${d.skipped?' , '+d.skipped+' skipped':''}${errCount?', '+errCount+' errors':''}`);
+        const json = await res.json(); const d = json.data || json;
+        toast(`Imported ${d.imported||0} devices${d.skipped?', '+d.skipped+' skipped':''}${(d.errors||[]).length?', '+(d.errors||[]).length+' errors':''}`);
         load();
       } catch(e) { toast(e.message, 'error'); }
       input.value = '';

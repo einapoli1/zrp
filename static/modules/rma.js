@@ -1,5 +1,9 @@
 window.module_rma = {
   render: async (container) => {
+    const bulk = setupBulkOps(container, 'rmas/bulk', [
+      {action:'close', label:'Close', class:'bg-gray-600 hover:bg-gray-700 text-white'},
+      {action:'delete', label:'🗑 Delete', class:'bg-red-600 hover:bg-red-700 text-white'},
+    ]);
     async function load() {
       const res = await api('GET', 'rmas');
       const items = res.data || [];
@@ -9,16 +13,20 @@ window.module_rma = {
           <button class="btn btn-primary" onclick="window._rmaCreate()">+ New RMA</button>
         </div>
         <table class="w-full text-sm"><thead><tr class="border-b text-left text-gray-500">
+          <th class="pb-2 w-8">${bulk.headerCheckbox()}</th>
           <th class="pb-2">ID</th><th class="pb-2">Serial</th><th class="pb-2">Customer</th><th class="pb-2">Reason</th><th class="pb-2">Status</th>
         </tr></thead><tbody>
           ${items.map(r => `<tr class="table-row border-b border-gray-100" onclick="window._rmaEdit('${r.id}')">
+            <td class="py-2">${bulk.checkbox(r.id)}</td>
             <td class="py-2 font-mono text-blue-600">${r.id}</td><td class="py-2 font-mono">${r.serial_number}</td>
             <td class="py-2">${r.customer||''}</td><td class="py-2">${r.reason||''}</td><td class="py-2">${badge(r.status)}</td>
           </tr>`).join('')}
         </tbody></table>
         ${items.length===0?'<p class="text-center text-gray-400 py-4">No RMAs</p>':''}
       </div>`;
+      bulk.init();
     }
+    container.addEventListener('bulk-reload', load);
     const form = (r={}) => `<div class="space-y-3">
       <div><label class="label">Serial Number</label><input class="input" data-field="serial_number" value="${r.serial_number||''}"></div>
       <div><label class="label">Customer</label><input class="input" data-field="customer" value="${r.customer||''}"></div>
