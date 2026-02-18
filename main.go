@@ -656,9 +656,17 @@ func main() {
 		}
 	})
 
+	// Top-level mux: health check bypasses auth
+	root := http.NewServeMux()
+	root.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write([]byte(`{"status":"ok"}`))
+	})
+	root.Handle("/", logging(requireAuth(mux)))
+
 	addr := fmt.Sprintf(":%d", *port)
 	log.Printf("ZRP server starting on http://localhost%s", addr)
-	log.Fatal(http.ListenAndServe(addr, logging(requireAuth(mux))))
+	log.Fatal(http.ListenAndServe(addr, root))
 }
 
 func handleConfig(w http.ResponseWriter, r *http.Request) {
