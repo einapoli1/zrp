@@ -1,5 +1,53 @@
 # ZRP Modules Guide
 
+## Authentication
+
+ZRP requires authentication. On first launch, a default admin account is created:
+
+- **Username:** `admin`
+- **Password:** `zonit123`
+
+### Login
+
+Enter your credentials on the login screen. Sessions last 24 hours.
+
+### Roles
+
+| Role | Can View | Can Create/Edit | Can Manage Users |
+|------|----------|-----------------|------------------|
+| Admin | Everything | Everything | Yes |
+| User | Everything | Everything | No |
+| Read-only | Everything | Nothing | No |
+
+### Logout
+
+Click your username in the top-right corner and select "Logout."
+
+---
+
+## User Management
+
+*Admin only.* Access from the gear icon in the sidebar.
+
+- **Create users:** Set username, display name, password, and role
+- **Edit users:** Change display name, role, or active status
+- **Deactivate:** Set a user to inactive — they can no longer log in (admins cannot deactivate themselves)
+- **Reset password:** Set a new password for any user
+
+---
+
+## API Keys
+
+Generate API keys for programmatic access (scripts, CI pipelines, integrations).
+
+- **Create:** Give the key a name and optional expiration date
+- **Copy key:** The full key is shown only once — store it securely
+- **Use:** Send as `Authorization: Bearer zrp_...` header
+- **Disable/Enable:** Toggle a key without deleting it
+- **Revoke:** Permanently delete a key
+
+---
+
 ## Dashboard
 
 The landing page. Shows eight KPI cards:
@@ -17,6 +65,48 @@ The landing page. Shows eight KPI cards:
 
 Click any card to jump to that module.
 
+### Charts
+
+The dashboard includes visual charts:
+- **ECOs by status** — bar/pie chart of draft, review, approved, implemented
+- **Work orders by status** — open, in progress, completed
+- **Top inventory by value** — highest-value items in stock
+
+### Low Stock Alerts
+
+A dedicated panel showing items where quantity on hand has fallen below the reorder point.
+
+---
+
+## Notifications
+
+The bell icon in the top bar shows unread notifications. ZRP automatically generates notifications for:
+
+| Type | Trigger | Severity |
+|------|---------|----------|
+| Low Stock | Qty on hand < reorder point | Warning |
+| Overdue WO | In progress > 7 days | Warning |
+| Open NCR | Open > 14 days | Error |
+| New RMA | Created in last hour | Info |
+
+Notifications are deduplicated (same type + record only once per 24 hours). Click a notification to navigate to the relevant record. Click the checkmark to mark as read.
+
+---
+
+## Global Search
+
+The search bar at the top of every page searches across **all modules** simultaneously:
+
+- **Parts** — IPN, manufacturer, MPN, all field values
+- **ECOs** — ID, title, description
+- **Work Orders** — ID, assembly IPN
+- **Devices** — serial number, IPN, customer
+- **NCRs** — ID, title
+- **Purchase Orders** — ID
+- **Quotes** — ID, customer
+
+Type at least one character and results appear grouped by module. Click any result to navigate to it.
+
 ---
 
 ## Parts (PLM)
@@ -32,9 +122,12 @@ Click any card to jump to that module.
 
 1. **Find a part:** Type in the search box or filter by category. Search matches against IPN and all field values.
 2. **View details:** Click a part row to see all its fields.
-3. **Edit a part:** Edit the CSV file directly in the gitplm directory, then refresh ZRP.
+3. **View BOM:** For assemblies, view the Bill of Materials showing sub-components.
+4. **View cost:** See BOM cost rollup for assemblies.
 
-**Integration:** Parts IPNs are referenced by Inventory, Work Orders, Purchase Orders, Documents, NCRs, and Quotes.
+**IPN Autocomplete:** When entering an IPN in other modules (inventory, work orders, etc.), the system suggests matching IPNs as you type.
+
+**Integration:** Parts IPNs are referenced by Inventory, Work Orders, Purchase Orders, Documents, NCRs, Quotes, and ECOs.
 
 ---
 
@@ -51,7 +144,11 @@ Click any card to jump to that module.
 3. **Approve:** Click the approve action. Records who approved and when.
 4. **Implement:** After changes are made, mark as implemented.
 
-**Integration:** ECOs reference affected IPNs from the Parts database. Dashboard shows count of open ECOs.
+**ECO→Parts enrichment:** When viewing an ECO, affected IPNs are enriched with part details (description, manufacturer, MPN) from the parts database.
+
+**NCR→ECO auto-link:** ECOs can reference an NCR ID. When creating an ECO from an NCR, the link is maintained for traceability.
+
+**Batch operations:** Select multiple ECOs with checkboxes, then bulk approve, implement, reject, or delete.
 
 ---
 
@@ -59,16 +156,12 @@ Click any card to jump to that module.
 
 **What it's for:** Managing revision-controlled engineering documents — assembly procedures, test specs, drawings, process instructions.
 
-**Key concepts:**
-- **Revision** — letter revision (A, B, C...) incremented on each release
-- **Category** — procedure, spec, drawing, etc.
-- **Content** — markdown text stored in the document record
-
 **Common workflows:**
 
 1. **Create a document:** Give it a title, category, optional IPN link, and write the content.
 2. **Edit and revise:** Update content and bump the revision letter.
 3. **Approve:** Move from draft to approved when reviewed.
+4. **Attach files:** Upload supporting files (PDFs, images) via the attachments panel.
 
 ---
 
@@ -79,17 +172,12 @@ Click any card to jump to that module.
 **Key concepts:**
 - **Qty On Hand** — physical count in stock
 - **Qty Reserved** — allocated to work orders
-- **Reorder Point** — when on-hand drops to this level, reorder
+- **Reorder Point** — when on-hand drops to this level, a notification is generated
 - **Transaction History** — every receive, issue, return, and adjustment is logged
 
-**Common workflows:**
+**IPN Autocomplete:** When entering an IPN for a transaction, matching IPNs from the parts database are suggested.
 
-1. **Check stock levels:** View the inventory list. Filter by `low_stock` to see items needing reorder.
-2. **Receive parts:** When a PO shipment arrives, use the PO receive function (automatically updates inventory).
-3. **Issue parts:** Create an inventory transaction of type `issue` when consuming parts for a work order.
-4. **Cycle count:** Use `adjust` transaction type to correct counts.
-
-**Integration:** Automatically updated when POs are received. Referenced by Work Order BOM checks.
+**Integration:** Automatically updated when POs are received. Referenced by Work Order BOM checks. Low stock triggers dashboard alerts and notifications.
 
 ---
 
@@ -99,32 +187,27 @@ Click any card to jump to that module.
 
 **Status workflow:** `draft` → `sent` → `partial` → `received`
 
-**Key concepts:**
-- **Line items** — each PO has one or more lines, each specifying an IPN, MPN, quantity, and price
-- **Partial receiving** — you can receive a portion of an order; status auto-updates
-
 **Common workflows:**
 
 1. **Create a PO:** Select a vendor, add line items with part numbers and quantities.
-2. **Send to vendor:** Update status to `sent`.
-3. **Receive shipment:** Use the receive action with quantities for each line. Inventory updates automatically.
+2. **Generate from WO:** Automatically create a PO for work order shortages (see Procurement below).
+3. **Send to vendor:** Update status to `sent`.
+4. **Receive shipment:** Use the receive action with quantities for each line. Inventory updates automatically.
 
-**Integration:** Links to Vendors. Receiving creates Inventory transactions.
+### Generate PO from Work Order Shortages
+
+When a work order has BOM shortages, you can automatically generate a draft PO:
+
+1. Open the work order and view the BOM
+2. Click "Generate PO from Shortages"
+3. Select a vendor
+4. A draft PO is created with line items for all short components
 
 ---
 
 ## Vendors
 
 **What it's for:** Keeping a directory of your suppliers with contact information and lead times.
-
-**Key concepts:**
-- **Status** — `active` (current supplier), `preferred` (primary supplier), `inactive` (no longer used)
-- **Lead Time** — expected days from order to delivery
-
-**Common workflows:**
-
-1. **Add a vendor:** Enter company name, website, contact details, and expected lead time.
-2. **Reference in POs:** When creating purchase orders, select from your vendor list.
 
 ---
 
@@ -134,19 +217,30 @@ Click any card to jump to that module.
 
 **Status workflow:** `open` → `in_progress` → `completed`
 
-**Key concepts:**
-- **Assembly IPN** — the product being built
-- **Quantity** — how many units to produce
-- **BOM** — Bill of Materials showing required components and availability
-
 **Common workflows:**
 
 1. **Plan production:** Create a WO specifying the assembly and quantity.
-2. **Check materials:** Use the BOM endpoint to verify all components are in stock.
+2. **Check materials:** Use the BOM view to verify all components are in stock.
 3. **Start production:** Update status to `in_progress` (auto-records start time).
 4. **Complete:** Update status to `completed` (auto-records completion time).
 
-**Integration:** BOM check queries Inventory. Assembly IPN references Parts.
+### BOM Shortage Highlighting
+
+The BOM view color-codes each component:
+- **Green (ok):** Sufficient stock
+- **Yellow (low):** Some stock but not enough for the full build
+- **Red (shortage):** Zero stock
+
+### PDF Traveler
+
+Click "Print Traveler" to generate a printable Work Order Traveler with:
+- Assembly information and notes
+- Full BOM table (IPN, description, MPN, manufacturer, qty, ref des)
+- Sign-off section (kitted by, built by, tested by, QA approved by)
+
+The traveler opens in a new tab with the print dialog ready.
+
+**Batch operations:** Select multiple WOs to bulk complete, cancel, or delete.
 
 ---
 
@@ -154,58 +248,30 @@ Click any card to jump to that module.
 
 **What it's for:** Recording factory test results for individual units identified by serial number.
 
-**Key concepts:**
-- **Serial Number** — unique identifier for the unit under test
-- **Result** — `pass` or `fail`
-- **Measurements** — JSON object with measured values (voltage, current, etc.)
-- **Test Type** — factory, burn-in, final, etc.
-
-**Common workflows:**
-
-1. **Record a test:** Submit serial number, IPN, firmware version, result, and measurements.
-2. **Review history:** Look up all test records for a serial number to see pass/fail trends.
-
-**Integration:** Referenced by Device history. Serial numbers link to Work Order serials.
-
 ---
 
 ## NCRs (Non-Conformance Reports)
 
-**What it's for:** Documenting and tracking quality issues — defects found during manufacturing, inspection, or in the field.
+**What it's for:** Documenting and tracking quality issues.
 
-**Status workflow:** `open` → `investigating` → `resolved` → `closed`
+**NCR→ECO auto-link:** When an NCR identifies a design issue, create an ECO directly from the NCR. The ECO's `ncr_id` field maintains the link.
 
-**Key concepts:**
-- **Defect Type** — workmanship, component, design
-- **Severity** — minor, major, critical
-- **Root Cause** — why the defect occurred
-- **Corrective Action** — what was done to prevent recurrence
-
-**Common workflows:**
-
-1. **Report a defect:** Create an NCR with title, description, affected IPN/serial, defect type, and severity.
-2. **Investigate:** Update with root cause analysis.
-3. **Resolve:** Document the corrective action and mark resolved.
-
-**Integration:** Links to specific IPNs and serial numbers. Dashboard shows open NCR count.
+**Batch operations:** Select multiple NCRs to bulk close, resolve, or delete.
 
 ---
 
 ## Device Registry
 
-**What it's for:** Tracking deployed devices in the field — which customer has which serial number, what firmware it's running, and where it's located.
-
-**Key concepts:**
-- **Status** — `active` (deployed), `inactive`, `rma` (returned), `decommissioned`
-- **History** — combined view of test records and firmware campaign participation
+**What it's for:** Tracking deployed devices in the field.
 
 **Common workflows:**
 
-1. **Register a device:** After production and testing, register the serial number with customer and location info.
-2. **Track firmware:** View current firmware version for each device.
-3. **View history:** See full lifecycle — factory tests, firmware updates, campaigns.
+1. **Register a device:** After production and testing, register the serial number.
+2. **Import devices:** Upload a CSV file to bulk-register devices.
+3. **Export devices:** Download all devices as a CSV.
+4. **View history:** See full lifecycle — factory tests, firmware updates, campaigns.
 
-**Integration:** Firmware campaigns target active devices. Test records and RMAs reference serial numbers.
+**Batch operations:** Select multiple devices to bulk decommission or delete.
 
 ---
 
@@ -213,37 +279,21 @@ Click any card to jump to that module.
 
 **What it's for:** Managing OTA firmware rollouts to deployed devices.
 
-**Status workflow:** `draft` → `active` → `completed`
+### Live Streaming
 
-**Key concepts:**
-- **Campaign** — defines a target firmware version
-- **Launch** — enrolls all active devices and begins rollout
-- **Progress** — tracks each device: pending, sent, updated, failed
+Use the SSE stream endpoint to monitor campaign progress in real-time. The UI shows a live progress bar with device counts.
 
-**Common workflows:**
+### Mark Individual Devices
 
-1. **Create a campaign:** Specify the firmware version and any notes.
-2. **Launch:** Automatically enrolls all active devices.
-3. **Monitor progress:** Check how many devices have updated vs. pending/failed.
-
-**Integration:** Targets devices from the Device Registry. Device history shows campaign participation.
+Mark each device as `updated` or `failed` as the firmware rollout proceeds.
 
 ---
 
 ## RMAs (Return Merchandise Authorization)
 
-**What it's for:** Processing customer returns — from initial complaint through diagnosis and resolution.
+**What it's for:** Processing customer returns.
 
-**Status workflow:** `open` → `received` → `diagnosing` → `repaired` → `shipped` → `closed`
-
-**Common workflows:**
-
-1. **Open an RMA:** Record the serial number, customer, reason, and defect description.
-2. **Receive unit:** Mark as received when the physical unit arrives.
-3. **Diagnose:** Update defect findings.
-4. **Resolve:** Document the resolution (repair, replace, refund) and ship back.
-
-**Integration:** Links to Device Registry by serial number. Dashboard shows open RMA count.
+**Batch operations:** Select multiple RMAs to bulk close or delete.
 
 ---
 
@@ -251,16 +301,88 @@ Click any card to jump to that module.
 
 **What it's for:** Creating and tracking customer quotes with itemized pricing.
 
-**Status workflow:** `draft` → `sent` → `accepted` / `declined` / `expired`
+### Cost Rollup
 
-**Key concepts:**
-- **Line items** — each line has an IPN, description, quantity, and unit price
-- **Cost rollup** — endpoint calculates line totals and grand total
+The cost view calculates line totals (qty × unit price) and a grand total.
 
-**Common workflows:**
+### PDF Quote
 
-1. **Create a quote:** Select customer, add line items with quantities and prices, set validity date.
-2. **Send to customer:** Update status to `sent`.
-3. **Track outcome:** Mark as accepted, declined, or expired.
+Click "Print Quote" to generate a professional quote document with:
+- Quote number, date, validity period
+- Customer information
+- Line items with IPN, description, quantity, unit price, and line totals
+- Subtotal
+- Terms (Net 30) and contact info
 
-**Integration:** Line items reference IPNs from Parts. Cost rollup provides pricing summary.
+---
+
+## File Attachments
+
+Upload files to any record in any module. Supported on ECOs, NCRs, work orders, documents, and more.
+
+- **Upload:** Click the paperclip icon on any record detail view
+- **Supported types:** Any file type (PDF, images, spreadsheets, etc.) up to 32MB
+- **Storage:** Files are stored in the `uploads/` directory alongside the database
+- **Access:** Files are served at `/files/{filename}` (no auth required for direct file URLs)
+- **Delete:** Click the trash icon next to any attachment
+
+---
+
+## Audit Log
+
+Every create, update, delete, and bulk operation is logged with:
+- **Who** (username)
+- **What** (action and module)
+- **Which record** (record ID)
+- **Summary** (human-readable description)
+- **When** (timestamp)
+
+Access the audit log from the sidebar. Filter by module, user, and date range.
+
+---
+
+## Batch Operations
+
+Most list views support multi-select with checkboxes:
+
+| Module | Bulk Actions |
+|--------|-------------|
+| ECOs | Approve, Implement, Reject, Delete |
+| Work Orders | Complete, Cancel, Delete |
+| NCRs | Close, Resolve, Delete |
+| Devices | Decommission, Delete |
+| RMAs | Close, Delete |
+| Inventory | Delete |
+
+Select items with checkboxes, then click the bulk action button.
+
+---
+
+## Calendar View
+
+The calendar shows upcoming dates across modules:
+
+| Color | Source | Date Shown |
+|-------|--------|------------|
+| Blue | Work Orders | Due date (completed_at or created + 30 days) |
+| Green | Purchase Orders | Expected delivery date |
+| Orange | Quotes | Expiration date (valid_until) |
+
+Navigate between months using the arrow buttons. Click any event to jump to that record.
+
+---
+
+## Dark Mode
+
+Toggle dark mode from the theme switcher in the top bar. Your preference is saved in the browser (localStorage) and persists across sessions.
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `/` or `Ctrl+K` | Focus global search |
+| `Escape` | Close modal / clear search |
+| `n` | New record (when in a module list view) |
+| `?` | Show keyboard shortcuts help |

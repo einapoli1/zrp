@@ -1,8 +1,22 @@
 # ZRP API Reference
 
-Base URL: `http://localhost:9000/api/v1/`
+Base URL: `http://localhost:9000`
 
-All requests and responses use `Content-Type: application/json`. No authentication is required (bind to localhost or use a reverse proxy for access control).
+## Authentication
+
+ZRP uses session-based authentication with cookie tokens. API keys (Bearer tokens) are also supported for programmatic access.
+
+- **Session auth:** POST to `/auth/login`, receive a `zrp_session` cookie
+- **API key auth:** Send `Authorization: Bearer zrp_...` header
+- **Exempt paths:** `/`, `/static/*`, `/auth/*`, `/files/*` do not require auth
+
+### Roles
+
+| Role | Permissions |
+|------|-------------|
+| `admin` | Full access, can manage users and API keys |
+| `user` | Read and write access to all modules |
+| `readonly` | GET requests only — POST/PUT/DELETE return 403 |
 
 ## Response Format
 
@@ -26,37 +40,513 @@ Successful responses wrap data in an envelope:
 | Code | Meaning |
 |------|---------|
 | 200 | Success |
+| 201 | Created |
 | 400 | Invalid request body |
+| 401 | Unauthorized (no session or invalid API key) |
+| 403 | Forbidden (deactivated account or readonly role) |
 | 404 | Resource not found |
+| 409 | Conflict (e.g., duplicate username) |
 | 500 | Server error |
 | 501 | Not implemented (e.g., CSV write operations) |
 
 ---
 
+## Auth
+
+### POST /auth/login
+
+Authenticate and create a session. No auth required.
+
+**Request Body:**
+
+```json
+{ "username": "admin", "password": "zonit123" }
+```
+
+**Response (200):**
+
+```json
+{
+  "user": { "id": 1, "username": "admin", "display_name": "Administrator", "role": "admin" }
+}
+```
+
+Sets `zrp_session` cookie (HttpOnly, 24h expiry).
+
+```bash
+curl -X POST http://localhost:9000/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"zonit123"}' \
+  -c cookies.txt
+```
+
+### POST /auth/logout
+
+Destroy the current session. No auth required.
+
+**Response (200):**
+
+```json
+{ "status": "ok" }
+```
+
+```bash
+curl -X POST http://localhost:9000/auth/logout -b cookies.txt
+```
+
+### GET /auth/me
+
+Get the currently authenticated user. No auth required (returns 401 if not logged in).
+
+**Response (200):**
+
+```json
+{
+  "user": { "id": 1, "username": "admin", "display_name": "Administrator", "role": "admin" }
+}
+```
+
+**Response (401):**
+
+```json
+{ "error": "Unauthorized", "code": "UNAUTHORIZED" }
+```
+
+```bash
+curl http://localhost:9000/auth/me -b cookies.txt
+```
+
+---
+
+## Users
+
+Admin-only endpoints for managing user accounts.
+
+### GET /api/v1/users
+
+List all users. Requires admin role.
+
+**Response:**
+
+```json
+{
+  "data": [
+    { "id": 1, "username": "admin", "display_name": "Administrator", "role": "admin", "active": 1, "created_at": "2026-02-17 20:46:55", "last_login": "2026-02-17 21:00:00" }
+  ]
+}
+```
+
+```bash
+curl http://localhost:9000/api/v1/users -b cookies.txt
+```
+
+### POST /api/v1/users
+
+Create a new user. Requires admin role.
+
+**Request Body:**
+
+```json
+{ "username": "jdoe", "display_name": "Jane Doe", "password": "secret123", "role": "user" }
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `username` | Yes | Unique login name |
+| `password` | Yes | Plain-text password (hashed with bcrypt) |
+| `display_name` | No | Friendly name |
+| `role` | No | `admin`, `user`, or `readonly` (default: `user`) |
+
+**Response (201):**
+
+```json
+{ "data": { "id": 5, "username": "jdoe", "display_name": "Jane Doe", "role": "user" } }
+```
+
+```bash
+curl -X POST http://localhost:9000/api/v1/users \
+  -H "Content-Type: application/json" \
+  -d '{"username":"jdoe","display_name":"Jane Doe","password":"secret123","role":"user"}' \
+  -b cookies.txt
+```
+
+### PUT /api/v1/users/:id
+
+Update a user's display name, role, or active status. Requires admin role. Admin cannot deactivate themselves.
+
+**Request Body:**
+
+```json
+{ "display_name": "Jane Smith", "role": "admin", "active": 1 }
+```
+
+```bash
+curl -X PUT http://localhost:9000/api/v1/users/5 \
+  -H "Content-Type: application/json" \
+  -d '{"display_name":"Jane Smith","role":"admin","active":1}' \
+  -b cookies.txt
+```
+
+### PUT /api/v1/users/:id/password
+
+Reset a user's password. Requires admin role.
+
+**Request Body:**
+
+```json
+{ "password": "newpassword456" }
+```
+
+```bash
+curl -X PUT http://localhost:9000/api/v1/users/5/password \
+  -H "Content-Type: application/json" \
+  -d '{"password":"newpassword456"}' \
+  -b cookies.txt
+```
+
+---
+
+## API Keys
+
+Manage API keys for programmatic (Bearer token) access. Authenticated users can manage keys.
+
+### GET /api/v1/apikeys
+
+List all API keys. Keys show only the prefix (first 12 chars), never the full key.
+
+**Response:**
+
+```json
+{
+  "data": [
+    { "id": 1, "name": "CI Pipeline", "key_prefix": "zrp_a1b2c3d4", "created_by": "admin", "created_at": "2026-02-17", "last_used": null, "expires_at": null, "enabled": 1 }
+  ]
+}
+```
+
+```bash
+curl http://localhost:9000/api/v1/apikeys -b cookies.txt
+```
+
+### POST /api/v1/apikeys
+
+Generate a new API key. The full key is returned only once.
+
+**Request Body:**
+
+```json
+{ "name": "CI Pipeline", "expires_at": "2027-01-01" }
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Descriptive name |
+| `expires_at` | No | Expiration date (ISO 8601) |
+
+**Response (201):**
+
+```json
+{ "id": 1, "name": "CI Pipeline", "key": "zrp_a1b2c3d4e5f67890abcdef12345678", "key_prefix": "zrp_a1b2c3d4", "message": "Store this key securely. It will not be shown again." }
+```
+
+```bash
+curl -X POST http://localhost:9000/api/v1/apikeys \
+  -H "Content-Type: application/json" \
+  -d '{"name":"CI Pipeline"}' \
+  -b cookies.txt
+```
+
+### DELETE /api/v1/apikeys/:id
+
+Revoke (permanently delete) an API key.
+
+```bash
+curl -X DELETE http://localhost:9000/api/v1/apikeys/1 -b cookies.txt
+```
+
+### PUT /api/v1/apikeys/:id
+
+Enable or disable an API key without deleting it.
+
+**Request Body:**
+
+```json
+{ "enabled": 0 }
+```
+
+```bash
+curl -X PUT http://localhost:9000/api/v1/apikeys/1 \
+  -H "Content-Type: application/json" \
+  -d '{"enabled":0}' \
+  -b cookies.txt
+```
+
+---
+
+## Notifications
+
+System-generated notifications for low stock, overdue work orders, open NCRs, and new RMAs.
+
+### GET /api/v1/notifications
+
+List notifications (most recent 50).
+
+**Query Parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `unread` | string | `true` to show only unread notifications |
+
+**Response:**
+
+```json
+{
+  "data": [
+    { "id": 1, "type": "low_stock", "severity": "warning", "title": "Low Stock: CAP-001-0001", "message": "25 on hand, reorder point 100", "record_id": "CAP-001-0001", "module": "inventory", "read_at": null, "created_at": "2026-02-17 21:00:00" }
+  ]
+}
+```
+
+```bash
+curl "http://localhost:9000/api/v1/notifications?unread=true" -b cookies.txt
+```
+
+### POST /api/v1/notifications/:id/read
+
+Mark a notification as read.
+
+**Response:**
+
+```json
+{ "status": "read" }
+```
+
+```bash
+curl -X POST http://localhost:9000/api/v1/notifications/1/read -b cookies.txt
+```
+
+---
+
+## Attachments
+
+File attachments linked to any module record.
+
+### POST /api/v1/attachments
+
+Upload a file. Uses `multipart/form-data`. Max 32MB.
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `module` | Yes | Module name (e.g., `eco`, `ncr`, `workorder`) |
+| `record_id` | Yes | ID of the parent record |
+| `file` | Yes | The file to upload |
+
+**Response (201):**
+
+```json
+{
+  "data": { "id": 1, "module": "eco", "record_id": "ECO-2026-001", "filename": "eco-ECO-2026-001-1708300000000-schematic.pdf", "original_name": "schematic.pdf", "size_bytes": 245000, "mime_type": "application/pdf", "uploaded_by": "admin" }
+}
+```
+
+```bash
+curl -X POST http://localhost:9000/api/v1/attachments \
+  -F "module=eco" \
+  -F "record_id=ECO-2026-001" \
+  -F "file=@schematic.pdf" \
+  -b cookies.txt
+```
+
+### GET /api/v1/attachments
+
+List attachments for a specific record.
+
+**Query Parameters (both required):**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `module` | string | Module name |
+| `record_id` | string | Record ID |
+
+```bash
+curl "http://localhost:9000/api/v1/attachments?module=eco&record_id=ECO-2026-001" -b cookies.txt
+```
+
+### DELETE /api/v1/attachments/:id
+
+Delete an attachment (removes file from disk).
+
+```bash
+curl -X DELETE http://localhost:9000/api/v1/attachments/1 -b cookies.txt
+```
+
+---
+
+## File Serving
+
+### GET /files/:filename
+
+Serve an uploaded file. No auth required.
+
+```bash
+curl http://localhost:9000/files/eco-ECO-2026-001-1708300000000-schematic.pdf
+```
+
+---
+
+## Audit Log
+
+### GET /api/v1/audit
+
+Query the audit log. All create/update/delete/bulk operations are logged.
+
+**Query Parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `module` | string | Filter by module (e.g., `eco`, `workorder`, `po`) |
+| `user` | string | Filter by username |
+| `from` | string | Start date (YYYY-MM-DD) |
+| `to` | string | End date (YYYY-MM-DD) |
+| `limit` | int | Max results (default: 50) |
+
+**Response:**
+
+```json
+{
+  "data": [
+    { "id": 1, "username": "admin", "action": "created", "module": "eco", "record_id": "ECO-2026-001", "summary": "Created ECO ECO-2026-001", "created_at": "2026-02-17 21:00:00" }
+  ]
+}
+```
+
+```bash
+curl "http://localhost:9000/api/v1/audit?module=eco&limit=10" -b cookies.txt
+```
+
+---
+
 ## Dashboard
 
-### GET /dashboard
+### GET /api/v1/dashboard
 
 Returns summary KPIs.
 
 ```bash
-curl http://localhost:9000/api/v1/dashboard
+curl http://localhost:9000/api/v1/dashboard -b cookies.txt
 ```
 
 ```json
 {
-  "open_ecos": 2,
-  "low_stock": 1,
-  "open_pos": 1,
-  "active_wos": 1,
-  "open_ncrs": 1,
-  "open_rmas": 1,
-  "total_parts": 150,
-  "total_devices": 3
+  "open_ecos": 2, "low_stock": 1, "open_pos": 1, "active_wos": 1,
+  "open_ncrs": 1, "open_rmas": 1, "total_parts": 150, "total_devices": 3
 }
 ```
 
-Note: The dashboard response is **not** wrapped in the `{data}` envelope — it returns the object directly.
+Note: The dashboard response is **not** wrapped in the `{data}` envelope.
+
+### GET /api/v1/dashboard/charts
+
+Chart data for the dashboard: ECOs by status, work orders by status, top inventory by value.
+
+**Response:**
+
+```json
+{
+  "data": {
+    "ecos_by_status": { "draft": 1, "review": 0, "approved": 1, "implemented": 0 },
+    "wos_by_status": { "open": 1, "in_progress": 0, "completed": 0 },
+    "inventory_value": [ { "ipn": "CAP-001-0001", "value": 10.0 } ]
+  }
+}
+```
+
+```bash
+curl http://localhost:9000/api/v1/dashboard/charts -b cookies.txt
+```
+
+### GET /api/v1/dashboard/lowstock
+
+Low stock items (where qty on hand < reorder point).
+
+**Response:**
+
+```json
+{
+  "data": [ { "ipn": "RES-001-0001", "qty_on_hand": 25, "reorder_point": 100 } ]
+}
+```
+
+```bash
+curl http://localhost:9000/api/v1/dashboard/lowstock -b cookies.txt
+```
+
+---
+
+## Global Search
+
+### GET /api/v1/search
+
+Search across all modules simultaneously.
+
+**Query Parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `q` | string | Search query (case-insensitive) |
+| `limit` | int | Max results per module (default: 20) |
+
+**Response:**
+
+```json
+{
+  "data": {
+    "parts": [ { "IPN": "CAP-001-0001", "Manufacturer": "Murata", ... } ],
+    "ecos": [ { "id": "ECO-2026-001", "title": "...", "status": "draft" } ],
+    "workorders": [ { "id": "WO-2026-0001", "assembly_ipn": "...", "status": "open" } ],
+    "devices": [ { "serial_number": "SN-001", "ipn": "...", "customer": "...", "status": "active" } ],
+    "ncrs": [ { "id": "NCR-2026-001", "title": "...", "status": "open" } ],
+    "pos": [ { "id": "PO-2026-0001", "status": "received" } ],
+    "quotes": [ { "id": "Q-2026-001", "customer": "...", "status": "draft" } ]
+  },
+  "meta": { "total": 5, "query": "murata" }
+}
+```
+
+```bash
+curl "http://localhost:9000/api/v1/search?q=murata&limit=10" -b cookies.txt
+```
+
+---
+
+## Calendar
+
+### GET /api/v1/calendar
+
+Calendar events for a given month: WO due dates, PO expected deliveries, quote expirations.
+
+**Query Parameters:**
+
+| Param | Type | Description |
+|-------|------|-------------|
+| `year` | int | Year (default: current) |
+| `month` | int | Month 1-12 (default: current) |
+
+**Response:**
+
+```json
+{
+  "data": [
+    { "date": "2026-03-15", "type": "workorder", "id": "WO-2026-0001", "title": "Build PCB-001 ×25", "color": "blue" },
+    { "date": "2026-03-20", "type": "po", "id": "PO-2026-0001", "title": "PO expected delivery", "color": "green" },
+    { "date": "2026-03-31", "type": "quote", "id": "Q-2026-001", "title": "Quote for MegaCorp expires", "color": "orange" }
+  ]
+}
+```
+
+```bash
+curl "http://localhost:9000/api/v1/calendar?year=2026&month=3" -b cookies.txt
+```
 
 ---
 
@@ -64,7 +554,7 @@ Note: The dashboard response is **not** wrapped in the `{data}` envelope — it 
 
 Parts are read from gitplm CSV files on disk. Write operations return 501.
 
-### GET /parts
+### GET /api/v1/parts
 
 List parts with optional filtering and pagination.
 
@@ -78,40 +568,38 @@ List parts with optional filtering and pagination.
 | `limit` | int | Results per page (default: 50) |
 
 ```bash
-curl "http://localhost:9000/api/v1/parts?category=capacitors&q=murata&page=1&limit=20"
+curl "http://localhost:9000/api/v1/parts?category=capacitors&q=murata&page=1&limit=20" -b cookies.txt
 ```
 
-```json
-{
-  "data": [
-    {
-      "ipn": "CAP-001-0001",
-      "fields": {
-        "IPN": "CAP-001-0001",
-        "Manufacturer": "Murata",
-        "MPN": "GRM188R71C104KA01",
-        "Value": "100nF",
-        "_category": "capacitors"
-      }
-    }
-  ],
-  "meta": { "total": 1, "page": 1, "limit": 20 }
-}
-```
-
-### GET /parts/{ipn}
+### GET /api/v1/parts/:ipn
 
 Get a single part by IPN.
 
 ```bash
-curl http://localhost:9000/api/v1/parts/CAP-001-0001
+curl http://localhost:9000/api/v1/parts/CAP-001-0001 -b cookies.txt
 ```
 
-### POST /parts → 501
+### GET /api/v1/parts/:ipn/bom
 
-### PUT /parts/{ipn} → 501
+Get the Bill of Materials for an assembly IPN. Returns sub-components parsed from the parts database with quantities and descriptions.
 
-### DELETE /parts/{ipn} → 501
+```bash
+curl http://localhost:9000/api/v1/parts/PCB-001-0001/bom -b cookies.txt
+```
+
+### GET /api/v1/parts/:ipn/cost
+
+BOM cost rollup for a part. Returns component costs, totals, and cost breakdown.
+
+```bash
+curl http://localhost:9000/api/v1/parts/PCB-001-0001/cost -b cookies.txt
+```
+
+### POST /api/v1/parts → 501
+
+### PUT /api/v1/parts/:ipn → 501
+
+### DELETE /api/v1/parts/:ipn → 501
 
 Parts are managed through gitplm CSV files. Edit the CSVs directly.
 
@@ -119,409 +607,281 @@ Parts are managed through gitplm CSV files. Edit the CSVs directly.
 
 ## Categories
 
-### GET /categories
+### GET /api/v1/categories
 
 List all part categories with column schemas and part counts.
 
 ```bash
-curl http://localhost:9000/api/v1/categories
+curl http://localhost:9000/api/v1/categories -b cookies.txt
 ```
 
-```json
-{
-  "data": [
-    { "id": "capacitors", "name": "capacitors", "count": 45, "columns": ["IPN", "MPN", "Manufacturer", "Value", "Package"] }
-  ]
-}
-```
+### POST /api/v1/categories/:id/columns
 
-### POST /categories/{id}/columns
+Add a column to a category.
 
-Add a column to a category (stub — not yet implemented for CSV backend).
+### DELETE /api/v1/categories/:id/columns/:colName
 
-```bash
-curl -X POST http://localhost:9000/api/v1/categories/capacitors/columns \
-  -d '{"name": "Voltage Rating"}'
-```
-
-### DELETE /categories/{id}/columns/{colName}
-
-Remove a column (stub).
+Remove a column.
 
 ---
 
 ## ECOs
 
-### GET /ecos
+### GET /api/v1/ecos
 
 List all ECOs, optionally filtered by status.
 
 **Query Parameters:** `status` (draft, review, approved, implemented, rejected)
 
 ```bash
-curl http://localhost:9000/api/v1/ecos?status=draft
+curl http://localhost:9000/api/v1/ecos?status=draft -b cookies.txt
 ```
 
-```json
-{
-  "data": [
-    {
-      "id": "ECO-2026-001",
-      "title": "Update power supply capacitor",
-      "description": "Replace C12 with higher voltage rating",
-      "status": "draft",
-      "priority": "high",
-      "affected_ipns": "[\"CAP-001-0001\"]",
-      "created_by": "engineer",
-      "created_at": "2026-02-17 20:46:55",
-      "updated_at": "2026-02-17 20:46:55",
-      "approved_at": null,
-      "approved_by": null
-    }
-  ]
-}
-```
+### GET /api/v1/ecos/:id
 
-### GET /ecos/{id}
+Get a single ECO with enriched part details for affected IPNs.
 
-```bash
-curl http://localhost:9000/api/v1/ecos/ECO-2026-001
-```
-
-### POST /ecos
+### POST /api/v1/ecos
 
 Create an ECO. Auto-generates ID as `ECO-{YEAR}-{NNN}`.
 
+**Fields:** `title` (required), `description`, `status` (default: draft), `priority` (default: normal), `affected_ipns` (JSON string array), `ncr_id` (links to an NCR)
+
 ```bash
 curl -X POST http://localhost:9000/api/v1/ecos \
-  -d '{
-    "title": "Change resistor value",
-    "description": "R15 should be 10K not 1K",
-    "priority": "normal",
-    "affected_ipns": "[\"RES-001-0001\"]"
-  }'
+  -H "Content-Type: application/json" \
+  -d '{"title":"Change resistor value","description":"R15 should be 10K","priority":"normal","affected_ipns":"[\"RES-001-0001\"]"}' \
+  -b cookies.txt
 ```
 
-**Fields:** `title` (required), `description`, `status` (default: draft), `priority` (default: normal), `affected_ipns` (JSON string array)
+### PUT /api/v1/ecos/:id
 
-### PUT /ecos/{id}
+Update an ECO.
 
-Update an ECO. Send all fields.
-
-```bash
-curl -X PUT http://localhost:9000/api/v1/ecos/ECO-2026-001 \
-  -d '{
-    "title": "Updated title",
-    "description": "Updated desc",
-    "status": "review",
-    "priority": "high",
-    "affected_ipns": "[]"
-  }'
-```
-
-### POST /ecos/{id}/approve
+### POST /api/v1/ecos/:id/approve
 
 Sets status to `approved`, records approver and timestamp.
 
-```bash
-curl -X POST http://localhost:9000/api/v1/ecos/ECO-2026-001/approve
-```
-
-### POST /ecos/{id}/implement
+### POST /api/v1/ecos/:id/implement
 
 Sets status to `implemented`.
 
+### POST /api/v1/ecos/bulk
+
+Bulk operations on ECOs.
+
+**Request Body:**
+
+```json
+{ "ids": ["ECO-2026-001", "ECO-2026-002"], "action": "approve" }
+```
+
+**Supported actions:** `approve`, `implement`, `reject`, `delete`
+
+**Response:**
+
+```json
+{ "data": { "success": 2, "failed": 0, "errors": [] } }
+```
+
 ```bash
-curl -X POST http://localhost:9000/api/v1/ecos/ECO-2026-001/implement
+curl -X POST http://localhost:9000/api/v1/ecos/bulk \
+  -H "Content-Type: application/json" \
+  -d '{"ids":["ECO-2026-001","ECO-2026-002"],"action":"approve"}' \
+  -b cookies.txt
 ```
 
 ---
 
 ## Documents
 
-### GET /docs
+### GET /api/v1/docs
 
-List all documents, ordered by creation date descending.
+List all documents.
 
-```bash
-curl http://localhost:9000/api/v1/docs
-```
+### GET /api/v1/docs/:id
 
-```json
-{
-  "data": [
-    {
-      "id": "DOC-2026-001",
-      "title": "Assembly Procedure - Z1000",
-      "category": "procedure",
-      "ipn": "",
-      "revision": "B",
-      "status": "approved",
-      "content": "# Assembly Procedure\n\nStep 1: Place PCB...",
-      "file_path": "",
-      "created_by": "engineer",
-      "created_at": "2026-02-17 20:46:55",
-      "updated_at": "2026-02-17 20:46:55"
-    }
-  ]
-}
-```
-
-### GET /docs/{id}
-
-### POST /docs
-
-```bash
-curl -X POST http://localhost:9000/api/v1/docs \
-  -d '{
-    "title": "Test Procedure",
-    "category": "procedure",
-    "ipn": "PCB-001-0001",
-    "content": "# Test Steps\n\n1. Power on..."
-  }'
-```
+### POST /api/v1/docs
 
 **Fields:** `title` (required), `category`, `ipn`, `revision` (default: A), `status` (default: draft), `content`, `file_path`
 
-### PUT /docs/{id}
+### PUT /api/v1/docs/:id
 
-### POST /docs/{id}/approve
-
-Sets status to `approved`.
+### POST /api/v1/docs/:id/approve
 
 ---
 
 ## Vendors
 
-### GET /vendors
+### GET /api/v1/vendors
 
-List all vendors, ordered by name.
+### GET /api/v1/vendors/:id
 
-```json
-{
-  "data": [
-    {
-      "id": "V-001",
-      "name": "DigiKey",
-      "website": "https://digikey.com",
-      "contact_name": "Sales Team",
-      "contact_email": "sales@digikey.com",
-      "contact_phone": "",
-      "notes": "",
-      "status": "preferred",
-      "lead_time_days": 3,
-      "created_at": "2026-02-17 20:46:55"
-    }
-  ]
-}
-```
-
-### GET /vendors/{id}
-
-### POST /vendors
-
-```bash
-curl -X POST http://localhost:9000/api/v1/vendors \
-  -d '{"name": "Arrow Electronics", "website": "https://arrow.com", "status": "active", "lead_time_days": 7}'
-```
+### POST /api/v1/vendors
 
 **Fields:** `name` (required), `website`, `contact_name`, `contact_email`, `contact_phone`, `notes`, `status` (default: active), `lead_time_days`
 
-ID is auto-generated as `V-{NNN}`.
+### PUT /api/v1/vendors/:id
 
-### PUT /vendors/{id}
-
-### DELETE /vendors/{id}
-
-```bash
-curl -X DELETE http://localhost:9000/api/v1/vendors/V-003
-```
+### DELETE /api/v1/vendors/:id
 
 ---
 
 ## Inventory
 
-### GET /inventory
+### GET /api/v1/inventory
 
 List all inventory items. Use `low_stock=true` to filter items at or below reorder point.
 
-```bash
-curl "http://localhost:9000/api/v1/inventory?low_stock=true"
-```
+### GET /api/v1/inventory/:ipn
 
-```json
-{
-  "data": [
-    {
-      "ipn": "RES-001-0001",
-      "qty_on_hand": 25,
-      "qty_reserved": 0,
-      "location": "Bin B-03",
-      "reorder_point": 100,
-      "reorder_qty": 500,
-      "updated_at": "2026-02-17 20:46:55"
-    }
-  ]
-}
-```
+### POST /api/v1/inventory/transact
 
-### GET /inventory/{ipn}
-
-### POST /inventory/transact
-
-Create an inventory transaction. Supported types: `receive`, `issue`, `return`, `adjust`.
-
-- `receive` / `return`: adds qty to on-hand
-- `issue`: subtracts qty from on-hand
-- `adjust`: sets on-hand to the given qty
+Create an inventory transaction. Types: `receive`, `issue`, `return`, `adjust`.
 
 ```bash
 curl -X POST http://localhost:9000/api/v1/inventory/transact \
-  -d '{"ipn": "CAP-001-0001", "type": "receive", "qty": 500, "reference": "PO-2026-0003", "notes": "Restock"}'
+  -H "Content-Type: application/json" \
+  -d '{"ipn":"CAP-001-0001","type":"receive","qty":500,"reference":"PO-2026-0003"}' \
+  -b cookies.txt
 ```
 
-### GET /inventory/{ipn}/history
+### POST /api/v1/inventory/bulk
 
-Transaction history for a specific IPN, ordered by date descending.
+Bulk operations on inventory. **Supported actions:** `delete`
 
-```bash
-curl http://localhost:9000/api/v1/inventory/CAP-001-0001/history
-```
+### GET /api/v1/inventory/:ipn/history
+
+Transaction history for a specific IPN.
 
 ---
 
 ## Purchase Orders
 
-### GET /pos
+### GET /api/v1/pos
 
-List all POs, ordered by creation date descending.
+List all POs.
 
-### GET /pos/{id}
+### GET /api/v1/pos/:id
 
 Returns PO with line items.
 
-```json
-{
-  "data": {
-    "id": "PO-2026-0001",
-    "vendor_id": "V-001",
-    "status": "received",
-    "notes": "Capacitor order",
-    "created_at": "2026-02-17 20:46:55",
-    "expected_date": "2026-03-01",
-    "received_at": null,
-    "lines": [
-      {
-        "id": 1,
-        "po_id": "PO-2026-0001",
-        "ipn": "CAP-001-0001",
-        "mpn": "GRM188R71C104KA01",
-        "manufacturer": "Murata",
-        "qty_ordered": 1000,
-        "qty_received": 1000,
-        "unit_price": 0.02,
-        "notes": ""
-      }
-    ]
-  }
-}
-```
-
-### POST /pos
+### POST /api/v1/pos
 
 Create a PO with line items.
 
 ```bash
 curl -X POST http://localhost:9000/api/v1/pos \
-  -d '{
-    "vendor_id": "V-001",
-    "expected_date": "2026-04-01",
-    "notes": "Quarterly restock",
-    "lines": [
-      {"ipn": "CAP-001-0001", "mpn": "GRM188R71C104KA01", "manufacturer": "Murata", "qty_ordered": 500, "unit_price": 0.02}
-    ]
-  }'
+  -H "Content-Type: application/json" \
+  -d '{"vendor_id":"V-001","expected_date":"2026-04-01","lines":[{"ipn":"CAP-001-0001","qty_ordered":500,"unit_price":0.02}]}' \
+  -b cookies.txt
 ```
 
-### PUT /pos/{id}
+### PUT /api/v1/pos/:id
 
-Update PO header (vendor, status, notes, expected date).
+### POST /api/v1/pos/:id/receive
 
-### POST /pos/{id}/receive
-
-Receive line items. Automatically updates inventory and creates transactions. Marks PO as `partial` or `received` based on fulfillment.
+Receive line items. Auto-updates inventory and creates transactions.
 
 ```bash
 curl -X POST http://localhost:9000/api/v1/pos/PO-2026-0002/receive \
-  -d '{"lines": [{"id": 2, "qty": 250}]}'
+  -H "Content-Type: application/json" \
+  -d '{"lines":[{"id":2,"qty":250}]}' \
+  -b cookies.txt
+```
+
+### POST /api/v1/pos/generate-from-wo
+
+Generate a PO from work order shortages. Analyzes BOM needs vs inventory and creates a draft PO for items with shortages.
+
+**Request Body:**
+
+```json
+{ "wo_id": "WO-2026-0001", "vendor_id": "V-001" }
+```
+
+**Response:**
+
+```json
+{ "data": { "po_id": "PO-2026-0005", "lines": 3 } }
+```
+
+```bash
+curl -X POST http://localhost:9000/api/v1/pos/generate-from-wo \
+  -H "Content-Type: application/json" \
+  -d '{"wo_id":"WO-2026-0001","vendor_id":"V-001"}' \
+  -b cookies.txt
 ```
 
 ---
 
 ## Work Orders
 
-### GET /workorders
+### GET /api/v1/workorders
 
-### GET /workorders/{id}
+### GET /api/v1/workorders/:id
 
-### POST /workorders
-
-```bash
-curl -X POST http://localhost:9000/api/v1/workorders \
-  -d '{"assembly_ipn": "PCB-001-0001", "qty": 25, "priority": "high", "notes": "Rush order"}'
-```
+### POST /api/v1/workorders
 
 **Fields:** `assembly_ipn` (required), `qty` (default: 1), `status` (default: open), `priority` (default: normal), `notes`
 
-### PUT /workorders/{id}
+### PUT /api/v1/workorders/:id
 
 Setting status to `in_progress` auto-sets `started_at`. Setting to `completed` auto-sets `completed_at`.
 
-### GET /workorders/{id}/bom
+### GET /api/v1/workorders/:id/bom
 
-BOM availability check. Returns inventory levels for all tracked components.
+BOM availability check with shortage highlighting. Returns inventory levels, required quantities, shortage amounts, and status (`ok`, `low`, `shortage`) for each component.
+
+**Response:**
 
 ```json
 {
   "data": {
-    "assembly_ipn": "PCB-001-0001",
-    "wo_qty": 10,
+    "wo_id": "WO-2026-0001", "assembly_ipn": "PCB-001-0001", "qty": 10,
     "bom": [
-      { "ipn": "CAP-001-0001", "qty_required": 10, "qty_on_hand": 500, "available": true }
+      { "ipn": "CAP-001-0001", "description": "100nF MLCC", "qty_required": 10, "qty_on_hand": 500, "shortage": 0, "status": "ok" },
+      { "ipn": "RES-001-0001", "description": "10K 0402", "qty_required": 10, "qty_on_hand": 5, "shortage": 5, "status": "low" }
     ]
   }
 }
+```
+
+```bash
+curl http://localhost:9000/api/v1/workorders/WO-2026-0001/bom -b cookies.txt
+```
+
+### GET /api/v1/workorders/:id/pdf
+
+Generate a printable Work Order Traveler as HTML. Opens print dialog automatically. Includes assembly info, BOM table, and sign-off section.
+
+```bash
+curl http://localhost:9000/api/v1/workorders/WO-2026-0001/pdf -b cookies.txt
+# Returns text/html — open in a browser to print
+```
+
+### POST /api/v1/workorders/bulk
+
+Bulk operations on work orders.
+
+**Supported actions:** `complete`, `cancel`, `delete`
+
+```bash
+curl -X POST http://localhost:9000/api/v1/workorders/bulk \
+  -H "Content-Type: application/json" \
+  -d '{"ids":["WO-2026-0001","WO-2026-0002"],"action":"complete"}' \
+  -b cookies.txt
 ```
 
 ---
 
 ## Test Records
 
-### GET /tests
+### GET /api/v1/tests
 
-List all test records, ordered by date descending.
+### GET /api/v1/tests/:serial_number
 
-### GET /tests/{serial_number}
-
-Get all test records for a specific serial number.
-
-```bash
-curl http://localhost:9000/api/v1/tests/SN-001
-```
-
-### POST /tests
-
-```bash
-curl -X POST http://localhost:9000/api/v1/tests \
-  -d '{
-    "serial_number": "SN-005",
-    "ipn": "PCB-001-0001",
-    "firmware_version": "1.3.0",
-    "test_type": "factory",
-    "result": "pass",
-    "measurements": "{\"voltage\":12.05,\"current\":0.48}"
-  }'
-```
+### POST /api/v1/tests
 
 **Fields:** `serial_number` (required), `ipn` (required), `result` (required: pass/fail), `firmware_version`, `test_type`, `measurements` (JSON string), `notes`
 
@@ -529,168 +889,182 @@ curl -X POST http://localhost:9000/api/v1/tests \
 
 ## NCRs
 
-### GET /ncrs
+### GET /api/v1/ncrs
 
-### GET /ncrs/{id}
+### GET /api/v1/ncrs/:id
 
-### POST /ncrs
-
-```bash
-curl -X POST http://localhost:9000/api/v1/ncrs \
-  -d '{
-    "title": "Cold solder joint on J1",
-    "description": "Pin 3 of J1 has insufficient solder",
-    "ipn": "PCB-001-0001",
-    "serial_number": "SN-005",
-    "defect_type": "workmanship",
-    "severity": "major"
-  }'
-```
+### POST /api/v1/ncrs
 
 **Fields:** `title` (required), `description`, `ipn`, `serial_number`, `defect_type`, `severity` (default: minor), `status` (default: open)
 
-### PUT /ncrs/{id}
+### PUT /api/v1/ncrs/:id
 
-Update NCR. Setting status to `resolved` or `closed` auto-sets `resolved_at`.
+Setting status to `resolved` or `closed` auto-sets `resolved_at`.
 
-**Additional fields for update:** `root_cause`, `corrective_action`
+### POST /api/v1/ncrs/bulk
+
+Bulk operations on NCRs. **Supported actions:** `close`, `resolve`, `delete`
 
 ---
 
 ## Devices
 
-### GET /devices
+### GET /api/v1/devices
 
-### GET /devices/{serial_number}
+### GET /api/v1/devices/:serial_number
 
-### POST /devices
+### POST /api/v1/devices
+
+### PUT /api/v1/devices/:serial_number
+
+### GET /api/v1/devices/:serial_number/history
+
+Combined test records and firmware campaign participation.
+
+### GET /api/v1/devices/export
+
+Export all devices as CSV.
 
 ```bash
-curl -X POST http://localhost:9000/api/v1/devices \
-  -d '{
-    "serial_number": "SN-010",
-    "ipn": "PCB-001-0001",
-    "firmware_version": "1.3.0",
-    "customer": "NewCorp",
-    "location": "Data Center C",
-    "install_date": "2026-02-17"
-  }'
+curl http://localhost:9000/api/v1/devices/export -b cookies.txt -o devices.csv
 ```
 
-### PUT /devices/{serial_number}
+### POST /api/v1/devices/import
 
-### GET /devices/{serial_number}/history
+Import devices from CSV. Uses `multipart/form-data`. Upserts on `serial_number`.
 
-Returns combined test records and firmware campaign participation for a device.
+**Required CSV columns:** `serial_number`, `ipn`
+**Optional columns:** `firmware_version`, `customer`, `location`, `status`, `install_date`, `notes`
+
+**Response:**
 
 ```json
-{
-  "data": {
-    "tests": [ ... ],
-    "campaigns": [ ... ]
-  }
-}
+{ "data": { "imported": 15, "skipped": 2, "errors": [] } }
 ```
+
+```bash
+curl -X POST http://localhost:9000/api/v1/devices/import \
+  -F "file=@devices.csv" \
+  -b cookies.txt
+```
+
+### POST /api/v1/devices/bulk
+
+Bulk operations on devices. **Supported actions:** `decommission`, `delete`
 
 ---
 
 ## Firmware Campaigns
 
-### GET /campaigns
+### GET /api/v1/campaigns
 
-### GET /campaigns/{id}
+### GET /api/v1/campaigns/:id
 
-### POST /campaigns
-
-```bash
-curl -X POST http://localhost:9000/api/v1/campaigns \
-  -d '{"name": "v1.4.0 Feature Release", "version": "1.4.0", "category": "public", "notes": "New telemetry features"}'
-```
+### POST /api/v1/campaigns
 
 **Fields:** `name` (required), `version` (required), `category` (default: public), `status` (default: draft), `target_filter`, `notes`
 
-### PUT /campaigns/{id}
+### PUT /api/v1/campaigns/:id
 
-### POST /campaigns/{id}/launch
+### POST /api/v1/campaigns/:id/launch
 
 Enrolls all active devices and sets campaign to `active`.
 
-```bash
-curl -X POST http://localhost:9000/api/v1/campaigns/FW-2026-001/launch
+### GET /api/v1/campaigns/:id/progress
+
+Returns device counts by status.
+
+### GET /api/v1/campaigns/:id/devices
+
+List all devices in a campaign with their update status.
+
+### GET /api/v1/campaigns/:id/stream
+
+Server-Sent Events (SSE) stream of campaign progress. Sends progress JSON every 2 seconds until all devices are updated or failed.
+
+**Response (text/event-stream):**
+
 ```
+data: {"pending":5,"sent":2,"updated":3,"failed":0,"total":10,"pct":30}
+```
+
+```bash
+curl -N http://localhost:9000/api/v1/campaigns/FW-2026-001/stream -b cookies.txt
+```
+
+### POST /api/v1/campaigns/:id/devices/:serial/mark
+
+Mark a device's campaign status.
+
+**Request Body:**
 
 ```json
-{ "data": { "launched": true, "devices_added": 2 } }
+{ "status": "updated" }
 ```
 
-### GET /campaigns/{id}/progress
+Status must be `updated` or `failed`.
 
 ```bash
-curl http://localhost:9000/api/v1/campaigns/FW-2026-001/progress
-```
-
-```json
-{ "data": { "total": 2, "pending": 2, "sent": 0, "updated": 0, "failed": 0 } }
+curl -X POST http://localhost:9000/api/v1/campaigns/FW-2026-001/devices/SN-001/mark \
+  -H "Content-Type: application/json" \
+  -d '{"status":"updated"}' \
+  -b cookies.txt
 ```
 
 ---
 
 ## RMAs
 
-### GET /rmas
+### GET /api/v1/rmas
 
-### GET /rmas/{id}
+### GET /api/v1/rmas/:id
 
-### POST /rmas
+### POST /api/v1/rmas
 
-```bash
-curl -X POST http://localhost:9000/api/v1/rmas \
-  -d '{"serial_number": "SN-010", "customer": "NewCorp", "reason": "Overheating", "defect_description": "Unit shuts down after 30 min"}'
-```
+### PUT /api/v1/rmas/:id
 
-### PUT /rmas/{id}
+### POST /api/v1/rmas/bulk
 
-Setting status to `received` auto-sets `received_at`. Setting to `closed` or `shipped` auto-sets `resolved_at`.
-
-**Additional fields:** `resolution`
+Bulk operations on RMAs. **Supported actions:** `close`, `delete`
 
 ---
 
 ## Quotes
 
-### GET /quotes
+### GET /api/v1/quotes
 
-### GET /quotes/{id}
+### GET /api/v1/quotes/:id
 
 Returns quote with line items.
 
-### POST /quotes
+### POST /api/v1/quotes
 
-```bash
-curl -X POST http://localhost:9000/api/v1/quotes \
-  -d '{
-    "customer": "MegaCorp",
-    "valid_until": "2026-06-01",
-    "notes": "100 unit order",
-    "lines": [
-      {"ipn": "PCB-001-0001", "description": "Z1000 Power Module", "qty": 100, "unit_price": 139.99}
-    ]
-  }'
-```
+### PUT /api/v1/quotes/:id
 
-### PUT /quotes/{id}
-
-### GET /quotes/{id}/cost
+### GET /api/v1/quotes/:id/cost
 
 Cost rollup — calculates line totals and grand total.
+
+**Response:**
 
 ```json
 {
   "data": {
-    "lines": [
-      { "ipn": "PCB-001-0001", "description": "Z1000 Power Module", "qty": 50, "unit_price": 149.99, "line_total": 7499.50 }
-    ],
+    "lines": [ { "ipn": "PCB-001-0001", "description": "Z1000 Power Module", "qty": 50, "unit_price": 149.99, "line_total": 7499.50 } ],
     "total": 7499.50
   }
 }
+```
+
+```bash
+curl http://localhost:9000/api/v1/quotes/Q-2026-001/cost -b cookies.txt
+```
+
+### GET /api/v1/quotes/:id/pdf
+
+Generate a printable quote as HTML. Includes customer info, line items with pricing, subtotal, terms, and contact info. Opens print dialog automatically.
+
+```bash
+curl http://localhost:9000/api/v1/quotes/Q-2026-001/pdf -b cookies.txt
+# Returns text/html — open in a browser to print
 ```

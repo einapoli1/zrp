@@ -1,49 +1,463 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
 )
 
-func TestNextID(t *testing.T) {
-	// Setup test DB
-	os.Remove("test.db")
-	defer os.Remove("test.db")
-	if err := initDB("test.db"); err != nil {
+func setupTestDB(t *testing.T) func() {
+	t.Helper()
+	dbFile := fmt.Sprintf("test_%s.db", t.Name())
+	os.Remove(dbFile)
+	if err := initDB(dbFile); err != nil {
 		t.Fatal(err)
 	}
 	seedDB()
+	os.MkdirAll("uploads", 0755)
+	return func() { os.Remove(dbFile) }
+}
+
+// loginAdmin logs in as admin and returns the session cookie
+func loginAdmin(t *testing.T) *http.Cookie {
+	t.Helper()
+	body := `{"username":"admin","password":"zonit123"}`
+	req := httptest.NewRequest("POST", "/auth/login", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	handleLogin(w, req)
+	if w.Code != 200 {
+		t.Fatalf("login failed: %d %s", w.Code, w.Body.String())
+	}
+	for _, c := range w.Result().Cookies() {
+		if c.Name == "zrp_session" {
+			return c
+		}
+	}
+	t.Fatal("no session cookie")
+	return nil
+}
+
+func authedRequest(method, path string, body string, cookie *http.Cookie) *http.Request {
+	var bodyReader io.Reader
+	if body != "" {
+		bodyReader = strings.NewReader(body)
+	}
+	req := httptest.NewRequest(method, path, bodyReader)
+	req.Header.Set("Content-Type", "application/json")
+	if cookie != nil {
+		req.AddCookie(cookie)
+	}
+	return req
+}
+
+// --- Auth Tests ---
+
+func TestLoginSuccess(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	if cookie.Value == "" {
+		t.Error("empty session token")
+	}
+}
+
+func TestLoginFailure(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	body := `{"username":"admin","password":"wrong"}`
+	req := httptest.NewRequest("POST", "/auth/login", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	handleLogin(w, req)
+	if w.Code != 401 {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestLogout(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	req := httptest.NewRequest("POST", "/auth/logout", nil)
+	req.AddCookie(cookie)
+	w := httptest.NewRecorder()
+	handleLogout(w, req)
+	if w.Code != 200 {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	// Session should be invalid now
+	req2 := httptest.NewRequest("GET", "/auth/me", nil)
+	req2.AddCookie(cookie)
+	w2 := httptest.NewRecorder()
+	handleMe(w2, req2)
+	if w2.Code != 401 {
+		t.Errorf("expected 401 after logout, got %d", w2.Code)
+	}
+}
+
+func TestMe(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	req := httptest.NewRequest("GET", "/auth/me", nil)
+	req.AddCookie(cookie)
+	w := httptest.NewRecorder()
+	handleMe(w, req)
+	if w.Code != 200 {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	user := resp["user"].(map[string]interface{})
+	if user["username"] != "admin" {
+		t.Errorf("expected admin, got %v", user["username"])
+	}
+}
+
+func TestMeUnauthorized(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	req := httptest.NewRequest("GET", "/auth/me", nil)
+	w := httptest.NewRecorder()
+	handleMe(w, req)
+	if w.Code != 401 {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+// --- User Tests ---
+
+func TestCreateUser(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"username":"newuser","display_name":"New User","password":"pass123","role":"user"}`
+	req := authedRequest("POST", "/api/v1/users", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateUser(w, req)
+	if w.Code != 201 {
+		t.Errorf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestCreateDuplicateUser(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"username":"admin","display_name":"Dup","password":"pass","role":"user"}`
+	req := authedRequest("POST", "/api/v1/users", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateUser(w, req)
+	if w.Code != 409 {
+		t.Errorf("expected 409, got %d", w.Code)
+	}
+}
+
+func TestUpdateUserRole(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	// Get engineer user ID
+	var engineerID int
+	db.QueryRow("SELECT id FROM users WHERE username='engineer'").Scan(&engineerID)
+
+	body := `{"display_name":"Engineer Updated","role":"readonly","active":1}`
+	req := authedRequest("PUT", fmt.Sprintf("/api/v1/users/%d", engineerID), body, cookie)
+	w := httptest.NewRecorder()
+	handleUpdateUser(w, req, fmt.Sprintf("%d", engineerID))
+	if w.Code != 200 {
+		t.Errorf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Verify role changed
+	var role string
+	db.QueryRow("SELECT role FROM users WHERE id=?", engineerID).Scan(&role)
+	if role != "readonly" {
+		t.Errorf("expected readonly, got %s", role)
+	}
+}
+
+func TestDeactivateUser(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	var engineerID int
+	db.QueryRow("SELECT id FROM users WHERE username='engineer'").Scan(&engineerID)
+
+	body := `{"display_name":"Engineer","role":"user","active":0}`
+	req := authedRequest("PUT", fmt.Sprintf("/api/v1/users/%d", engineerID), body, cookie)
+	w := httptest.NewRecorder()
+	handleUpdateUser(w, req, fmt.Sprintf("%d", engineerID))
+	if w.Code != 200 {
+		t.Errorf("expected 200, got %d", w.Code)
+	}
+
+	// Deactivated user can't login
+	loginBody := `{"username":"engineer","password":"zonit123"}`
+	req2 := httptest.NewRequest("POST", "/auth/login", strings.NewReader(loginBody))
+	req2.Header.Set("Content-Type", "application/json")
+	w2 := httptest.NewRecorder()
+	handleLogin(w2, req2)
+	if w2.Code != 403 {
+		t.Errorf("expected 403 for deactivated user, got %d", w2.Code)
+	}
+}
+
+// --- API Key Tests ---
+
+func TestAPIKeyLifecycle(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+
+	// Create key
+	body := `{"name":"Test Key"}`
+	req := authedRequest("POST", "/api/v1/apikeys", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateAPIKey(w, req)
+	if w.Code != 201 {
+		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	key := resp["key"].(string)
+	if !strings.HasPrefix(key, "zrp_") {
+		t.Errorf("key should start with zrp_, got %s", key)
+	}
+
+	// Verify Bearer auth works
+	if !validateBearerToken(key) {
+		t.Error("valid key should authenticate")
+	}
+}
+
+func TestBearerAuthWorks(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"name":"Bearer Test"}`
+	req := authedRequest("POST", "/api/v1/apikeys", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateAPIKey(w, req)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	key := resp["key"].(string)
+
+	if !validateBearerToken(key) {
+		t.Error("Bearer token should be valid")
+	}
+}
+
+func TestRevokedKeyRejected(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+
+	// Create key
+	body := `{"name":"Revoke Test"}`
+	req := authedRequest("POST", "/api/v1/apikeys", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateAPIKey(w, req)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	key := resp["key"].(string)
+	id := fmt.Sprintf("%.0f", resp["id"].(float64))
+
+	// Delete key
+	req2 := authedRequest("DELETE", "/api/v1/apikeys/"+id, "", cookie)
+	w2 := httptest.NewRecorder()
+	handleDeleteAPIKey(w2, req2, id)
+	if w2.Code != 200 {
+		t.Errorf("expected 200, got %d", w2.Code)
+	}
+
+	// Key should no longer work
+	if validateBearerToken(key) {
+		t.Error("revoked key should not authenticate")
+	}
+}
+
+func TestDisabledKeyRejected(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+
+	body := `{"name":"Disable Test"}`
+	req := authedRequest("POST", "/api/v1/apikeys", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateAPIKey(w, req)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	key := resp["key"].(string)
+	id := fmt.Sprintf("%.0f", resp["id"].(float64))
+
+	// Disable key
+	req2 := authedRequest("PUT", "/api/v1/apikeys/"+id, `{"enabled":0}`, cookie)
+	w2 := httptest.NewRecorder()
+	handleToggleAPIKey(w2, req2, id)
+
+	if validateBearerToken(key) {
+		t.Error("disabled key should not authenticate")
+	}
+}
+
+// --- Attachment Tests ---
+
+func TestAttachmentLifecycle(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+
+	// Upload
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	mw.WriteField("module", "eco")
+	mw.WriteField("record_id", "ECO-2026-001")
+	fw, _ := mw.CreateFormFile("file", "test.txt")
+	fw.Write([]byte("hello world"))
+	mw.Close()
+
+	req := httptest.NewRequest("POST", "/api/v1/attachments", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	req.AddCookie(cookie)
+	w := httptest.NewRecorder()
+	handleUploadAttachment(w, req)
+	if w.Code != 201 {
+		t.Fatalf("upload expected 201, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var uploadResp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &uploadResp)
+	data := uploadResp["data"].(map[string]interface{})
+	attID := fmt.Sprintf("%.0f", data["id"].(float64))
+
+	// List
+	req2 := httptest.NewRequest("GET", "/api/v1/attachments?module=eco&record_id=ECO-2026-001", nil)
+	req2.AddCookie(cookie)
+	w2 := httptest.NewRecorder()
+	handleListAttachments(w2, req2)
+	if w2.Code != 200 {
+		t.Errorf("list expected 200, got %d", w2.Code)
+	}
+
+	var listResp map[string]interface{}
+	json.Unmarshal(w2.Body.Bytes(), &listResp)
+	items := listResp["data"].([]interface{})
+	if len(items) != 1 {
+		t.Errorf("expected 1 attachment, got %d", len(items))
+	}
+
+	// Delete
+	req3 := authedRequest("DELETE", "/api/v1/attachments/"+attID, "", cookie)
+	w3 := httptest.NewRecorder()
+	handleDeleteAttachment(w3, req3, attID)
+	if w3.Code != 200 {
+		t.Errorf("delete expected 200, got %d", w3.Code)
+	}
+}
+
+// --- Bulk Operation Tests ---
+
+func TestBulkApproveECOs(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+
+	body := `{"ids":["ECO-2026-001"],"action":"approve"}`
+	req := authedRequest("POST", "/api/v1/ecos/bulk", body, cookie)
+	w := httptest.NewRecorder()
+	handleBulkECOs(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["success"].(float64) != 1 {
+		t.Errorf("expected 1 success, got %v", data["success"])
+	}
+
+	// Verify status
+	var status string
+	db.QueryRow("SELECT status FROM ecos WHERE id='ECO-2026-001'").Scan(&status)
+	if status != "approved" {
+		t.Errorf("expected approved, got %s", status)
+	}
+}
+
+func TestBulkInvalidAction(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+
+	body := `{"ids":["ECO-2026-001"],"action":"invalid"}`
+	req := authedRequest("POST", "/api/v1/ecos/bulk", body, cookie)
+	w := httptest.NewRecorder()
+	handleBulkECOs(w, req)
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+// --- Legacy Tests ---
+
+func TestNextID(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
 
 	id := nextID("ECO", "ecos", 3)
 	if !strings.HasPrefix(id, "ECO-2026-") {
 		t.Errorf("unexpected id format: %s", id)
 	}
-	// Should be 003 since we seeded 001 and 002
 	if !strings.HasSuffix(id, "003") {
 		t.Errorf("expected suffix 003, got: %s", id)
 	}
 }
 
 func TestDBMigrations(t *testing.T) {
-	os.Remove("test2.db")
-	defer os.Remove("test2.db")
-	if err := initDB("test2.db"); err != nil {
+	os.Remove("test_migrations.db")
+	defer os.Remove("test_migrations.db")
+	if err := initDB("test_migrations.db"); err != nil {
 		t.Fatal("migration failed:", err)
 	}
-	// Run again - should be idempotent
 	if err := runMigrations(); err != nil {
 		t.Fatal("re-migration failed:", err)
 	}
 }
 
 func TestSeedDB(t *testing.T) {
-	os.Remove("test3.db")
-	defer os.Remove("test3.db")
-	if err := initDB("test3.db"); err != nil {
-		t.Fatal(err)
-	}
-	seedDB()
+	cleanup := setupTestDB(t)
+	defer cleanup()
 
 	var count int
 	db.QueryRow("SELECT COUNT(*) FROM ecos").Scan(&count)
@@ -58,6 +472,10 @@ func TestSeedDB(t *testing.T) {
 	if count < 2 {
 		t.Errorf("expected at least 2 devices, got %d", count)
 	}
+	db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count)
+	if count < 2 {
+		t.Errorf("expected at least 2 users, got %d", count)
+	}
 }
 
 func TestSPHelper(t *testing.T) {
@@ -69,9 +487,5 @@ func TestSPHelper(t *testing.T) {
 	result := sp(ns)
 	if result == nil || *result != "hello" {
 		t.Error("sp failed")
-	}
-	nilResult := sp(ns)
-	if nilResult == nil {
-		t.Error("sp nil failed")
 	}
 }

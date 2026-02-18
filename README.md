@@ -35,20 +35,35 @@ A single-binary ERP system for hardware electronics manufacturing. Go backend, v
 
 ## Features
 
-- **Parts (PLM)** — Browse and search parts from gitplm CSV files, organized by category
-- **ECOs** — Engineering Change Orders with draft → review → approved → implemented workflow
-- **Documents** — Revision-controlled procedures, specs, and drawings linked to parts
-- **Inventory** — Real-time stock tracking with reorder points, locations, and transaction history
-- **Purchase Orders** — PO lifecycle from draft to received, with line items and partial receiving
-- **Vendors** — Supplier management with contacts, lead times, and status tracking
-- **Work Orders** — Production work orders tied to assembly IPNs with BOM availability checks
+**20+ modules** covering the full hardware product lifecycle:
+
+### Core Modules
+- **Dashboard** — KPI cards, charts (ECOs/WOs by status), low stock alerts, calendar view
+- **Parts (PLM)** — Browse/search gitplm CSV files with BOM & cost rollup for assemblies
+- **ECOs** — Engineering Change Orders with approval workflow and parts enrichment
+- **Documents** — Revision-controlled procedures, specs, and drawings with file attachments
+- **Inventory** — Stock tracking with reorder points, transaction history, and IPN autocomplete
+- **Purchase Orders** — PO lifecycle with partial receiving and auto-generate from WO shortages
+- **Vendors** — Supplier directory with contacts and lead times
+- **Work Orders** — Production tracking with BOM shortage highlighting and printable PDF travelers
 - **Test Records** — Factory test results with pass/fail, measurements, and firmware versions
-- **NCRs** — Non-Conformance Reports with defect classification, root cause, and corrective actions
-- **Device Registry** — Deployed device tracking with serial numbers, customers, and firmware versions
-- **Firmware Campaigns** — OTA firmware rollouts targeting active devices with progress tracking
-- **RMAs** — Return Merchandise Authorization with full lifecycle from open to resolution
-- **Quotes** — Customer quotes with line items, pricing, and cost rollup
-- **Dashboard** — At-a-glance KPIs: open ECOs, low stock, active WOs, open NCRs/RMAs
+- **NCRs** — Non-Conformance Reports with NCR→ECO auto-linking for traceability
+- **Device Registry** — Field device tracking with CSV import/export and full lifecycle history
+- **Firmware Campaigns** — OTA rollouts with live SSE progress streaming
+- **RMAs** — Return processing from complaint through resolution
+- **Quotes** — Customer quotes with cost rollup and printable PDF quotes
+
+### Platform Features
+- **Authentication** — Session-based login with bcrypt, role-based access (admin/user/readonly)
+- **API Keys** — Bearer token auth for scripts and CI pipelines
+- **Global Search** — Search across all modules from the top bar
+- **Notifications** — Auto-generated alerts for low stock, overdue WOs, aging NCRs, new RMAs
+- **File Attachments** — Upload files to any record (up to 32MB)
+- **Audit Log** — Full audit trail of all changes, filterable by module/user/date
+- **Bulk Operations** — Multi-select and batch actions across all list views
+- **Calendar** — Monthly view of WO due dates, PO deliveries, quote expirations
+- **Dark Mode** — Toggle with persistent preference
+- **Keyboard Shortcuts** — `/` to search, `n` for new, `?` for help
 
 ## Quick Start
 
@@ -167,21 +182,30 @@ zrp/
 ├── main.go              # HTTP server, routing, response helpers
 ├── db.go                # SQLite init, migrations, seed data, ID generation
 ├── types.go             # All Go struct types and API response types
-├── middleware.go         # CORS and request logging middleware
+├── middleware.go         # Auth middleware (session + Bearer), CORS, logging
+├── audit.go             # Audit logging, dashboard charts, low stock alerts
+├── handler_auth.go      # Login, logout, session (me) handlers
+├── handler_users.go     # User management (CRUD, password reset)
+├── handler_apikeys.go   # API key generation, validation, revocation
 ├── handler_parts.go     # Parts + Categories + Dashboard handlers
 ├── handler_eco.go       # ECO handlers
 ├── handler_docs.go      # Document handlers
 ├── handler_vendors.go   # Vendor handlers
 ├── handler_inventory.go # Inventory + transaction handlers
-├── handler_procurement.go # PO handlers with receiving logic
-├── handler_workorders.go  # Work order + BOM handlers
+├── handler_procurement.go # PO handlers with receiving + generate-from-WO
+├── handler_workorders.go  # Work order + BOM + PDF traveler handlers
 ├── handler_testing.go   # Test record handlers
 ├── handler_ncr.go       # NCR handlers
-├── handler_devices.go   # Device registry + history handlers
-├── handler_firmware.go  # Firmware campaign handlers
+├── handler_devices.go   # Device registry + import/export handlers
+├── handler_firmware.go  # Firmware campaign + SSE stream handlers
 ├── handler_rma.go       # RMA handlers
-├── handler_quotes.go    # Quote + cost rollup handlers
+├── handler_quotes.go    # Quote + cost rollup + PDF handlers
 ├── handler_costing.go   # BOM cost rollup (shared logic)
+├── handler_bulk.go      # Bulk operations for all modules
+├── handler_search.go    # Global search across all modules
+├── handler_calendar.go  # Calendar event aggregation
+├── handler_notifications.go # Notification generation and management
+├── handler_attachments.go   # File upload, list, delete
 ├── static/
 │   ├── index.html       # SPA shell with Tailwind CSS
 │   └── modules/         # One JS file per module
