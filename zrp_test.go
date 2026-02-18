@@ -489,3 +489,187 @@ func TestSPHelper(t *testing.T) {
 		t.Error("sp failed")
 	}
 }
+
+// --- Report Tests ---
+
+func TestReportInventoryValuation(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	req := authedRequest("GET", "/api/v1/reports/inventory-valuation", "", cookie)
+	w := httptest.NewRecorder()
+	handleReportInventoryValuation(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp APIResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp.Data == nil {
+		t.Fatal("expected data")
+	}
+}
+
+func TestReportInventoryValuationCSV(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	req := httptest.NewRequest("GET", "/api/v1/reports/inventory-valuation?format=csv", nil)
+	w := httptest.NewRecorder()
+	handleReportInventoryValuation(w, req)
+	if w.Header().Get("Content-Type") != "text/csv" {
+		t.Errorf("expected text/csv, got %s", w.Header().Get("Content-Type"))
+	}
+}
+
+func TestReportOpenECOs(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	req := httptest.NewRequest("GET", "/api/v1/reports/open-ecos", nil)
+	w := httptest.NewRecorder()
+	handleReportOpenECOs(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestReportWOThroughput(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	req := httptest.NewRequest("GET", "/api/v1/reports/wo-throughput?days=30", nil)
+	w := httptest.NewRecorder()
+	handleReportWOThroughput(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp APIResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp.Data == nil {
+		t.Fatal("expected data")
+	}
+}
+
+func TestReportWOThroughputInvalidDays(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	req := httptest.NewRequest("GET", "/api/v1/reports/wo-throughput?days=45", nil)
+	w := httptest.NewRecorder()
+	handleReportWOThroughput(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	// Should default to 30
+	var resp APIResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	dataMap := resp.Data.(map[string]interface{})
+	if int(dataMap["days"].(float64)) != 30 {
+		t.Errorf("expected default 30 days, got %v", dataMap["days"])
+	}
+}
+
+func TestReportLowStock(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	req := httptest.NewRequest("GET", "/api/v1/reports/low-stock", nil)
+	w := httptest.NewRecorder()
+	handleReportLowStock(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestReportNCRSummary(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	req := httptest.NewRequest("GET", "/api/v1/reports/ncr-summary", nil)
+	w := httptest.NewRecorder()
+	handleReportNCRSummary(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp APIResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp.Data == nil {
+		t.Fatal("expected data")
+	}
+}
+
+// --- Quote Margin Tests ---
+
+func TestQuoteCostMargin(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	// Create a quote with lines
+	body := `{"customer":"Test Corp","lines":[{"ipn":"RES-001-0001","description":"Resistor","qty":10,"unit_price":1.50}]}`
+	req := authedRequest("POST", "/api/v1/quotes", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateQuote(w, req)
+	if w.Code != 200 {
+		t.Fatalf("create quote failed: %d %s", w.Code, w.Body.String())
+	}
+	var createResp APIResponse
+	json.Unmarshal(w.Body.Bytes(), &createResp)
+	qData := createResp.Data.(map[string]interface{})
+	qid := qData["id"].(string)
+
+	// Get cost/margin
+	req2 := authedRequest("GET", "/api/v1/quotes/"+qid+"/cost", "", cookie)
+	w2 := httptest.NewRecorder()
+	handleQuoteCost(w2, req2, qid)
+	if w2.Code != 200 {
+		t.Fatalf("quote cost failed: %d %s", w2.Code, w2.Body.String())
+	}
+	var costResp APIResponse
+	json.Unmarshal(w2.Body.Bytes(), &costResp)
+	costData := costResp.Data.(map[string]interface{})
+	if costData["quote_id"] != qid {
+		t.Errorf("expected quote_id %s, got %v", qid, costData["quote_id"])
+	}
+	if costData["total_quoted"].(float64) != 15.0 {
+		t.Errorf("expected total_quoted 15.0, got %v", costData["total_quoted"])
+	}
+}
+
+// --- Config Test ---
+
+func TestConfig(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	gitplmUIURL = "http://localhost:8888"
+
+	req := httptest.NewRequest("GET", "/api/v1/config", nil)
+	w := httptest.NewRecorder()
+	handleConfig(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp APIResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp.Data.(map[string]interface{})
+	if data["gitplm_ui_url"] != "http://localhost:8888" {
+		t.Errorf("expected gitplm_ui_url, got %v", data["gitplm_ui_url"])
+	}
+}
+
+// --- Helper Tests ---
+
+func TestIpnCategory(t *testing.T) {
+	tests := []struct{ ipn, want string }{
+		{"RES-001-0001", "RES"},
+		{"PCA-002-0003", "PCA"},
+		{"CAP-100", "CAP"},
+	}
+	for _, tt := range tests {
+		got := ipnCategory(tt.ipn)
+		if got != tt.want {
+			t.Errorf("ipnCategory(%q) = %q, want %q", tt.ipn, got, tt.want)
+		}
+	}
+}

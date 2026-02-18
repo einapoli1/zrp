@@ -38,7 +38,7 @@ window.module_parts = {
               </tr></thead>
               <tbody>
                 ${parts.map(p => `<tr class="table-row border-b border-gray-100" onclick="window._partsDetail('${p.ipn}')">
-                  <td class="py-2 pr-4 font-mono text-blue-600">${p.ipn}</td>
+                  <td class="py-2 pr-4 font-mono text-blue-600">${p.ipn} <a href="${window._gitplmURL||'http://localhost:8888'}/#/parts?ipn=${encodeURIComponent(p.ipn)}" target="_blank" onclick="event.stopPropagation()" class="text-gray-400 hover:text-blue-500" title="Open in gitplm-ui">↗</a></td>
                   <td class="py-2 pr-4">${p.fields?._category || ''}</td>
                   ${p.fields ? Object.entries(p.fields).filter(([k])=>k!=='_category'&&k!=='ipn'&&k!=='IPN'&&k!=='pn'&&k!=='PN').slice(0,5).map(([k,v])=>`<td class="py-2 pr-4 truncate max-w-[200px]">${v}</td>`).join('') : ''}
                 </tr>`).join('')}
@@ -79,7 +79,8 @@ window.module_parts = {
           <div id="parts-bom-panel" style="display:none"><p class="text-gray-400 text-center py-2">Loading BOM...</p></div>
         </div>`;
       }
-      showModal('Part: ' + ipn, `<div class="font-mono text-lg text-blue-600 mb-4">${ipn}</div>${isAssembly ? bomHTML : fields}${costHTML}`);
+      const gitplmLink = `<a href="${window._gitplmURL||'http://localhost:8888'}/#/parts?ipn=${encodeURIComponent(ipn)}" target="_blank" class="text-sm text-blue-500 hover:underline ml-2">Open in gitplm-ui →</a>`;
+      showModal('Part: ' + ipn, `<div class="font-mono text-lg text-blue-600 mb-4">${ipn}${gitplmLink}</div>${isAssembly ? bomHTML : fields}${costHTML}`);
 
       // Load cost asynchronously
       try {

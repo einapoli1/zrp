@@ -1068,3 +1068,109 @@ Generate a printable quote as HTML. Includes customer info, line items with pric
 curl http://localhost:9000/api/v1/quotes/Q-2026-001/pdf -b cookies.txt
 # Returns text/html — open in a browser to print
 ```
+
+---
+
+## Config
+
+### GET /api/v1/config
+
+Returns application configuration.
+
+**Response:**
+```json
+{
+  "data": {
+    "gitplm_ui_url": "http://localhost:8888"
+  }
+}
+```
+
+---
+
+## Reports
+
+All report endpoints support `?format=csv` to download CSV instead of JSON.
+
+### GET /api/v1/reports/inventory-valuation
+
+Inventory items with qty × latest PO unit price, grouped by category.
+
+**Response:**
+```json
+{
+  "data": {
+    "groups": [
+      {
+        "category": "RES",
+        "items": [
+          { "ipn": "RES-001-0001", "description": "...", "category": "RES", "qty_on_hand": 100, "unit_price": 0.05, "subtotal": 5.00, "po_ref": "PO-2026-0001" }
+        ],
+        "subtotal": 5.00
+      }
+    ],
+    "grand_total": 5.00
+  }
+}
+```
+
+### GET /api/v1/reports/open-ecos
+
+Open ECOs (draft/review) sorted by priority (critical→low) with age in days.
+
+**Response:**
+```json
+{
+  "data": [
+    { "id": "ECO-2026-001", "title": "...", "status": "draft", "priority": "critical", "created_by": "engineer", "created_at": "...", "age_days": 5 }
+  ]
+}
+```
+
+### GET /api/v1/reports/wo-throughput?days=30
+
+Work order throughput for the last 30/60/90 days.
+
+**Query Parameters:**
+- `days` — 30, 60, or 90 (default: 30)
+
+**Response:**
+```json
+{
+  "data": {
+    "days": 30,
+    "count_by_status": { "completed": 5 },
+    "total_completed": 5,
+    "avg_cycle_time_days": 3.5
+  }
+}
+```
+
+### GET /api/v1/reports/low-stock
+
+Items where qty_on_hand < reorder_point.
+
+**Response:**
+```json
+{
+  "data": [
+    { "ipn": "RES-001-0001", "description": "...", "qty_on_hand": 5, "reorder_point": 50, "reorder_qty": 100, "suggested_order": 100 }
+  ]
+}
+```
+
+### GET /api/v1/reports/ncr-summary
+
+Open NCR summary by severity and defect type with average resolution time.
+
+**Response:**
+```json
+{
+  "data": {
+    "by_severity": { "minor": 2, "major": 1 },
+    "by_defect_type": { "cosmetic": 1, "functional": 2 },
+    "total_open": 3,
+    "avg_resolve_days": 7.5
+  }
+}
+```

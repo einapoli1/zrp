@@ -2,6 +2,19 @@
 
 All notable changes to ZRP are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.3.0] - 2026-02-18
+
+### Added
+- **Report Builder** — new Reports page with 5 built-in reports, all exportable to CSV:
+  - Inventory Valuation (qty × latest PO price, grouped by category)
+  - Open ECOs by Priority (sorted critical→low, with age in days)
+  - WO Throughput (30/60/90 day windows, count by status, avg cycle time)
+  - Low Stock Report (items below reorder point, suggested order qty)
+  - NCR Summary (by severity and defect type, avg resolve time)
+- **Quote Margin Analysis** — new "Margin Analysis" tab in quote detail showing BOM cost vs quoted price per line item with color-coded margin % (green >50%, yellow 20-50%, red <20%)
+- **gitplm-ui Deep Links** — parts table and detail modal link directly to gitplm-ui; configurable via `--gitplm-ui` flag
+- **Config endpoint** — `GET /api/v1/config` returns configurable settings (gitplm_ui_url)
+
 ## [0.2.0] - 2026-02-18
 
 ### Added

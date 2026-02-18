@@ -47,17 +47,45 @@ window.module_quotes = {
           </tr>`).join('')}
           ${lines.length?`<tr class="font-bold"><td colspan="4" class="py-2 text-right">Total:</td><td class="py-2 text-right">$${lines.reduce((s,l)=>s+l.qty*(l.unit_price||0),0).toFixed(2)}</td></tr>`:''}
         </tbody></table>
-        <div class="flex gap-2 mt-3"><button class="btn btn-secondary" id="quote-cost">💰 View Cost Rollup</button><button class="btn btn-secondary" onclick="window.open('/api/v1/quotes/${id}/pdf','_blank')">🖨️ Print Quote</button></div>
+        <div class="flex gap-2 mt-3">
+          <button class="btn btn-secondary" id="quote-tab-lines" onclick="document.getElementById('quote-lines-panel').style.display='block';document.getElementById('quote-margin-panel').style.display='none';">Line Items</button>
+          <button class="btn btn-secondary" id="quote-tab-margin" onclick="window._quoteLoadMargin('${id}')">📊 Margin Analysis</button>
+          <button class="btn btn-secondary" onclick="window.open('/api/v1/quotes/${id}/pdf','_blank')">🖨️ Print Quote</button>
+        </div>
+        <div id="quote-lines-panel"></div>
+        <div id="quote-margin-panel" style="display:none"><p class="text-gray-400 py-2">Loading margin data...</p></div>
       `);
-      document.getElementById('quote-cost')?.addEventListener('click', async () => {
-        const c = (await api('GET','quotes/'+id+'/cost')).data;
-        showModal('Cost Rollup: '+id, `<table class="w-full text-sm"><thead><tr class="border-b text-gray-500">
-          <th class="pb-1 text-left">IPN</th><th class="pb-1">Qty</th><th class="pb-1">Unit</th><th class="pb-1">Total</th>
-        </tr></thead><tbody>
-          ${(c.lines||[]).map(l=>`<tr class="border-b border-gray-100"><td class="py-1">${l.ipn}</td><td class="py-1 text-center">${l.qty}</td><td class="py-1 text-right">$${l.unit_price.toFixed(2)}</td><td class="py-1 text-right">$${l.line_total.toFixed(2)}</td></tr>`).join('')}
-          <tr class="font-bold"><td colspan="3" class="py-2 text-right">Total:</td><td class="py-2 text-right">$${(c.total||0).toFixed(2)}</td></tr>
-        </tbody></table>`);
-      });
+      window._quoteLoadMargin = async (qid) => {
+        document.getElementById('quote-lines-panel').style.display='none';
+        const panel = document.getElementById('quote-margin-panel');
+        panel.style.display='block';
+        try {
+          const c = (await api('GET','quotes/'+qid+'/cost')).data;
+          const marginColor = (pct) => { if(pct==null) return ''; if(pct>50) return 'text-green-600'; if(pct>=20) return 'text-yellow-600'; return 'text-red-600'; };
+          let html = `<table class="w-full text-sm mt-3"><thead><tr class="border-b text-gray-500">
+            <th class="pb-1 text-left">IPN</th><th class="pb-1 text-right">Qty</th><th class="pb-1 text-right">Quoted</th><th class="pb-1 text-right">BOM Cost</th><th class="pb-1 text-right">Margin/Unit</th><th class="pb-1 text-right">Margin %</th>
+          </tr></thead><tbody>`;
+          for (const l of (c.lines||[])) {
+            const hasCost = l.bom_cost != null;
+            const mc = marginColor(l.margin_pct);
+            html += `<tr class="border-b border-gray-100">
+              <td class="py-1 font-mono">${l.ipn}</td><td class="py-1 text-right">${l.qty}</td>
+              <td class="py-1 text-right">$${l.unit_price_quoted.toFixed(2)}</td>
+              <td class="py-1 text-right">${hasCost?'$'+l.bom_cost.toFixed(2):'<span class=\"text-gray-400\">—</span>'}</td>
+              <td class="py-1 text-right ${mc}">${hasCost?'$'+l.margin_per_unit.toFixed(2):'—'}</td>
+              <td class="py-1 text-right font-medium ${mc}">${hasCost?l.margin_pct.toFixed(1)+'%':'<span class=\"text-xs text-gray-400\">No cost data</span>'}</td>
+            </tr>`;
+          }
+          html += '</tbody></table>';
+          html += `<div class="mt-4 pt-3 border-t grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <div><span class="text-gray-500">Total Quoted</span><div class="font-bold">$${(c.total_quoted||0).toFixed(2)}</div></div>
+            <div><span class="text-gray-500">Total BOM Cost</span><div class="font-bold">${c.total_bom_cost!=null?'$'+c.total_bom_cost.toFixed(2):'—'}</div></div>
+            <div><span class="text-gray-500">Total Margin</span><div class="font-bold ${marginColor(c.total_margin_pct)}">${c.total_margin!=null?'$'+c.total_margin.toFixed(2):'—'}</div></div>
+            <div><span class="text-gray-500">Margin %</span><div class="font-bold ${marginColor(c.total_margin_pct)}">${c.total_margin_pct!=null?c.total_margin_pct.toFixed(1)+'%':'—'}</div></div>
+          </div>`;
+          panel.innerHTML = html;
+        } catch(e) { panel.innerHTML = '<p class="text-red-500">'+e.message+'</p>'; }
+      };
     };
     load();
   }

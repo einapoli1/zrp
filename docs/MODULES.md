@@ -386,3 +386,49 @@ Toggle dark mode from the theme switcher in the top bar. Your preference is save
 | `Escape` | Close modal / clear search |
 | `n` | New record (when in a module list view) |
 | `?` | Show keyboard shortcuts help |
+
+---
+
+## Reports
+
+Access from the **Reports** section in the sidebar. Five built-in reports:
+
+### Inventory Valuation
+Table of all inventory items showing quantity × unit price (from the latest PO line), subtotal per item, and grand total. Grouped by IPN category prefix (e.g., RES, CAP, PCA).
+
+### Open ECOs by Priority
+All open ECOs (draft/review status) sorted by priority from critical to low. Shows age in days since creation.
+
+### WO Throughput
+Work orders completed in a selectable time window (30/60/90 days). Shows count by status and average cycle time (started → completed).
+
+### Low Stock Report
+All inventory items where qty_on_hand is below reorder_point. Includes suggested reorder quantity and a link to create a purchase order.
+
+### NCR Summary
+Open NCRs broken down by severity and defect type. Shows total open count and average time to resolve for closed NCRs.
+
+### CSV Export
+Every report has an **Export CSV** button that downloads the report data as a CSV file.
+
+---
+
+## Quote Margin Analysis
+
+In the Quote detail modal, click the **📊 Margin Analysis** tab to see:
+
+- **BOM cost per line item** — sourced from the latest PO unit price for each IPN
+- **Margin per unit** — quoted price minus BOM cost
+- **Margin %** — color-coded: green (>50%), yellow (20–50%), red (<20%)
+- **Summary totals** — total quoted, total BOM cost, total margin $, total margin %
+- If no PO history exists for an IPN, the cost shows "—" with "No cost data"
+
+---
+
+## gitplm-ui Integration
+
+ZRP links to the gitplm-ui for deeper part data:
+
+- **Part detail modal** — "Open in gitplm-ui →" link in the header
+- **Parts table** — ↗ icon next to each IPN opens that part in gitplm-ui
+- **Configuration** — the gitplm-ui URL is configurable via `--gitplm-ui` flag (default: `http://localhost:8888`)

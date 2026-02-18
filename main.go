@@ -11,14 +11,17 @@ import (
 )
 
 var partsDir string
+var gitplmUIURL string
 
 func main() {
 	pmDir := flag.String("pmDir", "", "Path to gitplm parts database directory")
 	port := flag.Int("port", 9000, "HTTP port")
 	dbPath := flag.String("db", "zrp.db", "SQLite database path")
+	gitplmUI := flag.String("gitplm-ui", "http://localhost:8888", "gitplm-ui base URL")
 	flag.Parse()
 
 	partsDir = *pmDir
+	gitplmUIURL = *gitplmUI
 
 	if err := initDB(*dbPath); err != nil {
 		log.Fatal("DB init failed:", err)
@@ -325,6 +328,22 @@ func main() {
 		case parts[0] == "attachments" && len(parts) == 2 && r.Method == "DELETE":
 			handleDeleteAttachment(w, r, parts[1])
 
+		// Config
+		case parts[0] == "config" && len(parts) == 1 && r.Method == "GET":
+			handleConfig(w, r)
+
+		// Reports
+		case parts[0] == "reports" && len(parts) == 2 && parts[1] == "inventory-valuation":
+			handleReportInventoryValuation(w, r)
+		case parts[0] == "reports" && len(parts) == 2 && parts[1] == "open-ecos":
+			handleReportOpenECOs(w, r)
+		case parts[0] == "reports" && len(parts) == 2 && parts[1] == "wo-throughput":
+			handleReportWOThroughput(w, r)
+		case parts[0] == "reports" && len(parts) == 2 && parts[1] == "low-stock":
+			handleReportLowStock(w, r)
+		case parts[0] == "reports" && len(parts) == 2 && parts[1] == "ncr-summary":
+			handleReportNCRSummary(w, r)
+
 		// Notifications
 		case parts[0] == "notifications" && len(parts) == 1 && r.Method == "GET":
 			handleListNotifications(w, r)
@@ -339,6 +358,10 @@ func main() {
 	addr := fmt.Sprintf(":%d", *port)
 	log.Printf("ZRP server starting on http://localhost%s", addr)
 	log.Fatal(http.ListenAndServe(addr, logging(requireAuth(mux))))
+}
+
+func handleConfig(w http.ResponseWriter, r *http.Request) {
+	jsonResp(w, map[string]string{"gitplm_ui_url": gitplmUIURL})
 }
 
 func jsonResp(w http.ResponseWriter, data interface{}) {

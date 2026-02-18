@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"math"
 	"net/http"
 	"time"
 )
@@ -76,24 +77,61 @@ func handleQuoteCost(w http.ResponseWriter, r *http.Request, id string) {
 	rows, err := db.Query("SELECT ipn,description,qty,COALESCE(unit_price,0) FROM quote_lines WHERE quote_id=?", id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	defer rows.Close()
-	type CostLine struct {
-		IPN         string  `json:"ipn"`
-		Description string  `json:"description"`
-		Qty         int     `json:"qty"`
-		UnitPrice   float64 `json:"unit_price"`
-		LineTotal   float64 `json:"line_total"`
+	type MarginLine struct {
+		IPN             string   `json:"ipn"`
+		Qty             int      `json:"qty"`
+		UnitPriceQuoted float64  `json:"unit_price_quoted"`
+		BOMCost         *float64 `json:"bom_cost"`
+		MarginPerUnit   *float64 `json:"margin_per_unit"`
+		MarginPct       *float64 `json:"margin_pct"`
 	}
-	var lines []CostLine
-	total := 0.0
+	var lines []MarginLine
+	totalQuoted := 0.0
+	totalBOM := 0.0
+	bomAvailable := false
 	for rows.Next() {
-		var l CostLine
-		rows.Scan(&l.IPN, &l.Description, &l.Qty, &l.UnitPrice)
-		l.LineTotal = float64(l.Qty) * l.UnitPrice
-		total += l.LineTotal
-		lines = append(lines, l)
+		var ipn, desc string
+		var qty int
+		var unitPrice float64
+		rows.Scan(&ipn, &desc, &qty, &unitPrice)
+		_ = desc
+		ml := MarginLine{IPN: ipn, Qty: qty, UnitPriceQuoted: unitPrice}
+		totalQuoted += float64(qty) * unitPrice
+
+		// Look up BOM cost from latest PO line
+		var bomCost float64
+		err := db.QueryRow(`SELECT pl.unit_price FROM po_lines pl JOIN purchase_orders po ON pl.po_id=po.id WHERE pl.ipn=? ORDER BY po.created_at DESC LIMIT 1`, ipn).Scan(&bomCost)
+		if err == nil {
+			ml.BOMCost = &bomCost
+			margin := unitPrice - bomCost
+			ml.MarginPerUnit = &margin
+			if unitPrice > 0 {
+				pct := math.Round(margin/unitPrice*10000) / 100
+				ml.MarginPct = &pct
+			}
+			totalBOM += bomCost * float64(qty)
+			bomAvailable = true
+		}
+		lines = append(lines, ml)
 	}
-	if lines == nil { lines = []CostLine{} }
-	jsonResp(w, map[string]interface{}{"lines": lines, "total": total})
+	if lines == nil { lines = []MarginLine{} }
+
+	result := map[string]interface{}{
+		"quote_id":    id,
+		"lines":       lines,
+		"total_quoted": totalQuoted,
+	}
+	if bomAvailable {
+		totalMargin := totalQuoted - totalBOM
+		totalMarginPct := 0.0
+		if totalQuoted > 0 {
+			totalMarginPct = math.Round(totalMargin/totalQuoted*10000) / 100
+		}
+		result["total_bom_cost"] = totalBOM
+		result["total_margin"] = totalMargin
+		result["total_margin_pct"] = totalMarginPct
+	}
+	jsonResp(w, result)
 }
 
 func handleQuotePDF(w http.ResponseWriter, r *http.Request, id string) {
