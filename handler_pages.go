@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -425,5 +426,326 @@ func pageECOImplement(w http.ResponseWriter, r *http.Request, id string) {
 	logAudit(db, username, "implemented", "eco", id, "Implemented "+id)
 
 	pageECODetail(w, r, id)
+}
+
+// Quotes page handlers
+func pageQuotesList(w http.ResponseWriter, r *http.Request) {
+	user := getCurrentUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	query := r.URL.Query().Get("q")
+	status := r.URL.Query().Get("status")
+	page := 1
+	if p := r.URL.Query().Get("page"); p != "" {
+		if pi, err := strconv.Atoi(p); err == nil && pi > 0 {
+			page = pi
+		}
+	}
+	limit := 50
+
+	// Build query
+	sqlQuery := "SELECT id,customer,status,COALESCE(notes,''),created_at,COALESCE(valid_until,''),accepted_at FROM quotes WHERE 1=1"
+	var args []interface{}
+
+	if query != "" {
+		sqlQuery += " AND (id LIKE ? OR customer LIKE ?)"
+		args = append(args, "%"+query+"%", "%"+query+"%")
+	}
+	if status != "" {
+		sqlQuery += " AND status = ?"
+		args = append(args, status)
+	}
+
+	sqlQuery += " ORDER BY created_at DESC"
+
+	// Count total
+	countQuery := strings.Replace(sqlQuery, "SELECT id,customer,status,COALESCE(notes,''),created_at,COALESCE(valid_until,''),accepted_at FROM quotes", "SELECT COUNT(*) FROM quotes", 1)
+	var total int
+	db.QueryRow(countQuery, args...).Scan(&total)
+
+	// Get quotes for current page
+	start := (page - 1) * limit
+	sqlQuery += " LIMIT ? OFFSET ?"
+	args = append(args, limit, start)
+
+	rows, err := db.Query(sqlQuery, args...)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	defer rows.Close()
+
+	var quotes []Quote
+	for rows.Next() {
+		var q Quote
+		var aa sql.NullString
+		rows.Scan(&q.ID, &q.Customer, &q.Status, &q.Notes, &q.CreatedAt, &q.ValidUntil, &aa)
+		q.AcceptedAt = sp(aa)
+		quotes = append(quotes, q)
+	}
+	if quotes == nil {
+		quotes = []Quote{}
+	}
+
+	// Build pagination extra params
+	extra := ""
+	if query != "" {
+		extra += "&q=" + query
+	}
+	if status != "" {
+		extra += "&status=" + status
+	}
+
+	data := PageData{
+		Title:      "Quotes",
+		ActiveNav:  "quotes",
+		User:       user,
+		Quotes:     quotes,
+		Query:      query,
+		Status:     status,
+		Total:      total,
+		Pagination: makePagination(page, total, limit, "/quotes", "#quotes-table", extra),
+	}
+
+	pageFiles := []string{"templates/quotes/list.html"}
+	if isHTMX(r) {
+		renderPartial(w, pageFiles, "quotes-table", data)
+		return
+	}
+	render(w, pageFiles, "layout", data)
+}
+
+func pageQuoteDetail(w http.ResponseWriter, r *http.Request, id string) {
+	user := getCurrentUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	var q Quote
+	var aa sql.NullString
+	err := db.QueryRow("SELECT id,customer,status,COALESCE(notes,''),created_at,COALESCE(valid_until,''),accepted_at FROM quotes WHERE id=?", id).
+		Scan(&q.ID, &q.Customer, &q.Status, &q.Notes, &q.CreatedAt, &q.ValidUntil, &aa)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	q.AcceptedAt = sp(aa)
+
+	rows, _ := db.Query("SELECT id,quote_id,ipn,COALESCE(description,''),qty,COALESCE(unit_price,0),COALESCE(notes,'') FROM quote_lines WHERE quote_id=?", id)
+	if rows != nil {
+		defer rows.Close()
+		for rows.Next() {
+			var l QuoteLine
+			rows.Scan(&l.ID, &l.QuoteID, &l.IPN, &l.Description, &l.Qty, &l.UnitPrice, &l.Notes)
+			q.Lines = append(q.Lines, l)
+		}
+	}
+	if q.Lines == nil {
+		q.Lines = []QuoteLine{}
+	}
+
+	data := PageData{
+		Title:     "Quote " + q.ID,
+		ActiveNav: "quotes",
+		User:      user,
+		Quote:     q,
+	}
+
+	pageFiles := []string{"templates/quotes/detail.html"}
+	render(w, pageFiles, "layout", data)
+}
+
+func pageQuoteNew(w http.ResponseWriter, r *http.Request) {
+	user := getCurrentUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	data := PageData{
+		User: user,
+	}
+
+	pageFiles := []string{"templates/quotes/form.html"}
+	renderPartial(w, pageFiles, "quote-form", data)
+}
+
+func pageQuoteEdit(w http.ResponseWriter, r *http.Request, id string) {
+	user := getCurrentUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	var q Quote
+	var aa sql.NullString
+	err := db.QueryRow("SELECT id,customer,status,COALESCE(notes,''),created_at,COALESCE(valid_until,''),accepted_at FROM quotes WHERE id=?", id).
+		Scan(&q.ID, &q.Customer, &q.Status, &q.Notes, &q.CreatedAt, &q.ValidUntil, &aa)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	q.AcceptedAt = sp(aa)
+
+	data := PageData{
+		User:  user,
+		Quote: q,
+	}
+
+	pageFiles := []string{"templates/quotes/form.html"}
+	renderPartial(w, pageFiles, "quote-form", data)
+}
+
+// Calendar page handlers
+func pageCalendar(w http.ResponseWriter, r *http.Request) {
+	user := getCurrentUser(r)
+	if user == nil {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
+
+	yearStr := r.URL.Query().Get("year")
+	monthStr := r.URL.Query().Get("month")
+	now := time.Now()
+	year := now.Year()
+	month := int(now.Month())
+	if yearStr != "" {
+		if y, err := strconv.Atoi(yearStr); err == nil {
+			year = y
+		}
+	}
+	if monthStr != "" {
+		if m, err := strconv.Atoi(monthStr); err == nil && m >= 1 && m <= 12 {
+			month = m
+		}
+	}
+
+	monthNames := []string{"", "January", "February", "March", "April", "May", "June",
+		"July", "August", "September", "October", "November", "December"}
+
+	// Get events for this month
+	startDate := fmt.Sprintf("%04d-%02d-01", year, month)
+	endDate := fmt.Sprintf("%04d-%02d-31", year, month)
+
+	var events []CalendarEvent
+
+	// Work Orders
+	rows, err := db.Query(`SELECT id, COALESCE(notes,''), 
+		CASE WHEN completed_at IS NOT NULL THEN completed_at 
+		ELSE datetime(created_at, '+30 days') END as due_date,
+		assembly_ipn, qty
+		FROM work_orders 
+		WHERE CASE WHEN completed_at IS NOT NULL THEN completed_at 
+		ELSE datetime(created_at, '+30 days') END BETWEEN ? AND ?`,
+		startDate, endDate+" 23:59:59")
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var id, notes, dueDate, assemblyIPN string
+			var qty int
+			rows.Scan(&id, &notes, &dueDate, &assemblyIPN, &qty)
+			if len(dueDate) >= 10 {
+				dueDate = dueDate[:10]
+			}
+			title := fmt.Sprintf("Build %s ×%d", assemblyIPN, qty)
+			if notes != "" {
+				title = notes
+			}
+			events = append(events, CalendarEvent{Date: dueDate, Type: "workorder", ID: id, Title: title, Color: "blue"})
+		}
+	}
+
+	// Purchase Orders
+	rows2, err := db.Query(`SELECT id, COALESCE(notes,''), expected_date FROM purchase_orders WHERE expected_date BETWEEN ? AND ?`, startDate, endDate)
+	if err == nil {
+		defer rows2.Close()
+		for rows2.Next() {
+			var id, notes, expDate string
+			rows2.Scan(&id, &notes, &expDate)
+			if len(expDate) >= 10 {
+				expDate = expDate[:10]
+			}
+			title := "PO expected delivery"
+			if notes != "" {
+				title = notes
+			}
+			events = append(events, CalendarEvent{Date: expDate, Type: "po", ID: id, Title: title, Color: "green"})
+		}
+	}
+
+	// Quotes
+	rows3, err := db.Query(`SELECT id, customer, valid_until FROM quotes WHERE valid_until BETWEEN ? AND ?`, startDate, endDate)
+	if err == nil {
+		defer rows3.Close()
+		for rows3.Next() {
+			var id, customer, validUntil string
+			rows3.Scan(&id, &customer, &validUntil)
+			if len(validUntil) >= 10 {
+				validUntil = validUntil[:10]
+			}
+			title := fmt.Sprintf("Quote %s expires", id)
+			if customer != "" {
+				title = fmt.Sprintf("Quote for %s expires", customer)
+			}
+			events = append(events, CalendarEvent{Date: validUntil, Type: "quote", ID: id, Title: title, Color: "orange"})
+		}
+	}
+
+	// Group events by date
+	eventsByDate := make(map[string][]CalendarEvent)
+	for _, event := range events {
+		eventsByDate[event.Date] = append(eventsByDate[event.Date], event)
+	}
+
+	// Build calendar grid
+	firstDay := time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
+	
+	// Start calendar on Sunday before first day
+	startOfCalendar := firstDay.AddDate(0, 0, -int(firstDay.Weekday()))
+	
+	var weeks [][]CalendarDay
+	current := startOfCalendar
+	today := now.Format("2006-01-02")
+	
+	for weekNum := 0; weekNum < 6; weekNum++ {
+		var week []CalendarDay
+		for dayNum := 0; dayNum < 7; dayNum++ {
+			dayEvents := eventsByDate[current.Format("2006-01-02")]
+			day := CalendarDay{
+				Day:     current.Day(),
+				InMonth: current.Month() == time.Month(month),
+				Today:   current.Format("2006-01-02") == today,
+				Events:  dayEvents,
+			}
+			week = append(week, day)
+			current = current.AddDate(0, 0, 1)
+		}
+		weeks = append(weeks, week)
+		// Break if we've covered the whole month
+		if current.Month() != time.Month(month) && current.Day() > 7 {
+			break
+		}
+	}
+
+	data := PageData{
+		Title:        "Calendar",
+		ActiveNav:    "calendar",
+		User:         user,
+		Year:         year,
+		Month:        month,
+		MonthName:    monthNames[month],
+		CalendarData: CalendarPageData{Weeks: weeks},
+	}
+
+	pageFiles := []string{"templates/calendar/index.html"}
+	if isHTMX(r) {
+		renderPartial(w, pageFiles, "calendar-content", data)
+		return
+	}
+	render(w, pageFiles, "layout", data)
 }
 
