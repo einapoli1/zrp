@@ -1,0 +1,9 @@
+zrp.db
+node_modules/
+test-results/
+test-pw.db
+uploads/
+demo/
+*.mp4
+*.webm
+zrp
