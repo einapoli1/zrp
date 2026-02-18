@@ -1,27 +1,44 @@
 window.module_dashboard = {
   _refreshTimer: null,
   render: async (container) => {
-    // Clear any previous timer
     if (window.module_dashboard._refreshTimer) {
       clearInterval(window.module_dashboard._refreshTimer);
     }
 
     const data = await fetch('/api/v1/dashboard').then(r => r.json());
-    const cards = [
-      { label: 'Open ECOs', value: data.open_ecos, icon: '🔄', color: 'blue', route: 'ecos' },
-      { label: 'Low Stock Items', value: data.low_stock, icon: '📊', color: 'red', route: 'inventory' },
-      { label: 'Open POs', value: data.open_pos, icon: '🛒', color: 'purple', route: 'procurement' },
-      { label: 'Active Work Orders', value: data.active_wos, icon: '⚙️', color: 'yellow', route: 'workorders' },
-      { label: 'Open NCRs', value: data.open_ncrs, icon: '⚠️', color: 'orange', route: 'ncr' },
-      { label: 'Open RMAs', value: data.open_rmas, icon: '🔧', color: 'teal', route: 'rma' },
-      { label: 'Total Parts', value: data.total_parts, icon: '📦', color: 'gray', route: 'parts' },
-      { label: 'Total Devices', value: data.total_devices, icon: '📱', color: 'green', route: 'devices' },
-    ];
+    const widgetRes = await api('GET', 'dashboard/widgets');
+    const widgets = (widgetRes.data || []).sort((a, b) => a.position - b.position);
+
+    const allCards = {
+      kpi_open_ecos: { label: 'Open ECOs', value: data.open_ecos, icon: '🔄', color: 'blue', route: 'ecos' },
+      kpi_low_stock: { label: 'Low Stock Items', value: data.low_stock, icon: '📊', color: 'red', route: 'inventory' },
+      kpi_open_pos: { label: 'Open POs', value: data.open_pos, icon: '🛒', color: 'purple', route: 'procurement' },
+      kpi_active_wos: { label: 'Active Work Orders', value: data.active_wos, icon: '⚙️', color: 'yellow', route: 'workorders' },
+      kpi_open_ncrs: { label: 'Open NCRs', value: data.open_ncrs, icon: '⚠️', color: 'orange', route: 'ncr' },
+      kpi_open_rmas: { label: 'Open RMAs', value: data.open_rmas, icon: '🔧', color: 'teal', route: 'rma' },
+      kpi_total_parts: { label: 'Total Parts', value: data.total_parts, icon: '📦', color: 'gray', route: 'parts' },
+      kpi_total_devices: { label: 'Total Devices', value: data.total_devices, icon: '📱', color: 'green', route: 'devices' },
+    };
+
+    const chartWidgets = ['chart_eco_status', 'chart_wo_status', 'chart_inventory'];
+    const chartLabels = {
+      chart_eco_status: 'ECOs by Status',
+      chart_wo_status: 'Work Orders by Status',
+      chart_inventory: 'Inventory Value (Top 10)',
+    };
+
+    // Filter enabled widgets in order
+    const enabledKPIs = widgets.filter(w => w.enabled && allCards[w.widget_type]).map(w => allCards[w.widget_type]);
+    const enabledCharts = widgets.filter(w => w.enabled && chartWidgets.includes(w.widget_type)).map(w => w.widget_type);
 
     container.innerHTML = `
+      <div class="flex items-center justify-between mb-4">
+        <div></div>
+        <button class="btn btn-secondary text-sm" onclick="window._dashCustomize()">⚙️ Customize</button>
+      </div>
       <div id="low-stock-banner"></div>
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        ${cards.map(c => `
+        ${enabledKPIs.map(c => `
           <div class="card cursor-pointer hover:shadow-md transition-shadow" onclick="navigate('${c.route}')">
             <div class="flex items-center justify-between">
               <div>
@@ -35,9 +52,9 @@ window.module_dashboard = {
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-6">
-        <div class="card"><h3 class="text-sm font-semibold text-gray-500 mb-3">ECOs by Status</h3><canvas id="chart-ecos"></canvas></div>
-        <div class="card"><h3 class="text-sm font-semibold text-gray-500 mb-3">Work Orders by Status</h3><canvas id="chart-wos"></canvas></div>
-        <div class="card"><h3 class="text-sm font-semibold text-gray-500 mb-3">Inventory Value (Top 10)</h3><canvas id="chart-inv"></canvas></div>
+        ${enabledCharts.includes('chart_eco_status') ? '<div class="card"><h3 class="text-sm font-semibold text-gray-500 mb-3">ECOs by Status</h3><canvas id="chart-ecos"></canvas></div>' : ''}
+        ${enabledCharts.includes('chart_wo_status') ? '<div class="card"><h3 class="text-sm font-semibold text-gray-500 mb-3">Work Orders by Status</h3><canvas id="chart-wos"></canvas></div>' : ''}
+        ${enabledCharts.includes('chart_inventory') ? '<div class="card"><h3 class="text-sm font-semibold text-gray-500 mb-3">Inventory Value (Top 10)</h3><canvas id="chart-inv"></canvas></div>' : ''}
       </div>
 
       <div class="card">
@@ -49,17 +66,95 @@ window.module_dashboard = {
       </div>
     `;
 
-    // Load low stock alerts
     loadLowStockAlerts();
-
-    // Load charts
     loadCharts();
-
-    // Load activity feed
     loadActivityFeed();
-
-    // Auto-refresh activity feed
     window.module_dashboard._refreshTimer = setInterval(loadActivityFeed, 30000);
+
+    // Customize handler
+    window._dashCustomize = () => {
+      const allWidgetTypes = [
+        { type: 'kpi_open_ecos', label: '🔄 Open ECOs' },
+        { type: 'kpi_low_stock', label: '📊 Low Stock Items' },
+        { type: 'kpi_open_pos', label: '🛒 Open POs' },
+        { type: 'kpi_active_wos', label: '⚙️ Active Work Orders' },
+        { type: 'kpi_open_ncrs', label: '⚠️ Open NCRs' },
+        { type: 'kpi_open_rmas', label: '🔧 Open RMAs' },
+        { type: 'kpi_total_parts', label: '📦 Total Parts' },
+        { type: 'kpi_total_devices', label: '📱 Total Devices' },
+        { type: 'chart_eco_status', label: '📈 ECO Status Chart' },
+        { type: 'chart_wo_status', label: '📈 WO Status Chart' },
+        { type: 'chart_inventory', label: '📈 Inventory Chart' },
+      ];
+
+      // Build ordered list from current widgets
+      const widgetMap = {};
+      widgets.forEach(w => { widgetMap[w.widget_type] = w; });
+      let ordered = widgets.map(w => ({
+        type: w.widget_type,
+        label: allWidgetTypes.find(a => a.type === w.widget_type)?.label || w.widget_type,
+        enabled: w.enabled,
+      }));
+      // Add any missing
+      allWidgetTypes.forEach(a => {
+        if (!widgetMap[a.type]) ordered.push({ type: a.type, label: a.label, enabled: 1 });
+      });
+
+      function renderList() {
+        return ordered.map((w, i) => `
+          <div class="flex items-center gap-3 py-2 px-3 bg-gray-50 dark:bg-gray-700 rounded mb-1 cursor-move" draggable="true" data-idx="${i}">
+            <span class="text-gray-400 cursor-grab">⠿</span>
+            <span class="flex-1 text-sm">${w.label}</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" class="sr-only peer" ${w.enabled ? 'checked' : ''} onchange="window._dashToggleWidget(${i}, this.checked)">
+              <div class="w-9 h-5 bg-gray-300 peer-checked:bg-blue-600 rounded-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full"></div>
+            </label>
+          </div>
+        `).join('');
+      }
+
+      const overlay = showModal('Customize Dashboard', `
+        <p class="text-sm text-gray-500 mb-3">Drag to reorder. Toggle to show/hide.</p>
+        <div id="widget-list">${renderList()}</div>
+      `, async (modal) => {
+        const updates = ordered.map((w, i) => ({ widget_type: w.type, position: i, enabled: w.enabled ? 1 : 0 }));
+        try {
+          await api('PUT', 'dashboard/widgets', updates);
+          toast('Dashboard layout saved');
+          modal.remove();
+          window.module_dashboard.render(container);
+        } catch(e) { toast(e.message, 'error'); }
+      });
+
+      window._dashToggleWidget = (idx, checked) => {
+        ordered[idx].enabled = checked ? 1 : 0;
+      };
+
+      // Drag and drop
+      const list = overlay.querySelector('#widget-list');
+      let dragIdx = null;
+      list.addEventListener('dragstart', (e) => {
+        dragIdx = parseInt(e.target.dataset.idx);
+        e.target.style.opacity = '0.5';
+      });
+      list.addEventListener('dragend', (e) => {
+        e.target.style.opacity = '1';
+      });
+      list.addEventListener('dragover', (e) => {
+        e.preventDefault();
+      });
+      list.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const target = e.target.closest('[data-idx]');
+        if (!target || dragIdx === null) return;
+        const dropIdx = parseInt(target.dataset.idx);
+        if (dragIdx === dropIdx) return;
+        const [item] = ordered.splice(dragIdx, 1);
+        ordered.splice(dropIdx, 0, item);
+        list.innerHTML = renderList();
+        dragIdx = null;
+      });
+    };
   }
 };
 
@@ -123,7 +218,6 @@ async function loadCharts() {
     const res = await fetch('/api/v1/dashboard/charts').then(r => r.json());
     const d = res.data || {};
 
-    // ECOs by Status - horizontal bar
     const ecoCtx = document.getElementById('chart-ecos');
     if (ecoCtx) {
       const ecos = d.ecos_by_status || {};
@@ -131,21 +225,12 @@ async function loadCharts() {
         type: 'bar',
         data: {
           labels: ['Draft', 'Review', 'Approved', 'Implemented'],
-          datasets: [{
-            data: [ecos.draft||0, ecos.review||0, ecos.approved||0, ecos.implemented||0],
-            backgroundColor: ['#9ca3af', '#fbbf24', '#34d399', '#60a5fa'],
-            borderRadius: 4,
-          }]
+          datasets: [{ data: [ecos.draft||0, ecos.review||0, ecos.approved||0, ecos.implemented||0], backgroundColor: ['#9ca3af', '#fbbf24', '#34d399', '#60a5fa'], borderRadius: 4 }]
         },
-        options: {
-          indexAxis: 'y',
-          plugins: { legend: { display: false } },
-          scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } }
-        }
+        options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
       });
     }
 
-    // Work Orders - donut
     const woCtx = document.getElementById('chart-wos');
     if (woCtx) {
       const wos = d.wos_by_status || {};
@@ -153,18 +238,12 @@ async function loadCharts() {
         type: 'doughnut',
         data: {
           labels: ['Open', 'In Progress', 'Completed'],
-          datasets: [{
-            data: [wos.open||0, wos.in_progress||0, wos.completed||0],
-            backgroundColor: ['#3b82f6', '#f59e0b', '#10b981'],
-          }]
+          datasets: [{ data: [wos.open||0, wos.in_progress||0, wos.completed||0], backgroundColor: ['#3b82f6', '#f59e0b', '#10b981'] }]
         },
-        options: {
-          plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } }
-        }
+        options: { plugins: { legend: { position: 'bottom', labels: { boxWidth: 12 } } } }
       });
     }
 
-    // Inventory Value - bar
     const invCtx = document.getElementById('chart-inv');
     if (invCtx) {
       const inv = d.inventory_value || [];
@@ -172,17 +251,9 @@ async function loadCharts() {
         type: 'bar',
         data: {
           labels: inv.map(i => i.ipn),
-          datasets: [{
-            data: inv.map(i => i.value),
-            backgroundColor: '#6366f1',
-            borderRadius: 4,
-          }]
+          datasets: [{ data: inv.map(i => i.value), backgroundColor: '#6366f1', borderRadius: 4 }]
         },
-        options: {
-          indexAxis: 'y',
-          plugins: { legend: { display: false } },
-          scales: { x: { beginAtZero: true } }
-        }
+        options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true } } }
       });
     }
   } catch(err) {
@@ -197,10 +268,7 @@ async function loadLowStockAlerts() {
     const banner = document.getElementById('low-stock-banner');
     if (!banner) return;
 
-    if (items.length === 0) {
-      banner.innerHTML = '';
-      return;
-    }
+    if (items.length === 0) { banner.innerHTML = ''; return; }
 
     banner.innerHTML = `
       <div class="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">

@@ -1071,6 +1071,216 @@ curl http://localhost:9000/api/v1/quotes/Q-2026-001/pdf -b cookies.txt
 
 ---
 
+## Prices (Supplier Price Catalog)
+
+### GET /api/v1/prices/:ipn
+
+Price history for an IPN, sorted newest first. Includes vendor name via join.
+
+**Response:**
+
+```json
+{
+  "data": [
+    { "id": 1, "ipn": "CAP-001-0001", "vendor_id": "V-001", "vendor_name": "DigiKey", "unit_price": 0.025, "currency": "USD", "min_qty": 500, "lead_time_days": 3, "po_id": null, "recorded_at": "2026-02-18T06:00:00Z", "notes": null }
+  ]
+}
+```
+
+```bash
+curl http://localhost:9000/api/v1/prices/CAP-001-0001 -b cookies.txt
+```
+
+### POST /api/v1/prices
+
+Manually add a price entry.
+
+**Request Body:**
+
+```json
+{ "ipn": "CAP-001-0001", "vendor_id": "V-001", "unit_price": 0.025, "min_qty": 500, "lead_time_days": 3 }
+```
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `ipn` | Yes | Internal Part Number |
+| `vendor_id` | No | Vendor ID |
+| `unit_price` | Yes | Price per unit (must be > 0) |
+| `min_qty` | No | Minimum order quantity (default: 1) |
+| `lead_time_days` | No | Vendor lead time in days |
+| `notes` | No | Free-text notes |
+
+```bash
+curl -X POST http://localhost:9000/api/v1/prices \
+  -H "Content-Type: application/json" \
+  -d '{"ipn":"CAP-001-0001","vendor_id":"V-001","unit_price":0.025,"min_qty":500}' \
+  -b cookies.txt
+```
+
+### DELETE /api/v1/prices/:id
+
+Remove a price entry by ID.
+
+```bash
+curl -X DELETE http://localhost:9000/api/v1/prices/1 -b cookies.txt
+```
+
+### GET /api/v1/prices/:ipn/trend
+
+Price trend data for charting, sorted by date ascending.
+
+**Response:**
+
+```json
+{
+  "data": [
+    { "date": "2026-01-15", "price": 0.03, "vendor": "DigiKey" },
+    { "date": "2026-02-18", "price": 0.025, "vendor": "DigiKey" }
+  ]
+}
+```
+
+```bash
+curl http://localhost:9000/api/v1/prices/CAP-001-0001/trend -b cookies.txt
+```
+
+**Note:** Prices are also automatically recorded when PO lines are received (POST /api/v1/pos/:id/receive) if the line has a unit_price set.
+
+---
+
+## Email Configuration
+
+### GET /api/v1/email/config
+
+Returns SMTP configuration. Password is masked as "****" if set.
+
+**Response:**
+
+```json
+{
+  "data": { "id": 1, "smtp_host": "smtp.gmail.com", "smtp_port": 587, "smtp_user": "user@example.com", "smtp_password": "****", "from_address": "noreply@example.com", "from_name": "ZRP", "enabled": 1 }
+}
+```
+
+```bash
+curl http://localhost:9000/api/v1/email/config -b cookies.txt
+```
+
+### PUT /api/v1/email/config
+
+Update SMTP configuration. Send password as "****" to keep existing password unchanged.
+
+**Request Body:**
+
+```json
+{ "smtp_host": "smtp.gmail.com", "smtp_port": 587, "smtp_user": "user@example.com", "smtp_password": "app-password", "from_address": "noreply@example.com", "from_name": "ZRP", "enabled": 1 }
+```
+
+```bash
+curl -X PUT http://localhost:9000/api/v1/email/config \
+  -H "Content-Type: application/json" \
+  -d '{"smtp_host":"smtp.gmail.com","smtp_port":587,"smtp_user":"user@example.com","smtp_password":"app-password","from_address":"noreply@example.com","enabled":1}' \
+  -b cookies.txt
+```
+
+### POST /api/v1/email/test
+
+Send a test email to verify configuration.
+
+**Request Body:**
+
+```json
+{ "to": "recipient@example.com" }
+```
+
+```bash
+curl -X POST http://localhost:9000/api/v1/email/test \
+  -H "Content-Type: application/json" \
+  -d '{"to":"recipient@example.com"}' \
+  -b cookies.txt
+```
+
+### GET /api/v1/email-log
+
+Returns recent email log entries (up to 100), newest first.
+
+**Response:**
+
+```json
+{
+  "data": [
+    { "id": 1, "to_address": "user@example.com", "subject": "ZRP Test Email", "body": "...", "status": "sent", "error": "", "sent_at": "2026-02-17 22:00:00" }
+  ]
+}
+```
+
+```bash
+curl http://localhost:9000/api/v1/email-log -b cookies.txt
+```
+
+### Settings Aliases
+
+The following aliases are also available for the email configuration endpoints:
+
+- `GET /api/v1/settings/email` → same as `GET /api/v1/email/config`
+- `PUT /api/v1/settings/email` → same as `PUT /api/v1/email/config`
+- `POST /api/v1/settings/email/test` → same as `POST /api/v1/email/test`
+
+### Email Triggers
+
+When email is enabled, ZRP automatically sends emails on these events:
+
+- **ECO Approved** → Emails the ECO creator (or admin) when an ECO status changes to "approved"
+- **Low Stock** → Emails admin when an inventory item drops below its reorder point after a transaction
+- **Overdue Work Order** → Emails admin when a work order is updated and its due date has passed (status ≠ closed/completed)
+
+---
+
+## Dashboard Widgets
+
+### GET /api/v1/dashboard/widgets
+
+Returns all dashboard widgets with their position and enabled status.
+
+**Response:**
+
+```json
+{
+  "data": [
+    { "id": 1, "user_id": 0, "widget_type": "kpi_open_ecos", "position": 0, "enabled": 1 },
+    { "id": 2, "user_id": 0, "widget_type": "kpi_low_stock", "position": 1, "enabled": 1 }
+  ]
+}
+```
+
+```bash
+curl http://localhost:9000/api/v1/dashboard/widgets -b cookies.txt
+```
+
+### PUT /api/v1/dashboard/widgets
+
+Update widget positions and visibility. Send an array of widget updates.
+
+**Request Body:**
+
+```json
+[
+  { "widget_type": "kpi_open_ecos", "position": 0, "enabled": 1 },
+  { "widget_type": "kpi_low_stock", "position": 1, "enabled": 0 }
+]
+```
+
+**Available widget types:** `kpi_open_ecos`, `kpi_low_stock`, `kpi_open_pos`, `kpi_active_wos`, `kpi_open_ncrs`, `kpi_open_rmas`, `kpi_total_parts`, `kpi_total_devices`, `chart_eco_status`, `chart_wo_status`, `chart_inventory`
+
+```bash
+curl -X PUT http://localhost:9000/api/v1/dashboard/widgets \
+  -H "Content-Type: application/json" \
+  -d '[{"widget_type":"kpi_open_ecos","position":0,"enabled":1}]' \
+  -b cookies.txt
+```
+
+---
+
 ## Config
 
 ### GET /api/v1/config
@@ -1172,5 +1382,73 @@ Open NCR summary by severity and defect type with average resolution time.
     "total_open": 3,
     "avg_resolve_days": 7.5
   }
+}
+```
+
+---
+
+## Supplier Prices
+
+### GET /api/v1/supplier-prices
+
+List/filter supplier price quotes.
+
+**Query Parameters:**
+- `ipn` — filter by IPN (exact match)
+- `vendor` — filter by vendor name (partial match)
+- `limit` — max results (default 100, max 1000)
+- `offset` — pagination offset
+
+**Response:**
+```json
+{
+  "data": [
+    { "id": 1, "ipn": "RES-001-0001", "vendor_name": "Acme Corp", "unit_price": 0.0523, "currency": "USD", "quantity_break": 100, "quote_date": "2026-01-15", "lead_time_days": 14, "notes": "...", "created_at": "..." }
+  ],
+  "meta": { "total": 1, "page": 1, "limit": 100 }
+}
+```
+
+### POST /api/v1/supplier-prices
+
+Create a new supplier price quote.
+
+**Body:**
+```json
+{ "ipn": "RES-001-0001", "vendor_name": "Acme Corp", "unit_price": 0.0523, "currency": "USD", "quantity_break": 100, "quote_date": "2026-01-15", "lead_time_days": 14, "notes": "optional" }
+```
+
+Required: `ipn`, `vendor_name`, `unit_price` (> 0). Defaults: currency=USD, quantity_break=1.
+
+### GET /api/v1/supplier-prices/:id
+
+Get a single supplier price quote by ID.
+
+### PUT /api/v1/supplier-prices/:id
+
+Update a supplier price quote. Send only fields to change.
+
+**Body (all optional):**
+```json
+{ "ipn": "...", "vendor_name": "...", "unit_price": 0.05, "currency": "EUR", "quantity_break": 250, "quote_date": "2026-02-01", "lead_time_days": 10, "notes": "updated" }
+```
+
+### DELETE /api/v1/supplier-prices/:id
+
+Delete a supplier price quote.
+
+### GET /api/v1/supplier-prices/trend
+
+Get price trend data for charting.
+
+**Query Parameters:**
+- `ipn` (required) — IPN to get trend for
+
+**Response:**
+```json
+{
+  "data": [
+    { "date": "2026-01-01", "price": 0.0523, "vendor": "Acme Corp", "quantity_break": 100 }
+  ]
 }
 ```

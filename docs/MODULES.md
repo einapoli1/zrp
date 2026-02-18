@@ -425,6 +425,88 @@ In the Quote detail modal, click the **📊 Margin Analysis** tab to see:
 
 ---
 
+## Supplier Price Catalog
+
+Track price history for every part across vendors. Prices are recorded automatically when PO lines are received, and can also be added manually.
+
+### Pricing Tab in Part Detail
+
+When viewing any part, click the **💲 Pricing** tab to see:
+
+- **Price history table** — vendor, unit price, min qty, lead time, date
+- **Sparkline chart** — inline SVG showing price trend over time (hover points for details)
+- **Best price highlight** — the lowest current unit price is marked with a green "Best" badge
+- **Add Price button** — manually add a price entry with vendor dropdown, price, min qty, and lead time
+
+### Automatic Price Recording
+
+When receiving items on a Purchase Order (POST /api/v1/pos/:id/receive), the unit price from each PO line is automatically recorded in the price history, linked to the PO and vendor.
+
+---
+
+## Email Notifications
+
+Configure SMTP to receive email notifications for system alerts (low stock, overdue work orders, aging NCRs, new RMAs).
+
+### Email Settings (Admin → 📧 Email Settings)
+
+- **SMTP host, port, username, password** — configure your mail server
+- **From address and name** — the sender identity for outgoing emails
+- **Enable/disable toggle** — turn email notifications on or off
+- **Send Test Email** — verify configuration by sending a test message
+
+### Email Log
+
+The Email Settings page includes an **Email Log** table showing recent sent and failed emails with recipient, subject, status, error details, and timestamp.
+
+### How It Works
+
+When email is enabled, the background notification goroutine (runs every 5 minutes) will also send an email for each new notification. Each notification is only emailed once (tracked by an `emailed` flag). Emails are sent to the configured "from address" as the default recipient.
+
+### Event-Driven Email Triggers
+
+In addition to periodic notification emails, ZRP sends targeted emails on specific events:
+
+- **ECO Approved** — When an ECO is approved, an email is sent to the ECO creator (falls back to admin address if no user email is set)
+- **Low Stock Alert** — When an inventory transaction causes an item to drop below its reorder point, an email is sent to the admin
+- **Overdue Work Order** — When a work order is updated and its due date has passed (and status is not closed/completed), an email is sent to the admin
+
+All sent/failed emails are recorded in the email log for auditing.
+
+---
+
+## Custom Dashboard Widgets
+
+The dashboard KPI cards and charts are now configurable. You can reorder, show, or hide any widget.
+
+### Customizing the Dashboard
+
+1. Click the **⚙️ Customize** button in the top-right of the dashboard
+2. A modal shows all available widgets with toggle switches
+3. **Drag to reorder** — grab the ⠿ handle and drag widgets up/down
+4. **Toggle visibility** — use the switch to show/hide individual widgets
+5. Click **Save** to apply changes
+
+### Available Widgets
+
+| Widget | Type |
+|--------|------|
+| Open ECOs | KPI card |
+| Low Stock Items | KPI card |
+| Open POs | KPI card |
+| Active Work Orders | KPI card |
+| Open NCRs | KPI card |
+| Open RMAs | KPI card |
+| Total Parts | KPI card |
+| Total Devices | KPI card |
+| ECO Status Chart | Chart |
+| WO Status Chart | Chart |
+| Inventory Chart | Chart |
+
+Settings are saved server-side and persist across sessions.
+
+---
+
 ## gitplm-ui Integration
 
 ZRP links to the gitplm-ui for deeper part data:
@@ -432,3 +514,15 @@ ZRP links to the gitplm-ui for deeper part data:
 - **Part detail modal** — "Open in gitplm-ui →" link in the header
 - **Parts table** — ↗ icon next to each IPN opens that part in gitplm-ui
 - **Configuration** — the gitplm-ui URL is configurable via `--gitplm-ui` flag (default: `http://localhost:8888`)
+
+## Supplier Prices
+
+**Route:** `/supplier-prices` (sidebar: Supply Chain → Supplier Prices)
+
+Track and compare supplier price quotes per IPN across vendors.
+
+### Features
+- **Price catalog table** — sortable by IPN, vendor, price, date. "Best Price" per IPN highlighted in green.
+- **Add Price Quote** — modal form with IPN autocomplete from parts DB, vendor name, unit price, currency, quantity break, lead time, quote date, and notes.
+- **Price History** — click any IPN to see all quotes across vendors with an SVG line chart showing price trends over time (one line per vendor, color-coded legend).
+- **Parts Integration** — Parts detail modal includes a "📊 Price Quotes" tab showing the supplier price chart and table for that IPN.

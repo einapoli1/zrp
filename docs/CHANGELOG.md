@@ -5,6 +5,52 @@ All notable changes to ZRP are documented here. Format follows [Keep a Changelog
 ## [0.3.0] - 2026-02-18
 
 ### Added
+- **Email Notifications — Event Triggers & Email Log**
+  - New `email_log` table records all sent/failed emails with recipient, subject, status, error, and timestamp
+  - Email Log table visible on the Email Settings page
+  - `GET /api/v1/email-log` — list recent email log entries
+  - Settings aliases: `GET/PUT /api/v1/settings/email`, `POST /api/v1/settings/email/test`
+  - ECO approval trigger: emails the ECO creator when an ECO is approved
+  - Low stock trigger: emails admin when inventory drops below reorder point after a transaction
+  - Overdue work order trigger: emails admin when a WO with a past due date is updated
+  - `due_date` column added to work_orders table
+  - `email` column added to users table
+  - Audit logging on email config save and test send
+  - Go unit tests for all email handlers and triggers (mock SMTP)
+
+### Added
+- **Supplier Price Catalog** — new module (`/supplier-prices`) under Supply Chain for tracking vendor price quotes per IPN
+  - Full CRUD API: `GET/POST/PUT/DELETE /api/v1/supplier-prices`, plus `/trend` endpoint for chart data
+  - Sortable price table with "Best Price" highlight (green) per IPN
+  - Add Price Quote modal with IPN autocomplete from parts database
+  - Price history view with SVG line chart showing price trends per vendor over time
+  - Parts detail modal integration: new "📊 Price Quotes" tab
+  - Audit logging on create/update/delete
+  - Go unit tests for all handlers (CRUD, validation, trend, edge cases)
+
+
+### Added
+- **Supplier Price Catalog** — track price history per IPN across vendors with automatic recording from PO receipts:
+  - `GET /api/v1/prices/:ipn` — price history sorted newest first
+  - `POST /api/v1/prices` — manually add price entries
+  - `DELETE /api/v1/prices/:id` — remove entries
+  - `GET /api/v1/prices/:ipn/trend` — trend data for charting
+  - Pricing tab in part detail modal with history table, SVG sparkline, and "Add Price" form
+  - Best price highlighted with green badge
+  - Automatic price recording when PO lines are received
+- **Email Notifications** — SMTP-based email alerts for system notifications:
+  - `GET /api/v1/email/config` — view SMTP config (password masked)
+  - `PUT /api/v1/email/config` — update SMTP settings
+  - `POST /api/v1/email/test` — send test email
+  - Email Settings page under Admin (📧 Email Settings sidebar link)
+  - Background goroutine sends emails for new notifications when enabled
+  - Each notification emailed only once (tracked by `emailed` column)
+- **Custom Dashboard Widgets** — configurable KPI cards and charts:
+  - `GET /api/v1/dashboard/widgets` — list widgets with positions
+  - `PUT /api/v1/dashboard/widgets` — update positions and visibility
+  - "Customize" button opens drag-to-reorder modal with toggle switches
+  - 11 widgets: 8 KPI cards + 3 charts, all individually hideable
+  - Settings persist server-side
 - **Report Builder** — new Reports page with 5 built-in reports, all exportable to CSV:
   - Inventory Valuation (qty × latest PO price, grouped by category)
   - Open ECOs by Priority (sorted critical→low, with age in days)

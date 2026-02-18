@@ -158,12 +158,21 @@ func handleReceivePO(w http.ResponseWriter, r *http.Request, id string) {
 		} `json:"lines"`
 	}
 	if err := decodeBody(r, &body); err != nil { jsonErr(w, "invalid body", 400); return }
+	// Get vendor_id for price recording
+	var poVendorID string
+	db.QueryRow("SELECT COALESCE(vendor_id,'') FROM purchase_orders WHERE id=?", id).Scan(&poVendorID)
+
 	now := time.Now().Format("2006-01-02 15:04:05")
 	for _, l := range body.Lines {
 		db.Exec("UPDATE po_lines SET qty_received=qty_received+? WHERE id=?", l.Qty, l.ID)
 		// Also update inventory
 		var ipn string
-		db.QueryRow("SELECT ipn FROM po_lines WHERE id=?", l.ID).Scan(&ipn)
+		var unitPrice float64
+		db.QueryRow("SELECT ipn, COALESCE(unit_price,0) FROM po_lines WHERE id=?", l.ID).Scan(&ipn, &unitPrice)
+		// Record price history
+		if ipn != "" && unitPrice > 0 {
+			recordPriceFromPO(id, ipn, unitPrice, poVendorID)
+		}
 		if ipn != "" {
 			db.Exec("INSERT OR IGNORE INTO inventory (ipn) VALUES (?)", ipn)
 			db.Exec("UPDATE inventory SET qty_on_hand=qty_on_hand+?,updated_at=? WHERE ipn=?", l.Qty, now, ipn)

@@ -32,9 +32,11 @@ func main() {
 	go func() {
 		time.Sleep(5 * time.Second)
 		generateNotifications()
+		emailNotificationsForRecent()
 		for {
 			time.Sleep(5 * time.Minute)
 			generateNotifications()
+			emailNotificationsForRecent()
 		}
 	}()
 
@@ -99,6 +101,10 @@ func main() {
 			handleDashboardCharts(w, r)
 		case path == "dashboard/lowstock" && r.Method == "GET":
 			handleLowStockAlerts(w, r)
+		case path == "dashboard/widgets" && r.Method == "PUT":
+			handleUpdateDashboardWidgets(w, r)
+		case path == "dashboard/widgets" && r.Method == "GET":
+			handleGetDashboardWidgets(w, r)
 
 		// Audit
 		case path == "audit" || (parts[0] == "audit" && len(parts) == 1):
@@ -327,6 +333,35 @@ func main() {
 			handleListAttachments(w, r)
 		case parts[0] == "attachments" && len(parts) == 2 && r.Method == "DELETE":
 			handleDeleteAttachment(w, r, parts[1])
+
+		// Prices
+		case parts[0] == "prices" && len(parts) == 2 && parts[1] != "" && r.Method == "GET":
+			// Check if it's a numeric ID (delete) or IPN (list)
+			handleListPrices(w, r, parts[1])
+		case parts[0] == "prices" && len(parts) == 3 && parts[2] == "trend" && r.Method == "GET":
+			handlePriceTrend(w, r, parts[1])
+		case parts[0] == "prices" && len(parts) == 1 && r.Method == "POST":
+			handleCreatePrice(w, r)
+		case parts[0] == "prices" && len(parts) == 2 && r.Method == "DELETE":
+			handleDeletePrice(w, r, parts[1])
+
+		// Email
+		case parts[0] == "email" && len(parts) == 2 && parts[1] == "config" && r.Method == "GET":
+			handleGetEmailConfig(w, r)
+		case parts[0] == "email" && len(parts) == 2 && parts[1] == "config" && r.Method == "PUT":
+			handleUpdateEmailConfig(w, r)
+		case parts[0] == "email" && len(parts) == 2 && parts[1] == "test" && r.Method == "POST":
+			handleTestEmail(w, r)
+		case parts[0] == "email-log" && len(parts) == 1 && r.Method == "GET":
+			handleListEmailLog(w, r)
+
+		// Settings/Email aliases
+		case parts[0] == "settings" && len(parts) == 2 && parts[1] == "email" && r.Method == "GET":
+			handleGetEmailConfig(w, r)
+		case parts[0] == "settings" && len(parts) == 2 && parts[1] == "email" && r.Method == "PUT":
+			handleUpdateEmailConfig(w, r)
+		case parts[0] == "settings" && len(parts) == 3 && parts[1] == "email" && parts[2] == "test" && r.Method == "POST":
+			handleTestEmail(w, r)
 
 		// Config
 		case parts[0] == "config" && len(parts) == 1 && r.Method == "GET":

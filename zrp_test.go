@@ -8,6 +8,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/smtp"
 	"os"
 	"strings"
 	"testing"
@@ -658,6 +659,448 @@ func TestConfig(t *testing.T) {
 	}
 }
 
+// --- Price History Tests ---
+
+func TestPriceCreateAndList(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	// Create price entry
+	body := `{"ipn":"CAP-001-0001","vendor_id":"V-001","unit_price":0.05,"min_qty":100,"lead_time_days":3}`
+	req := authedRequest("POST", "/api/v1/prices", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreatePrice(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// List prices
+	req2 := authedRequest("GET", "/api/v1/prices/CAP-001-0001", "", cookie)
+	w2 := httptest.NewRecorder()
+	handleListPrices(w2, req2, "CAP-001-0001")
+	if w2.Code != 200 {
+		t.Fatalf("expected 200, got %d", w2.Code)
+	}
+	var resp APIResponse
+	json.Unmarshal(w2.Body.Bytes(), &resp)
+	items := resp.Data.([]interface{})
+	if len(items) < 1 {
+		t.Errorf("expected at least 1 price entry, got %d", len(items))
+	}
+}
+
+func TestPriceDelete(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	body := `{"ipn":"CAP-001-0001","unit_price":0.03}`
+	req := authedRequest("POST", "/api/v1/prices", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreatePrice(w, req)
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	id := fmt.Sprintf("%.0f", data["id"].(float64))
+
+	req2 := authedRequest("DELETE", "/api/v1/prices/"+id, "", cookie)
+	w2 := httptest.NewRecorder()
+	handleDeletePrice(w2, req2, id)
+	if w2.Code != 200 {
+		t.Errorf("expected 200, got %d", w2.Code)
+	}
+}
+
+func TestPriceTrend(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	// Add two prices
+	api2 := func(b string) { req := authedRequest("POST", "/api/v1/prices", b, cookie); w := httptest.NewRecorder(); handleCreatePrice(w, req) }
+	api2(`{"ipn":"RES-001-0001","unit_price":0.01}`)
+	api2(`{"ipn":"RES-001-0001","unit_price":0.02}`)
+
+	req := authedRequest("GET", "/api/v1/prices/RES-001-0001/trend", "", cookie)
+	w := httptest.NewRecorder()
+	handlePriceTrend(w, req, "RES-001-0001")
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp APIResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	points := resp.Data.([]interface{})
+	if len(points) != 2 {
+		t.Errorf("expected 2 trend points, got %d", len(points))
+	}
+}
+
+func TestPriceInvalidCreate(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	body := `{"ipn":"","unit_price":0}`
+	req := authedRequest("POST", "/api/v1/prices", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreatePrice(w, req)
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+// --- Email Config Tests ---
+
+func TestEmailConfigGetDefault(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	req := authedRequest("GET", "/api/v1/email/config", "", cookie)
+	w := httptest.NewRecorder()
+	handleGetEmailConfig(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp APIResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp.Data.(map[string]interface{})
+	if data["enabled"].(float64) != 0 {
+		t.Error("expected disabled by default")
+	}
+}
+
+func TestEmailConfigUpdate(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	body := `{"smtp_host":"smtp.test.com","smtp_port":465,"smtp_user":"user@test.com","smtp_password":"secret","from_address":"noreply@test.com","from_name":"ZRP Test","enabled":1}`
+	req := authedRequest("PUT", "/api/v1/email/config", body, cookie)
+	w := httptest.NewRecorder()
+	handleUpdateEmailConfig(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp APIResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp.Data.(map[string]interface{})
+	if data["smtp_host"] != "smtp.test.com" {
+		t.Errorf("expected smtp.test.com, got %v", data["smtp_host"])
+	}
+	if data["smtp_password"] != "****" {
+		t.Error("password should be masked")
+	}
+}
+
+func TestEmailTestMissingTo(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	body := `{}`
+	req := authedRequest("POST", "/api/v1/email/test", body, cookie)
+	w := httptest.NewRecorder()
+	handleTestEmail(w, req)
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+// --- Dashboard Widget Tests ---
+
+func TestDashboardWidgetsGet(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	req := authedRequest("GET", "/api/v1/dashboard/widgets", "", cookie)
+	w := httptest.NewRecorder()
+	handleGetDashboardWidgets(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp APIResponse
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	items := resp.Data.([]interface{})
+	if len(items) != 11 {
+		t.Errorf("expected 11 default widgets, got %d", len(items))
+	}
+}
+
+func TestDashboardWidgetsUpdate(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	body := `[{"widget_type":"kpi_open_ecos","position":5,"enabled":0},{"widget_type":"kpi_low_stock","position":0,"enabled":1}]`
+	req := authedRequest("PUT", "/api/v1/dashboard/widgets", body, cookie)
+	w := httptest.NewRecorder()
+	handleUpdateDashboardWidgets(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	// Verify
+	var enabled int
+	db.QueryRow("SELECT enabled FROM dashboard_widgets WHERE widget_type='kpi_open_ecos'").Scan(&enabled)
+	if enabled != 0 {
+		t.Errorf("expected disabled, got %d", enabled)
+	}
+}
+
+func TestRecordPriceFromPO(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	recordPriceFromPO("PO-2026-0001", "CAP-001-0001", 0.05, "V-001")
+
+	var count int
+	db.QueryRow("SELECT COUNT(*) FROM price_history WHERE ipn='CAP-001-0001' AND po_id='PO-2026-0001'").Scan(&count)
+	if count != 1 {
+		t.Errorf("expected 1 price record, got %d", count)
+	}
+}
+
+func TestRecordPriceFromPOZeroPrice(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	recordPriceFromPO("PO-2026-0001", "CAP-001-0001", 0, "V-001")
+
+	var count int
+	db.QueryRow("SELECT COUNT(*) FROM price_history WHERE ipn='CAP-001-0001'").Scan(&count)
+	if count != 0 {
+		t.Errorf("expected 0 price records for zero price, got %d", count)
+	}
+}
+
+// --- Email Tests ---
+
+func TestGetEmailConfig(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	req := authedRequest("GET", "/api/v1/email/config", "", cookie)
+	w := httptest.NewRecorder()
+	handleGetEmailConfig(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["smtp_port"].(float64) != 587 {
+		t.Errorf("expected default port 587, got %v", data["smtp_port"])
+	}
+}
+
+func TestUpdateEmailConfig(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	body := `{"smtp_host":"smtp.test.com","smtp_port":465,"smtp_user":"user@test.com","smtp_password":"secret","from_address":"noreply@test.com","from_name":"Test","enabled":1}`
+	req := authedRequest("PUT", "/api/v1/email/config", body, cookie)
+	w := httptest.NewRecorder()
+	handleUpdateEmailConfig(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].(map[string]interface{})
+	if data["smtp_host"] != "smtp.test.com" {
+		t.Errorf("expected smtp.test.com, got %v", data["smtp_host"])
+	}
+	if data["smtp_password"] != "****" {
+		t.Errorf("expected masked password, got %v", data["smtp_password"])
+	}
+}
+
+func TestUpdateEmailConfigMaskedPassword(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	// Set initial password
+	body := `{"smtp_host":"smtp.test.com","smtp_port":587,"smtp_user":"u","smtp_password":"realpass","from_address":"a@b.com","enabled":1}`
+	req := authedRequest("PUT", "/api/v1/email/config", body, cookie)
+	w := httptest.NewRecorder()
+	handleUpdateEmailConfig(w, req)
+
+	// Update with masked password - should keep original
+	body2 := `{"smtp_host":"smtp.test.com","smtp_port":587,"smtp_user":"u","smtp_password":"****","from_address":"a@b.com","enabled":1}`
+	req2 := authedRequest("PUT", "/api/v1/email/config", body2, cookie)
+	w2 := httptest.NewRecorder()
+	handleUpdateEmailConfig(w2, req2)
+
+	var actual string
+	db.QueryRow("SELECT smtp_password FROM email_config WHERE id=1").Scan(&actual)
+	if actual != "realpass" {
+		t.Errorf("expected original password preserved, got %q", actual)
+	}
+}
+
+func TestTestEmailMissingTo(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	req := authedRequest("POST", "/api/v1/email/test", `{}`, cookie)
+	w := httptest.NewRecorder()
+	handleTestEmail(w, req)
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestTestEmailWithMockSMTP(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	// Configure email
+	body := `{"smtp_host":"localhost","smtp_port":2525,"smtp_user":"u","smtp_password":"p","from_address":"test@test.com","from_name":"ZRP","enabled":1}`
+	req := authedRequest("PUT", "/api/v1/email/config", body, cookie)
+	w := httptest.NewRecorder()
+	handleUpdateEmailConfig(w, req)
+
+	// Mock SMTP
+	var sentTo string
+	origSend := SMTPSendFunc
+	SMTPSendFunc = func(addr string, auth smtp.Auth, from string, to []string, msg []byte) error {
+		sentTo = to[0]
+		return nil
+	}
+	defer func() { SMTPSendFunc = origSend }()
+
+	req2 := authedRequest("POST", "/api/v1/email/test", `{"to":"recipient@test.com"}`, cookie)
+	w2 := httptest.NewRecorder()
+	handleTestEmail(w2, req2)
+	if w2.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w2.Code, w2.Body.String())
+	}
+	if sentTo != "recipient@test.com" {
+		t.Errorf("expected recipient@test.com, got %q", sentTo)
+	}
+
+	// Check email log
+	var count int
+	db.QueryRow("SELECT COUNT(*) FROM email_log WHERE to_address='recipient@test.com'").Scan(&count)
+	if count != 1 {
+		t.Errorf("expected 1 email log entry, got %d", count)
+	}
+}
+
+func TestListEmailLog(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	// Insert a log entry
+	db.Exec("INSERT INTO email_log (to_address, subject, body, status, sent_at) VALUES ('a@b.com', 'Test', 'body', 'sent', '2026-01-01 00:00:00')")
+
+	req := authedRequest("GET", "/api/v1/email-log", "", cookie)
+	w := httptest.NewRecorder()
+	handleListEmailLog(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	data := resp["data"].([]interface{})
+	if len(data) != 1 {
+		t.Errorf("expected 1 log entry, got %d", len(data))
+	}
+}
+
+func TestEmailOnECOApproved(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Enable email config
+	db.Exec("INSERT OR REPLACE INTO email_config (id, smtp_host, smtp_port, smtp_user, smtp_password, from_address, from_name, enabled) VALUES (1, 'localhost', 2525, 'u', 'p', 'admin@test.com', 'ZRP', 1)")
+
+	// Mock SMTP
+	var sentSubject string
+	origSend := SMTPSendFunc
+	SMTPSendFunc = func(addr string, auth smtp.Auth, from string, to []string, msg []byte) error {
+		sentSubject = string(msg)
+		return nil
+	}
+	defer func() { SMTPSendFunc = origSend }()
+
+	emailOnECOApproved("ECO-2026-001")
+
+	if !strings.Contains(sentSubject, "ECO-2026-001") {
+		t.Errorf("expected email about ECO-2026-001")
+	}
+}
+
+func TestEmailOnLowStock(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	// Enable email config
+	db.Exec("INSERT OR REPLACE INTO email_config (id, smtp_host, smtp_port, smtp_user, smtp_password, from_address, from_name, enabled) VALUES (1, 'localhost', 2525, 'u', 'p', 'admin@test.com', 'ZRP', 1)")
+
+	// Insert inventory item below reorder point
+	db.Exec("INSERT INTO inventory (ipn, qty_on_hand, reorder_point) VALUES ('TEST-001', 2, 10)")
+
+	var sentMsg string
+	origSend := SMTPSendFunc
+	SMTPSendFunc = func(addr string, auth smtp.Auth, from string, to []string, msg []byte) error {
+		sentMsg = string(msg)
+		return nil
+	}
+	defer func() { SMTPSendFunc = origSend }()
+
+	emailOnLowStock("TEST-001")
+
+	if !strings.Contains(sentMsg, "TEST-001") {
+		t.Errorf("expected email about low stock TEST-001")
+	}
+}
+
+func TestEmailOnLowStockAboveThreshold(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	db.Exec("INSERT OR REPLACE INTO email_config (id, smtp_host, smtp_port, smtp_user, smtp_password, from_address, from_name, enabled) VALUES (1, 'localhost', 2525, 'u', 'p', 'admin@test.com', 'ZRP', 1)")
+	db.Exec("INSERT INTO inventory (ipn, qty_on_hand, reorder_point) VALUES ('TEST-002', 50, 10)")
+
+	called := false
+	origSend := SMTPSendFunc
+	SMTPSendFunc = func(addr string, auth smtp.Auth, from string, to []string, msg []byte) error {
+		called = true
+		return nil
+	}
+	defer func() { SMTPSendFunc = origSend }()
+
+	emailOnLowStock("TEST-002")
+
+	if called {
+		t.Errorf("should not send email when stock is above reorder point")
+	}
+}
+
+func TestSettingsEmailAliases(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	cookie := loginAdmin(t)
+
+	// GET /api/v1/settings/email should work
+	req := authedRequest("GET", "/api/v1/settings/email", "", cookie)
+	w := httptest.NewRecorder()
+	handleGetEmailConfig(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
 // --- Helper Tests ---
 
 func TestIpnCategory(t *testing.T) {
@@ -673,3 +1116,4 @@ func TestIpnCategory(t *testing.T) {
 		}
 	}
 }
+

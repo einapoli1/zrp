@@ -158,6 +158,7 @@
       <a class="sidebar-link" data-route="users" onclick="navigate('users')">👥 Users</a>
       <a class="sidebar-link" data-route="audit" onclick="navigate('audit')">📋 Audit Log</a>
       <a class="sidebar-link" data-route="apikeys" onclick="navigate('apikeys')">🔑 API Keys</a>
+      <a class="sidebar-link" data-route="email" onclick="navigate('email')">📧 Email Settings</a>
     </nav>
   </aside>
 
@@ -314,9 +315,8 @@ function getModalValues(overlay) {
 const modules = {};
 const moduleNames = {
   dashboard: 'Dashboard', calendar: 'Calendar', parts: 'Parts (PLM)', ecos: 'ECOs', docs: 'Documents',
-  inventory: 'Inventory', procurement: 'Purchase Orders', vendors: 'Vendors',
   workorders: 'Work Orders', testing: 'Test Records', ncr: 'NCRs',
-  devices: 'Devices', firmware: 'Firmware', rma: 'RMAs', quotes: 'Quotes', reports: 'Reports', users: 'Users', audit: 'Audit Log', apikeys: 'API Keys'
+  devices: 'Devices', firmware: 'Firmware', rma: 'RMAs', quotes: 'Quotes', reports: 'Reports', users: 'Users', audit: 'Audit Log', apikeys: 'API Keys', email: 'Email Settings'
 };
 
 function navigate(route) {

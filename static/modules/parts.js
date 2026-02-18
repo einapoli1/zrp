@@ -68,19 +68,37 @@ window.module_parts = {
       // Cost section
       let costHTML = '<div id="parts-cost-panel" class="mt-4 border-t pt-4"><p class="text-gray-400 text-sm">Loading cost...</p></div>';
 
+      // Pricing tab
+      let pricingTabBtn = `<button class="btn btn-secondary btn-sm" onclick="window._partsLoadPricing('${ipn}')">💲 Pricing</button>`;
+      let supplierPriceTabBtn = `<button class="btn btn-secondary btn-sm" onclick="window._partsLoadSupplierPrices('${ipn}')">📊 Price Quotes</button>`;
+
       let bomHTML = '';
       if (isAssembly) {
         bomHTML = `<div class="mt-4 border-t pt-4">
           <div class="flex gap-2 mb-3">
-            <button class="btn btn-secondary btn-sm" id="parts-tab-details" onclick="document.getElementById('parts-details-panel').style.display='block';document.getElementById('parts-bom-panel').style.display='none';">Details</button>
+            <button class="btn btn-secondary btn-sm" id="parts-tab-details" onclick="document.getElementById('parts-details-panel').style.display='block';document.getElementById('parts-bom-panel').style.display='none';document.getElementById('parts-pricing-panel')&&(document.getElementById('parts-pricing-panel').style.display='none');document.getElementById('parts-supplier-prices-panel')&&(document.getElementById('parts-supplier-prices-panel').style.display='none');">Details</button>
             <button class="btn btn-secondary btn-sm" id="parts-tab-bom" onclick="window._partsLoadBOM('${ipn}')">📋 BOM</button>
+            ${pricingTabBtn}
+            ${supplierPriceTabBtn}
           </div>
           <div id="parts-details-panel">${fields}</div>
           <div id="parts-bom-panel" style="display:none"><p class="text-gray-400 text-center py-2">Loading BOM...</p></div>
+          <div id="parts-pricing-panel" style="display:none"><p class="text-gray-400 text-center py-2">Loading pricing...</p></div>
+          <div id="parts-supplier-prices-panel" style="display:none"><p class="text-gray-400 text-center py-2">Loading supplier prices...</p></div>
+        </div>`;
+      } else {
+        bomHTML = `<div class="mt-4 border-t pt-4">
+          <div class="flex gap-2 mb-3">
+            ${pricingTabBtn}
+            ${supplierPriceTabBtn}
+          </div>
+          <div id="parts-details-panel">${fields}</div>
+          <div id="parts-pricing-panel" style="display:none"><p class="text-gray-400 text-center py-2">Loading pricing...</p></div>
+          <div id="parts-supplier-prices-panel" style="display:none"><p class="text-gray-400 text-center py-2">Loading supplier prices...</p></div>
         </div>`;
       }
       const gitplmLink = `<a href="${window._gitplmURL||'http://localhost:8888'}/#/parts?ipn=${encodeURIComponent(ipn)}" target="_blank" class="text-sm text-blue-500 hover:underline ml-2">Open in gitplm-ui →</a>`;
-      showModal('Part: ' + ipn, `<div class="font-mono text-lg text-blue-600 mb-4">${ipn}${gitplmLink}</div>${isAssembly ? bomHTML : fields}${costHTML}`);
+      showModal('Part: ' + ipn, `<div class="font-mono text-lg text-blue-600 mb-4">${ipn}${gitplmLink}</div>${bomHTML}${costHTML}`);
 
       // Load cost asynchronously
       try {
@@ -151,6 +169,166 @@ window.module_parts = {
         panel.innerHTML = '<p class="text-red-500 text-center py-4">' + (e.message||'Failed to load BOM') + '</p>';
       }
     };
+    window._partsLoadSupplierPrices = async (ipn) => {
+      if (document.getElementById('parts-details-panel')) document.getElementById('parts-details-panel').style.display = 'none';
+      if (document.getElementById('parts-bom-panel')) document.getElementById('parts-bom-panel').style.display = 'none';
+      if (document.getElementById('parts-pricing-panel')) document.getElementById('parts-pricing-panel').style.display = 'none';
+      const panel = document.getElementById('parts-supplier-prices-panel');
+      if (!panel) return;
+      panel.style.display = 'block';
+      panel.innerHTML = '<p class="text-gray-400 text-center py-2">Loading supplier prices...</p>';
+      try {
+        const [pricesRes, trendRes] = await Promise.all([
+          api('GET', 'supplier-prices?ipn=' + encodeURIComponent(ipn) + '&limit=500'),
+          api('GET', 'supplier-prices/trend?ipn=' + encodeURIComponent(ipn))
+        ]);
+        const prices = pricesRes.data || [];
+        const trend = trendRes.data || [];
+        let html = '';
+        // Chart
+        if (trend.length > 1) {
+          const vendors = [...new Set(trend.map(t => t.vendor))];
+          const colors = ['#3b82f6','#ef4444','#10b981','#f59e0b','#8b5cf6','#ec4899'];
+          const w=500,h=200,pad=35;
+          const allPrices = trend.map(t=>t.price);
+          const minP=Math.min(...allPrices)*0.95, maxP=Math.max(...allPrices)*1.05, range=maxP-minP||1;
+          const allDates=[...new Set(trend.map(t=>t.date))].sort();
+          let paths='',dots='';
+          vendors.forEach((v,vi)=>{
+            const c=colors[vi%colors.length];
+            const pts=trend.filter(t=>t.vendor===v).map(t=>({
+              x:pad+((allDates.indexOf(t.date))/Math.max(allDates.length-1,1))*(w-2*pad),
+              y:h-pad-((t.price-minP)/range)*(h-2*pad),t
+            }));
+            if(pts.length>1) paths+=`<polyline points="${pts.map(p=>p.x+','+p.y).join(' ')}" fill="none" stroke="${c}" stroke-width="2"/>`;
+            pts.forEach(p=>{dots+=`<circle cx="${p.x}" cy="${p.y}" r="3" fill="${c}"><title>$${p.t.price} — ${p.t.vendor} (${p.t.date})</title></circle>`;});
+          });
+          const legend=vendors.map((v,i)=>`<span class="inline-flex items-center gap-1 mr-3"><span class="w-3 h-3 rounded-full inline-block" style="background:${colors[i%colors.length]}"></span>${v}</span>`).join('');
+          html+=`<div class="mb-3"><svg viewBox="0 0 ${w} ${h}" class="w-full" style="max-height:200px"><line x1="${pad}" y1="${h-pad}" x2="${w-pad}" y2="${h-pad}" stroke="#e5e7eb"/><line x1="${pad}" y1="${pad}" x2="${pad}" y2="${h-pad}" stroke="#e5e7eb"/>${paths}${dots}</svg><div class="text-xs mt-1">${legend}</div></div>`;
+        }
+        // Table
+        let bestPrice=Infinity;
+        prices.forEach(p=>{if(p.unit_price<bestPrice)bestPrice=p.unit_price;});
+        html+=`<div class="flex justify-between items-center mb-2"><h3 class="text-sm font-semibold">Supplier Price Quotes</h3></div>`;
+        if(prices.length===0){html+='<p class="text-gray-400 text-sm">No supplier price quotes</p>';}
+        else{
+          html+=`<table class="w-full text-sm"><thead><tr class="border-b text-gray-500 text-left"><th class="pb-1">Vendor</th><th class="pb-1">Price</th><th class="pb-1">Qty Break</th><th class="pb-1">Lead Time</th><th class="pb-1">Date</th></tr></thead><tbody>`;
+          prices.forEach(p=>{
+            const isBest=p.unit_price===bestPrice;
+            html+=`<tr class="border-b border-gray-100"><td class="py-1">${p.vendor_name}</td><td class="py-1 font-mono ${isBest?'text-green-600 font-bold':''}">$${Number(p.unit_price).toFixed(4)}</td><td class="py-1">${p.quantity_break}</td><td class="py-1">${p.lead_time_days!=null?p.lead_time_days+'d':'—'}</td><td class="py-1">${p.quote_date||''}</td></tr>`;
+          });
+          html+='</tbody></table>';
+        }
+        panel.innerHTML=html;
+      } catch(e) { panel.innerHTML = '<p class="text-red-500 text-sm">Error loading supplier prices</p>'; }
+    };
+
+    window._partsLoadPricing = async (ipn) => {
+      if (document.getElementById('parts-details-panel')) document.getElementById('parts-details-panel').style.display = 'none';
+      if (document.getElementById('parts-bom-panel')) document.getElementById('parts-bom-panel').style.display = 'none';
+      if (document.getElementById('parts-supplier-prices-panel')) document.getElementById('parts-supplier-prices-panel').style.display = 'none';
+      const panel = document.getElementById('parts-pricing-panel');
+      if (!panel) return;
+      panel.style.display = 'block';
+      panel.innerHTML = '<p class="text-gray-400 text-center py-2">Loading pricing...</p>';
+      try {
+        const res = await api('GET', 'prices/' + encodeURIComponent(ipn));
+        const prices = res.data || [];
+        const trendRes = await api('GET', 'prices/' + encodeURIComponent(ipn) + '/trend');
+        const trend = trendRes.data || [];
+
+        // Sparkline SVG
+        let sparkline = '';
+        if (trend.length > 1) {
+          const w = 300, h = 60, pad = 5;
+          const ps = trend.map(t => t.price);
+          const minP = Math.min(...ps), maxP = Math.max(...ps);
+          const range = maxP - minP || 1;
+          const points = trend.map((t, i) => {
+            const x = pad + (i / (trend.length - 1)) * (w - 2 * pad);
+            const y = h - pad - ((t.price - minP) / range) * (h - 2 * pad);
+            return `${x},${y}`;
+          }).join(' ');
+          sparkline = `<div class="mb-3"><svg width="${w}" height="${h}" class="border rounded">
+            <polyline points="${points}" fill="none" stroke="#3b82f6" stroke-width="2"/>
+            ${trend.map((t, i) => {
+              const x = pad + (i / (trend.length - 1)) * (w - 2 * pad);
+              const y = h - pad - ((t.price - minP) / range) * (h - 2 * pad);
+              return `<circle cx="${x}" cy="${y}" r="3" fill="#3b82f6"><title>$${t.price} — ${t.vendor} (${t.date})</title></circle>`;
+            }).join('')}
+          </svg><div class="text-xs text-gray-400 mt-1">Price trend over time</div></div>`;
+        }
+
+        // Find best price
+        let bestIdx = -1;
+        if (prices.length > 0) {
+          let minPrice = Infinity;
+          prices.forEach((p, i) => { if (p.unit_price < minPrice) { minPrice = p.unit_price; bestIdx = i; } });
+        }
+
+        let html = sparkline;
+        html += `<div class="flex justify-between items-center mb-2">
+          <h3 class="text-sm font-semibold">Price History</h3>
+          <button class="btn btn-secondary btn-sm" onclick="window._partsAddPrice('${ipn}')">+ Add Price</button>
+        </div>`;
+        if (prices.length === 0) {
+          html += '<p class="text-gray-400 text-sm">No price history</p>';
+        } else {
+          html += `<table class="w-full text-sm"><thead><tr class="border-b text-gray-500 text-left">
+            <th class="pb-1">Vendor</th><th class="pb-1">Unit Price</th><th class="pb-1">Min Qty</th><th class="pb-1">Lead Time</th><th class="pb-1">Date</th>
+          </tr></thead><tbody>`;
+          prices.forEach((p, i) => {
+            const isBest = i === bestIdx;
+            html += `<tr class="border-b border-gray-100 ${isBest ? 'bg-green-50' : ''}">
+              <td class="py-1">${p.vendor_name || p.vendor_id || '—'}${isBest ? ' <span class="badge bg-green-100 text-green-700">Best</span>' : ''}</td>
+              <td class="py-1 font-mono">$${Number(p.unit_price).toFixed(4)}</td>
+              <td class="py-1">${p.min_qty || 1}</td>
+              <td class="py-1">${p.lead_time_days ? p.lead_time_days + 'd' : '—'}</td>
+              <td class="py-1 text-gray-400 text-xs">${p.recorded_at ? new Date(p.recorded_at).toLocaleDateString() : '—'}</td>
+            </tr>`;
+          });
+          html += '</tbody></table>';
+        }
+        panel.innerHTML = html;
+      } catch(e) {
+        panel.innerHTML = '<p class="text-red-500 text-sm">' + (e.message || 'Failed to load pricing') + '</p>';
+      }
+    };
+
+    window._partsAddPrice = async (ipn) => {
+      // Load vendors for dropdown
+      let vendors = [];
+      try {
+        const vRes = await api('GET', 'vendors');
+        vendors = vRes.data || [];
+      } catch(e) {}
+
+      const vendorOpts = vendors.map(v => `<option value="${v.id}">${v.name}</option>`).join('');
+      showModal('Add Price Entry', `
+        <div class="space-y-3">
+          <div><label class="label">IPN</label><input class="input" data-field="ipn" value="${ipn}" readonly></div>
+          <div><label class="label">Vendor</label><select class="input" data-field="vendor_id"><option value="">— Select —</option>${vendorOpts}</select></div>
+          <div><label class="label">Unit Price ($)</label><input type="number" step="0.0001" class="input" data-field="unit_price" placeholder="0.0000"></div>
+          <div><label class="label">Min Qty</label><input type="number" class="input" data-field="min_qty" value="1"></div>
+          <div><label class="label">Lead Time (days)</label><input type="number" class="input" data-field="lead_time_days" placeholder=""></div>
+        </div>
+      `, async (modal) => {
+        const vals = getModalValues(modal);
+        try {
+          await api('POST', 'prices', {
+            ipn: vals.ipn,
+            vendor_id: vals.vendor_id || null,
+            unit_price: parseFloat(vals.unit_price),
+            min_qty: parseInt(vals.min_qty) || 1,
+            lead_time_days: vals.lead_time_days ? parseInt(vals.lead_time_days) : null,
+          });
+          toast('Price entry added');
+          modal.remove();
+          window._partsLoadPricing(ipn);
+        } catch(e) { toast(e.message, 'error'); }
+      });
+    };
+
     window._partsExport = () => { toast('CSV export: use gitplm CLI for full export'); };
     load();
   }

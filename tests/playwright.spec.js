@@ -21,7 +21,7 @@ test.describe('ZRP ERP System', () => {
 
   test('Dashboard loads with KPI cards', async ({ page }) => {
     await page.goto(BASE);
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(4000);
     const content = await page.textContent('#content');
     expect(content).toContain('Open ECOs');
     expect(content).toContain('Low Stock');

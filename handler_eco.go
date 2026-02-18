@@ -112,6 +112,7 @@ func handleApproveECO(w http.ResponseWriter, r *http.Request, id string) {
 	_, err := db.Exec("UPDATE ecos SET status='approved',approved_at=?,approved_by='engineer',updated_at=? WHERE id=?", now, now, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	logAudit(db, getUsername(r), "approved", "eco", id, "Approved "+id)
+	go emailOnECOApproved(id)
 	handleGetECO(w, r, id)
 }
 

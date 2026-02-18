@@ -58,6 +58,7 @@ func handleUpdateWorkOrder(w http.ResponseWriter, r *http.Request, id string) {
 		wo.AssemblyIPN, wo.Qty, wo.Status, wo.Priority, wo.Notes, wo.Status, now, wo.Status, now, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	logAudit(db, getUsername(r), "updated", "workorder", id, "Updated WO "+id+": status="+wo.Status)
+	go emailOnOverdueWorkOrder(id)
 	handleGetWorkOrder(w, r, id)
 }
 

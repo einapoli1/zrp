@@ -71,6 +71,7 @@ func handleInventoryTransact(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logAudit(db, getUsername(r), t.Type, "inventory", t.IPN, "Inventory "+t.Type+": "+t.IPN)
+	go emailOnLowStock(t.IPN)
 	jsonResp(w, map[string]string{"status": "ok"})
 }
 

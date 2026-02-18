@@ -191,6 +191,45 @@ func runMigrations() error {
 			read_at DATETIME,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
+		`CREATE TABLE IF NOT EXISTS price_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			ipn TEXT NOT NULL,
+			vendor_id TEXT,
+			vendor_name TEXT,
+			unit_price REAL NOT NULL,
+			currency TEXT DEFAULT 'USD',
+			min_qty INTEGER DEFAULT 1,
+			lead_time_days INTEGER,
+			po_id TEXT,
+			recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			notes TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS email_config (
+			id INTEGER PRIMARY KEY DEFAULT 1,
+			smtp_host TEXT,
+			smtp_port INTEGER DEFAULT 587,
+			smtp_user TEXT,
+			smtp_password TEXT,
+			from_address TEXT,
+			from_name TEXT DEFAULT 'ZRP',
+			enabled INTEGER DEFAULT 0
+		)`,
+		`CREATE TABLE IF NOT EXISTS email_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			to_address TEXT NOT NULL,
+			subject TEXT NOT NULL,
+			body TEXT,
+			status TEXT NOT NULL DEFAULT 'sent',
+			error TEXT,
+			sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS dashboard_widgets (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER DEFAULT 0,
+			widget_type TEXT NOT NULL,
+			position INTEGER DEFAULT 0,
+			enabled INTEGER DEFAULT 1
+		)`,
 	}
 	for _, t := range tables {
 		if _, err := db.Exec(t); err != nil {
@@ -203,6 +242,9 @@ func runMigrations() error {
 		"ALTER TABLE inventory ADD COLUMN mpn TEXT DEFAULT ''",
 		"ALTER TABLE users ADD COLUMN active INTEGER DEFAULT 1",
 		"ALTER TABLE ecos ADD COLUMN ncr_id TEXT DEFAULT ''",
+		"ALTER TABLE notifications ADD COLUMN emailed INTEGER DEFAULT 0",
+		"ALTER TABLE work_orders ADD COLUMN due_date TEXT DEFAULT ''",
+		"ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''",
 	}
 	for _, s := range alterStmts {
 		db.Exec(s) // ignore errors (column already exists)
@@ -242,6 +284,27 @@ func seedDB() {
 		if err == nil {
 			db.Exec("INSERT INTO users (username, password_hash, display_name, role, active) VALUES (?, ?, ?, ?, 1)",
 				"viewer", string(hash), "Viewer", "readonly")
+		}
+	}
+
+	// Seed email config
+	var emailCount int
+	db.QueryRow("SELECT COUNT(*) FROM email_config").Scan(&emailCount)
+	if emailCount == 0 {
+		db.Exec("INSERT INTO email_config (id, enabled) VALUES (1, 0)")
+	}
+
+	// Seed dashboard widgets
+	var widgetCount int
+	db.QueryRow("SELECT COUNT(*) FROM dashboard_widgets").Scan(&widgetCount)
+	if widgetCount == 0 {
+		widgets := []string{
+			"kpi_open_ecos", "kpi_low_stock", "kpi_open_pos", "kpi_active_wos",
+			"kpi_open_ncrs", "kpi_open_rmas", "kpi_total_parts", "kpi_total_devices",
+			"chart_eco_status", "chart_wo_status", "chart_inventory",
+		}
+		for i, w := range widgets {
+			db.Exec("INSERT INTO dashboard_widgets (user_id, widget_type, position, enabled) VALUES (0, ?, ?, 1)", w, i)
 		}
 	}
 
