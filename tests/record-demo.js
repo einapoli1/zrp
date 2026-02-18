@@ -1,17 +1,38 @@
 const { chromium } = require('@playwright/test');
 const path = require('path');
 
+async function login(page) {
+  const BASE = 'http://localhost:9000';
+  await page.goto(BASE);
+  // Pre-set tour-seen so it never starts
+  await page.evaluate(() => localStorage.setItem('zrp-tour-seen', 'true'));
+  await page.waitForSelector('#login-page:not(.hidden), #app:not(.hidden)', { timeout: 5000 });
+  const loginVisible = await page.$('#login-page:not(.hidden)');
+  if (loginVisible) {
+    await page.fill('#login-username', 'admin');
+    await page.fill('#login-password', 'changeme');
+    await page.click('#login-form button[type="submit"]');
+    await page.waitForSelector('#app:not(.hidden)', { timeout: 5000 });
+  }
+  // Dismiss any tour overlay
+  await page.evaluate(() => {
+    localStorage.setItem('zrp-tour-seen', 'true');
+    document.querySelectorAll('.zt-overlay-bg, .zt-overlay, .zt-popover').forEach(el => el.remove());
+    if (window._tourCleanup) window._tourCleanup();
+  });
+  await page.waitForTimeout(1000);
+}
+
 (async () => {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
-    recordVideo: { dir: path.join(__dirname, '..', 'demo-video'), size: { width: 1440, height: 900 } }
+    recordVideo: { dir: path.join(__dirname, '..', 'demo'), size: { width: 1440, height: 900 } }
   });
   const page = await context.newPage();
-  const BASE = 'http://localhost:9000';
 
-  // Dashboard
-  await page.goto(BASE);
+  // Login first
+  await login(page);
   await page.waitForTimeout(2000);
 
   // Parts
