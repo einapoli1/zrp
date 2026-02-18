@@ -53,6 +53,7 @@ func handleCreateECO(w http.ResponseWriter, r *http.Request) {
 		e.ID, e.Title, e.Description, e.Status, e.Priority, e.AffectedIPNs, "engineer", now, now)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	e.CreatedAt = now; e.UpdatedAt = now; e.CreatedBy = "engineer"
+	logAudit(db, getUsername(r), "created", "eco", e.ID, "Created "+e.ID+": "+e.Title)
 	jsonResp(w, e)
 }
 
@@ -63,6 +64,7 @@ func handleUpdateECO(w http.ResponseWriter, r *http.Request, id string) {
 	_, err := db.Exec("UPDATE ecos SET title=?,description=?,status=?,priority=?,affected_ipns=?,updated_at=? WHERE id=?",
 		e.Title, e.Description, e.Status, e.Priority, e.AffectedIPNs, now, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "updated", "eco", id, "Updated "+id+": "+e.Title)
 	handleGetECO(w, r, id)
 }
 
@@ -70,6 +72,7 @@ func handleApproveECO(w http.ResponseWriter, r *http.Request, id string) {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	_, err := db.Exec("UPDATE ecos SET status='approved',approved_at=?,approved_by='engineer',updated_at=? WHERE id=?", now, now, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "approved", "eco", id, "Approved "+id)
 	handleGetECO(w, r, id)
 }
 
@@ -77,5 +80,6 @@ func handleImplementECO(w http.ResponseWriter, r *http.Request, id string) {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	_, err := db.Exec("UPDATE ecos SET status='implemented',updated_at=? WHERE id=?", now, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "implemented", "eco", id, "Implemented "+id)
 	handleGetECO(w, r, id)
 }

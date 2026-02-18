@@ -57,6 +57,7 @@ func handleCreateQuote(w http.ResponseWriter, r *http.Request) {
 			q.ID, l.IPN, l.Description, l.Qty, l.UnitPrice, l.Notes)
 	}
 	q.CreatedAt = now
+	logAudit(db, getUsername(r), "created", "quote", q.ID, "Created "+q.ID+" for "+q.Customer)
 	jsonResp(w, q)
 }
 
@@ -66,6 +67,7 @@ func handleUpdateQuote(w http.ResponseWriter, r *http.Request, id string) {
 	_, err := db.Exec("UPDATE quotes SET customer=?,status=?,notes=?,valid_until=? WHERE id=?",
 		q.Customer, q.Status, q.Notes, q.ValidUntil, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "updated", "quote", id, "Updated "+id+": status="+q.Status)
 	handleGetQuote(w, r, id)
 }
 

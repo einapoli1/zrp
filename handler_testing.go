@@ -44,5 +44,6 @@ func handleCreateTest(w http.ResponseWriter, r *http.Request) {
 	t.ID = int(id)
 	t.TestedAt = now
 	t.TestedBy = "operator"
+	logAudit(db, getUsername(r), "created", "test", t.SerialNumber, "Test "+t.Result+" for "+t.SerialNumber)
 	jsonResp(w, t)
 }

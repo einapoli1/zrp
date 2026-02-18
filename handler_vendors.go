@@ -38,6 +38,7 @@ func handleCreateVendor(w http.ResponseWriter, r *http.Request) {
 	_, err := db.Exec("INSERT INTO vendors (id,name,website,contact_name,contact_email,contact_phone,notes,status,lead_time_days) VALUES (?,?,?,?,?,?,?,?,?)",
 		v.ID, v.Name, v.Website, v.ContactName, v.ContactEmail, v.ContactPhone, v.Notes, v.Status, v.LeadTimeDays)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "created", "vendor", v.ID, "Created vendor "+v.Name)
 	jsonResp(w, v)
 }
 
@@ -47,11 +48,13 @@ func handleUpdateVendor(w http.ResponseWriter, r *http.Request, id string) {
 	_, err := db.Exec("UPDATE vendors SET name=?,website=?,contact_name=?,contact_email=?,contact_phone=?,notes=?,status=?,lead_time_days=? WHERE id=?",
 		v.Name, v.Website, v.ContactName, v.ContactEmail, v.ContactPhone, v.Notes, v.Status, v.LeadTimeDays, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "updated", "vendor", id, "Updated vendor "+v.Name)
 	handleGetVendor(w, r, id)
 }
 
 func handleDeleteVendor(w http.ResponseWriter, r *http.Request, id string) {
 	_, err := db.Exec("DELETE FROM vendors WHERE id=?", id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "deleted", "vendor", id, "Deleted vendor "+id)
 	jsonResp(w, map[string]string{"deleted": id})
 }

@@ -44,6 +44,7 @@ func handleCreateWorkOrder(w http.ResponseWriter, r *http.Request) {
 		wo.ID, wo.AssemblyIPN, wo.Qty, wo.Status, wo.Priority, wo.Notes, now)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	wo.CreatedAt = now
+	logAudit(db, getUsername(r), "created", "workorder", wo.ID, "Created WO "+wo.ID+" for "+wo.AssemblyIPN)
 	jsonResp(w, wo)
 }
 
@@ -54,6 +55,7 @@ func handleUpdateWorkOrder(w http.ResponseWriter, r *http.Request, id string) {
 	_, err := db.Exec("UPDATE work_orders SET assembly_ipn=?,qty=?,status=?,priority=?,notes=?,started_at=CASE WHEN ?='in_progress' AND started_at IS NULL THEN ? ELSE started_at END,completed_at=CASE WHEN ?='completed' THEN ? ELSE completed_at END WHERE id=?",
 		wo.AssemblyIPN, wo.Qty, wo.Status, wo.Priority, wo.Notes, wo.Status, now, wo.Status, now, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "updated", "workorder", id, "Updated WO "+id+": status="+wo.Status)
 	handleGetWorkOrder(w, r, id)
 }
 

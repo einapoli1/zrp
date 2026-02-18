@@ -38,6 +38,7 @@ func handleCreateDoc(w http.ResponseWriter, r *http.Request) {
 		d.ID, d.Title, d.Category, d.IPN, d.Revision, d.Status, d.Content, d.FilePath, "engineer", now, now)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	d.CreatedAt = now; d.UpdatedAt = now; d.CreatedBy = "engineer"
+	logAudit(db, getUsername(r), "created", "document", d.ID, "Created "+d.ID+": "+d.Title)
 	jsonResp(w, d)
 }
 
@@ -48,6 +49,7 @@ func handleUpdateDoc(w http.ResponseWriter, r *http.Request, id string) {
 	_, err := db.Exec("UPDATE documents SET title=?,category=?,ipn=?,revision=?,status=?,content=?,file_path=?,updated_at=? WHERE id=?",
 		d.Title, d.Category, d.IPN, d.Revision, d.Status, d.Content, d.FilePath, now, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "updated", "document", id, "Updated "+id+": "+d.Title)
 	handleGetDoc(w, r, id)
 }
 
@@ -55,5 +57,6 @@ func handleApproveDoc(w http.ResponseWriter, r *http.Request, id string) {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	_, err := db.Exec("UPDATE documents SET status='approved',updated_at=? WHERE id=?", now, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "approved", "document", id, "Approved document "+id)
 	handleGetDoc(w, r, id)
 }

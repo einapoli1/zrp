@@ -147,6 +147,16 @@ func runMigrations() error {
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			expires_at DATETIME NOT NULL
 		)`,
+		`CREATE TABLE IF NOT EXISTS audit_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id INTEGER,
+			username TEXT DEFAULT 'system',
+			action TEXT NOT NULL,
+			module TEXT NOT NULL,
+			record_id TEXT NOT NULL,
+			summary TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
 	}
 	for _, t := range tables {
 		if _, err := db.Exec(t); err != nil {

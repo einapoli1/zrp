@@ -59,6 +59,7 @@ func handleCreatePO(w http.ResponseWriter, r *http.Request) {
 			p.ID, l.IPN, l.MPN, l.Manufacturer, l.QtyOrdered, l.UnitPrice, l.Notes)
 	}
 	p.CreatedAt = now
+	logAudit(db, getUsername(r), "created", "po", p.ID, "Created PO "+p.ID)
 	jsonResp(w, p)
 }
 
@@ -68,6 +69,7 @@ func handleUpdatePO(w http.ResponseWriter, r *http.Request, id string) {
 	_, err := db.Exec("UPDATE purchase_orders SET vendor_id=?,status=?,notes=?,expected_date=? WHERE id=?",
 		p.VendorID, p.Status, p.Notes, p.ExpectedDate, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "updated", "po", id, "Updated PO "+id)
 	handleGetPO(w, r, id)
 }
 
@@ -99,5 +101,6 @@ func handleReceivePO(w http.ResponseWriter, r *http.Request, id string) {
 	} else {
 		db.Exec("UPDATE purchase_orders SET status='partial' WHERE id=?", id)
 	}
+	logAudit(db, getUsername(r), "received", "po", id, "Received items on PO "+id)
 	handleGetPO(w, r, id)
 }

@@ -42,6 +42,7 @@ func handleCreateRMA(w http.ResponseWriter, r *http.Request) {
 		rm.ID, rm.SerialNumber, rm.Customer, rm.Reason, rm.Status, rm.DefectDescription, now)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	rm.CreatedAt = now
+	logAudit(db, getUsername(r), "created", "rma", rm.ID, "Created "+rm.ID+": "+rm.Reason)
 	jsonResp(w, rm)
 }
 
@@ -55,5 +56,6 @@ func handleUpdateRMA(w http.ResponseWriter, r *http.Request, id string) {
 	_, err := db.Exec("UPDATE rmas SET serial_number=?,customer=?,reason=?,status=?,defect_description=?,resolution=?,received_at=COALESCE(?,received_at),resolved_at=COALESCE(?,resolved_at) WHERE id=?",
 		rm.SerialNumber, rm.Customer, rm.Reason, rm.Status, rm.DefectDescription, rm.Resolution, receivedAt, resolvedAt, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "updated", "rma", id, "Updated "+id+": status="+rm.Status)
 	handleGetRMA(w, r, id)
 }

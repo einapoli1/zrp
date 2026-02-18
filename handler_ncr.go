@@ -43,6 +43,7 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 		n.ID, n.Title, n.Description, n.IPN, n.SerialNumber, n.DefectType, n.Severity, n.Status, now)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	n.CreatedAt = now
+	logAudit(db, getUsername(r), "created", "ncr", n.ID, "Created "+n.ID+": "+n.Title)
 	jsonResp(w, n)
 }
 
@@ -57,5 +58,6 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request, id string) {
 	_, err := db.Exec("UPDATE ncrs SET title=?,description=?,ipn=?,serial_number=?,defect_type=?,severity=?,status=?,root_cause=?,corrective_action=?,resolved_at=COALESCE(?,resolved_at) WHERE id=?",
 		n.Title, n.Description, n.IPN, n.SerialNumber, n.DefectType, n.Severity, n.Status, n.RootCause, n.CorrectiveAction, resolvedAt, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "updated", "ncr", id, "Updated "+id+": "+n.Title)
 	handleGetNCR(w, r, id)
 }

@@ -41,6 +41,7 @@ func handleCreateDevice(w http.ResponseWriter, r *http.Request) {
 		d.SerialNumber, d.IPN, d.FirmwareVersion, d.Customer, d.Location, d.Status, d.InstallDate, d.Notes, now)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	d.CreatedAt = now
+	logAudit(db, getUsername(r), "created", "device", d.SerialNumber, "Registered device "+d.SerialNumber)
 	jsonResp(w, d)
 }
 
@@ -50,6 +51,7 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request, serial string) {
 	_, err := db.Exec("UPDATE devices SET ipn=?,firmware_version=?,customer=?,location=?,status=?,install_date=?,notes=? WHERE serial_number=?",
 		d.IPN, d.FirmwareVersion, d.Customer, d.Location, d.Status, d.InstallDate, d.Notes, serial)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "updated", "device", serial, "Updated device "+serial)
 	handleGetDevice(w, r, serial)
 }
 

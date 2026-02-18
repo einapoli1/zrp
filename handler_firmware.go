@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -43,6 +44,7 @@ func handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
 		f.ID, f.Name, f.Version, f.Category, f.Status, f.TargetFilter, f.Notes, now)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	f.CreatedAt = now
+	logAudit(db, getUsername(r), "created", "firmware", f.ID, "Created campaign "+f.ID+": "+f.Name)
 	jsonResp(w, f)
 }
 
@@ -52,6 +54,7 @@ func handleUpdateCampaign(w http.ResponseWriter, r *http.Request, id string) {
 	_, err := db.Exec("UPDATE firmware_campaigns SET name=?,version=?,category=?,status=?,target_filter=?,notes=? WHERE id=?",
 		f.Name, f.Version, f.Category, f.Status, f.TargetFilter, f.Notes, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
+	logAudit(db, getUsername(r), "updated", "firmware", id, "Updated campaign "+id)
 	handleGetCampaign(w, r, id)
 }
 
@@ -69,6 +72,7 @@ func handleLaunchCampaign(w http.ResponseWriter, r *http.Request, id string) {
 		count++
 	}
 	db.Exec("UPDATE firmware_campaigns SET status='active',started_at=? WHERE id=?", now, id)
+	logAudit(db, getUsername(r), "launched", "firmware", id, fmt.Sprintf("Launched campaign %s to %d devices", id, count))
 	jsonResp(w, map[string]interface{}{"launched": true, "devices_added": count})
 }
 

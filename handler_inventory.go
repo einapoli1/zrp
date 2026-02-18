@@ -56,6 +56,7 @@ func handleInventoryTransact(w http.ResponseWriter, r *http.Request) {
 		db.Exec("UPDATE inventory SET qty_on_hand=?,updated_at=? WHERE ipn=?", t.Qty, now, t.IPN)
 	}
 
+	logAudit(db, getUsername(r), t.Type, "inventory", t.IPN, "Inventory "+t.Type+": "+t.IPN)
 	jsonResp(w, map[string]string{"status": "ok"})
 }
 

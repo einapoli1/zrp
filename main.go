@@ -67,6 +67,16 @@ func main() {
 		// Dashboard
 		case path == "dashboard" && r.Method == "GET":
 			handleDashboard(w, r)
+		case path == "dashboard/charts" && r.Method == "GET":
+			handleDashboardCharts(w, r)
+		case path == "dashboard/lowstock" && r.Method == "GET":
+			handleLowStockAlerts(w, r)
+
+		// Audit
+		case path == "audit" || (parts[0] == "audit" && len(parts) == 1):
+			if r.Method == "GET" {
+				handleAuditLog(w, r)
+			}
 
 		// Parts
 		case parts[0] == "parts" && len(parts) == 1 && r.Method == "GET":
