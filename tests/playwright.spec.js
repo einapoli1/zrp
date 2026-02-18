@@ -4,6 +4,8 @@ const BASE = 'http://localhost:9000';
 
 async function login(page, user = 'admin', pass = 'changeme') {
   await page.goto(BASE);
+  // Pre-set tour-seen so it never starts
+  await page.evaluate(() => localStorage.setItem('zrp-tour-seen', 'true'));
   await page.waitForSelector('#login-page:not(.hidden), #app:not(.hidden)', { timeout: 5000 });
   const loginVisible = await page.$('#login-page:not(.hidden)');
   if (loginVisible) {
@@ -13,28 +15,26 @@ async function login(page, user = 'admin', pass = 'changeme') {
     await page.waitForSelector('#app:not(.hidden)', { timeout: 5000 });
   }
   // Dismiss tour overlay if it auto-started
+  await dismissTour(page);
+  await page.waitForTimeout(1000);
+}
+
+async function dismissTour(page) {
   await page.evaluate(() => {
     localStorage.setItem('zrp-tour-seen', 'true');
     document.querySelectorAll('.zt-overlay-bg, .zt-overlay, .zt-popover').forEach(el => el.remove());
     if (window._tourCleanup) window._tourCleanup();
   });
-  // Wait for dashboard to fully render before returning
-  await page.waitForTimeout(2000);
 }
 
 async function nav(page, route) {
-  await page.waitForTimeout(500);
-  await page.evaluate((r) => {
-    window.location.hash = '#/' + r;
-  }, route);
-  await page.waitForFunction((r) => {
-    return window.location.hash === '#/' + r;
-  }, route, { timeout: 5000 }).catch(() => {});
-  await page.waitForTimeout(2000);
+  await page.evaluate((r) => window.navigate(r), route);
   await page.waitForFunction(() => {
     const content = document.getElementById('content');
-    return content && content.innerHTML.length > 0;
-  }, { timeout: 5000 }).catch(() => {});
+    return content && content.children.length > 0 && !content.textContent.includes('Loading');
+  }, { timeout: 10000 });
+  await dismissTour(page);
+  await page.waitForTimeout(500);
 }
 
 async function getContent(page) {
@@ -55,7 +55,10 @@ async function fillField(page, field, value) {
 // Helper: save modal
 async function saveModal(page) {
   await page.click('#modal-save');
-  await page.waitForTimeout(2000);
+  // Wait for modal to close or page to stabilize
+  await page.waitForFunction(() => !document.querySelector('.modal-overlay'), { timeout: 10000 }).catch(() => {});
+  // Small buffer - but check page is still alive first
+  try { await page.waitForTimeout(500); } catch(e) {}
 }
 
 // ─── AUTHENTICATION ───────────────────────────────────────────
@@ -397,6 +400,13 @@ test.describe('Procurement / POs', () => {
     await nav(page, 'procurement');
     await page.locator('button:has-text("New PO")').click();
     await page.waitForSelector('.modal-overlay', { timeout: 5000 });
+    // Select first vendor (required field)
+    const vendorSelect = page.locator('.modal-overlay select[data-field="vendor_id"]');
+    const options = await vendorSelect.locator('option').all();
+    if (options.length > 1) {
+      const val = await options[1].getAttribute('value');
+      await vendorSelect.selectOption(val);
+    }
     await saveModal(page);
     await page.waitForTimeout(1000);
     const c = await getContent(page);
@@ -461,15 +471,16 @@ test.describe('Device Registry', () => {
 
   test('register new device', async ({ page }) => {
     await nav(page, 'devices');
+    const sn = 'SN-PW-' + Date.now();
     await page.locator('button:has-text("Register Device")').click();
     await page.waitForSelector('.modal-overlay', { timeout: 5000 });
-    await fillField(page, 'serial_number', 'SN-PW-001');
+    await fillField(page, 'serial_number', sn);
     await fillField(page, 'ipn', 'PCB-001-0001');
     await fillField(page, 'firmware_version', '1.0.0');
     await fillField(page, 'customer', 'PW Test');
     await saveModal(page);
     const c = await getContent(page);
-    expect(c).toContain('SN-PW-001');
+    expect(c).toContain(sn);
   });
 
   test('click device shows detail with history', async ({ page }) => {
@@ -647,14 +658,15 @@ test.describe('User Management', () => {
 
   test('create user', async ({ page }) => {
     await nav(page, 'users');
+    const uname = 'pw_user_' + Date.now();
     await page.locator('button:has-text("New User")').click();
     await page.waitForSelector('.modal-overlay', { timeout: 5000 });
-    await fillField(page, 'username', 'pw_testuser');
+    await fillField(page, 'username', uname);
     await fillField(page, 'display_name', 'PW Test User');
     await fillField(page, 'password', 'testpass123');
     await saveModal(page);
     const c = await getContent(page);
-    expect(c).toContain('pw_testuser');
+    expect(c).toContain(uname);
   });
 
   test('edit user role', async ({ page }) => {
@@ -685,11 +697,17 @@ test.describe('API Key Management', () => {
     await page.locator('#btn-new-key, button:has-text("Generate New Key"), button:has-text("New Key")').first().click();
     await page.waitForSelector('.modal-overlay', { timeout: 5000 }).catch(() => {});
     await page.waitForTimeout(500);
-    // Try to fill the name field if a modal appeared
     const modal = await page.$('.modal-overlay');
     if (modal) {
       await fillField(page, 'name', 'PW Test Key');
-      await saveModal(page);
+      await page.click('#modal-save');
+      // A second modal appears showing the generated key - wait for it then close
+      await page.waitForTimeout(2000);
+      // Close any remaining modal overlay
+      await page.evaluate(() => {
+        document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+      });
+      await page.waitForTimeout(500);
     }
     const c = await getContent(page);
     expect(c).toContain('PW Test Key');

@@ -1,0 +1,76 @@
+{{define "content"}}
+<div class="mb-4 flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+  <div class="flex gap-2 items-center">
+    <input type="text" name="q" class="input w-64" placeholder="Search quotes..."
+           hx-get="/quotes" hx-trigger="keyup changed delay:300ms" hx-target="#quotes-table" hx-swap="innerHTML"
+           hx-include="[name='status']" value="{{.Query}}">
+    <select name="status" class="input w-48"
+            hx-get="/quotes" hx-trigger="change" hx-target="#quotes-table" hx-swap="innerHTML"
+            hx-include="[name='q']">
+      <option value="">All Statuses</option>
+      <option value="draft" {{if eq .Status "draft"}}selected{{end}}>Draft</option>
+      <option value="sent" {{if eq .Status "sent"}}selected{{end}}>Sent</option>
+      <option value="accepted" {{if eq .Status "accepted"}}selected{{end}}>Accepted</option>
+      <option value="rejected" {{if eq .Status "rejected"}}selected{{end}}>Rejected</option>
+    </select>
+  </div>
+  <div class="flex gap-2 items-center">
+    <span class="text-sm text-gray-500">{{.Total}} quotes</span>
+    <button class="btn btn-primary" hx-get="/quotes/new" hx-target="#modal" hx-swap="innerHTML">+ New Quote</button>
+  </div>
+</div>
+
+<div class="card overflow-x-auto">
+  <div id="quotes-table">
+    {{template "quotes-table" .}}
+  </div>
+</div>
+{{end}}
+
+{{define "quotes-table"}}
+{{if .Quotes}}
+<table class="w-full text-sm">
+  <thead>
+    <tr class="border-b border-gray-200 dark:border-gray-700 text-left">
+      <th class="px-3 py-2 font-medium text-gray-500">ID</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Customer</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Status</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Valid Until</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Created</th>
+      <th class="px-3 py-2 w-8"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {{range .Quotes}}
+    <tr class="table-row border-b border-gray-100 dark:border-gray-700" onclick="window.location='/quotes/{{.ID}}'">
+      <td class="px-3 py-2 font-mono text-blue-600">{{.ID}}</td>
+      <td class="px-3 py-2">{{.Customer}}</td>
+      <td class="px-3 py-2">
+        {{if eq .Status "draft"}}
+          <span class="badge badge-secondary">Draft</span>
+        {{else if eq .Status "sent"}}
+          <span class="badge badge-info">Sent</span>
+        {{else if eq .Status "accepted"}}
+          <span class="badge badge-success">Accepted</span>
+        {{else if eq .Status "rejected"}}
+          <span class="badge badge-error">Rejected</span>
+        {{else}}
+          <span class="badge badge-secondary">{{.Status}}</span>
+        {{end}}
+      </td>
+      <td class="px-3 py-2">{{if .ValidUntil}}{{.ValidUntil}}{{else}}&mdash;{{end}}</td>
+      <td class="px-3 py-2 text-gray-500">{{if .CreatedAt}}{{slice .CreatedAt 0 10}}{{end}}</td>
+      <td class="px-3 py-2 text-gray-400">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+        </svg>
+      </td>
+    </tr>
+    {{end}}
+  </tbody>
+</table>
+{{template "pagination" .Pagination}}
+{{else}}
+{{template "empty-state" (dict "Message" "No quotes yet" "ActionURL" "/quotes/new" "ActionLabel" "New Quote")}}
+{{end}}
+{{end}}

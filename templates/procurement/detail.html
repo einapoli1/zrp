@@ -1,0 +1,61 @@
+{{define "content"}}
+<div class="mb-4">
+  <a href="/procurement" class="text-sm text-blue-600 hover:underline">← Back to Purchase Orders</a>
+</div>
+
+<div class="card mb-4">
+  <div class="flex justify-between items-start mb-4">
+    <h2 class="text-lg font-semibold">{{.PO.ID}}</h2>
+    <span class="badge badge-{{.PO.Status}}">{{.PO.Status}}</span>
+  </div>
+
+  <div class="detail-grid mb-4">
+    <div>
+      <div class="detail-label">Vendor</div>
+      <div class="detail-value"><a href="/vendors/{{.PO.VendorID}}" class="text-blue-600">{{.PO.VendorID}}</a></div>
+    </div>
+    <div>
+      <div class="detail-label">Expected Date</div>
+      <div class="detail-value">{{if .PO.ExpectedDate}}{{formatDate .PO.ExpectedDate}}{{else}}—{{end}}</div>
+    </div>
+    <div>
+      <div class="detail-label">Created</div>
+      <div class="detail-value">{{formatDate .PO.CreatedAt}}</div>
+    </div>
+    <div>
+      <div class="detail-label">Received</div>
+      <div class="detail-value">{{if .PO.ReceivedAt}}{{formatDate (deref .PO.ReceivedAt)}}{{else}}—{{end}}</div>
+    </div>
+  </div>
+
+  {{if .PO.Notes}}<p class="text-sm text-gray-600 dark:text-gray-400">{{.PO.Notes}}</p>{{end}}
+</div>
+
+<div class="card">
+  <h3 class="text-base font-semibold mb-3">Line Items</h3>
+  <table class="w-full text-sm">
+    <thead>
+      <tr class="border-b border-gray-200 dark:border-gray-700 text-left">
+        <th class="px-3 py-2 font-medium text-gray-500">IPN</th>
+        <th class="px-3 py-2 font-medium text-gray-500">MPN</th>
+        <th class="px-3 py-2 font-medium text-gray-500 text-right">Ordered</th>
+        <th class="px-3 py-2 font-medium text-gray-500 text-right">Received</th>
+        <th class="px-3 py-2 font-medium text-gray-500 text-right">Unit Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .PO.Lines}}
+      <tr class="border-b border-gray-100 dark:border-gray-700">
+        <td class="px-3 py-2 font-mono text-blue-600">{{.IPN}}</td>
+        <td class="px-3 py-2">{{.MPN}}</td>
+        <td class="px-3 py-2 text-right">{{printf "%.0f" .QtyOrdered}}</td>
+        <td class="px-3 py-2 text-right">{{printf "%.0f" .QtyReceived}}</td>
+        <td class="px-3 py-2 text-right">${{printf "%.2f" .UnitPrice}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="5" class="px-3 py-4 text-center text-gray-400">No line items</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

@@ -1,0 +1,45 @@
+{{define "content"}}
+<div class="mb-4 flex justify-between items-center">
+  <span class="text-sm text-gray-500">{{.Total}} vendors</span>
+  <a href="/vendors/new" class="btn btn-primary">+ New Vendor</a>
+</div>
+
+<div class="card overflow-x-auto">
+  <div id="vendors-table">
+    {{template "vendors-table" .}}
+  </div>
+</div>
+{{end}}
+
+{{define "vendors-table"}}
+<table class="w-full text-sm">
+  <thead>
+    <tr class="border-b border-gray-200 dark:border-gray-700 text-left">
+      <th class="px-3 py-2 font-medium text-gray-500">ID</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Name</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Contact</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Email</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Status</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Lead Time</th>
+      <th class="px-3 py-2 font-medium text-gray-500"></th>
+    </tr>
+  </thead>
+  <tbody>
+    {{range .Vendors}}
+    <tr class="table-row border-b border-gray-100 dark:border-gray-700" onclick="window.location='/vendors/{{.ID}}'">
+      <td class="px-3 py-2 font-mono text-blue-600">{{.ID}}</td>
+      <td class="px-3 py-2 font-medium">{{.Name}}</td>
+      <td class="px-3 py-2">{{.ContactName}}</td>
+      <td class="px-3 py-2">{{.ContactEmail}}</td>
+      <td class="px-3 py-2"><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
+      <td class="px-3 py-2">{{if gt .LeadTimeDays 0}}{{.LeadTimeDays}} days{{else}}—{{end}}</td>
+      <td class="px-3 py-2">
+        <button class="btn btn-danger btn-sm" hx-delete="/vendors/{{.ID}}" hx-confirm="Delete vendor {{.Name}}?" hx-target="closest tr" hx-swap="outerHTML" onclick="event.stopPropagation()">✕</button>
+      </td>
+    </tr>
+    {{else}}
+    <tr><td colspan="7" class="px-3 py-8 text-center text-gray-400">No vendors found</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

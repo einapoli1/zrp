@@ -39,6 +39,7 @@ func main() {
 		log.Fatal("DB init failed:", err)
 	}
 	seedDB()
+	initTemplates()
 
 	// Start background notification generator (run once after short delay, then every 5 min)
 	go func() {
@@ -56,12 +57,64 @@ func main() {
 
 	// Static files
 	mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+
+	// Server-rendered page routes
+	mux.HandleFunc("/login", pageLogin)
+	mux.HandleFunc("/logout", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			pageLogout(w, r)
+		} else {
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
+		}
+	})
+	mux.HandleFunc("/dashboard", pageDashboard)
+	mux.HandleFunc("/dashboard/kpi", pageDashboardKPI)
+	mux.HandleFunc("/dashboard/activity", pageDashboardActivity)
+	mux.HandleFunc("/parts", pagePartsList)
+	mux.HandleFunc("/parts/", func(w http.ResponseWriter, r *http.Request) {
+		ipn := strings.TrimPrefix(r.URL.Path, "/parts/")
+		if ipn == "" {
+			pagePartsList(w, r)
+			return
+		}
+		pagePartDetail(w, r, ipn)
+	})
+	mux.HandleFunc("/ecos", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			pageECOCreate(w, r)
+			return
+		}
+		pageECOsList(w, r)
+	})
+	mux.HandleFunc("/ecos/new", pageECONew)
+	mux.HandleFunc("/ecos/", func(w http.ResponseWriter, r *http.Request) {
+		path := strings.TrimPrefix(r.URL.Path, "/ecos/")
+		parts := strings.Split(path, "/")
+		if len(parts) == 2 && parts[1] == "approve" && r.Method == "POST" {
+			pageECOApprove(w, r, parts[0])
+			return
+		}
+		if len(parts) == 2 && parts[1] == "implement" && r.Method == "POST" {
+			pageECOImplement(w, r, parts[0])
+			return
+		}
+		if len(parts) >= 1 && parts[0] != "" {
+			pageECODetail(w, r, parts[0])
+			return
+		}
+		pageECOsList(w, r)
+	})
+
+	// SPA fallback
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" || r.URL.Path == "/index.html" {
+		if r.URL.Path == "/" {
+			http.Redirect(w, r, "/dashboard", http.StatusSeeOther)
+			return
+		}
+		if r.URL.Path == "/index.html" {
 			http.ServeFile(w, r, "static/index.html")
 			return
 		}
-		// Try static file first
 		http.ServeFile(w, r, "static/index.html")
 	})
 

@@ -32,6 +32,7 @@ func requireAuth(next http.Handler) http.Handler {
 			strings.HasPrefix(path, "/static/") ||
 			strings.HasPrefix(path, "/auth/") ||
 			strings.HasPrefix(path, "/files/") ||
+			path == "/login" ||
 			path == "/api/v1/openapi.json" ||
 			strings.HasPrefix(path, "/docs") {
 			next.ServeHTTP(w, r)
@@ -55,6 +56,11 @@ func requireAuth(next http.Handler) http.Handler {
 		// Check session cookie
 		cookie, err := r.Cookie("zrp_session")
 		if err != nil {
+			// For page routes (non-API), redirect to login
+			if !strings.HasPrefix(path, "/api/") {
+				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(401)
 			json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized", "code": "UNAUTHORIZED"})
@@ -67,6 +73,10 @@ func requireAuth(next http.Handler) http.Handler {
 		err = db.QueryRow(`SELECT s.user_id, u.role, u.active FROM sessions s JOIN users u ON s.user_id = u.id
 			WHERE s.token = ? AND s.expires_at > CURRENT_TIMESTAMP`, cookie.Value).Scan(&userID, &role, &active)
 		if err != nil {
+			if !strings.HasPrefix(path, "/api/") {
+				http.Redirect(w, r, "/login", http.StatusSeeOther)
+				return
+			}
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(401)
 			json.NewEncoder(w).Encode(map[string]string{"error": "Unauthorized", "code": "UNAUTHORIZED"})

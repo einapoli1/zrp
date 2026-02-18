@@ -1,0 +1,32 @@
+{{define "content"}}
+<div class="mb-4">
+  <a href="/procurement" class="text-sm text-blue-600 hover:underline">← Back to Purchase Orders</a>
+</div>
+
+<div class="card" style="max-width:600px">
+  <h2 class="text-lg font-semibold mb-4">New Purchase Order</h2>
+  <form hx-post="/procurement" hx-target="#content">
+    <div class="form-group">
+      <label class="label">Vendor</label>
+      <select name="vendor_id" class="input w-full" required>
+        <option value="">Select vendor...</option>
+        {{range .AllVendors}}
+        <option value="{{.ID}}">{{.Name}} ({{.ID}})</option>
+        {{end}}
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="label">Expected Date</label>
+      <input type="date" name="expected_date" class="input w-full">
+    </div>
+    <div class="form-group">
+      <label class="label">Notes</label>
+      <textarea name="notes" class="input w-full" rows="3"></textarea>
+    </div>
+    <div class="flex gap-2 justify-end">
+      <a href="/procurement" class="btn btn-secondary">Cancel</a>
+      <button type="submit" class="btn btn-primary">Create PO</button>
+    </div>
+  </form>
+</div>
+{{end}}

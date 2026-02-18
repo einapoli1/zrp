@@ -1,0 +1,49 @@
+{{define "content"}}
+<div class="mb-4 flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+  <select name="status" class="input w-40"
+          hx-get="/procurement" hx-trigger="change" hx-target="#po-table" hx-swap="innerHTML">
+    <option value="">All Statuses</option>
+    <option value="draft" {{if eq .Status "draft"}}selected{{end}}>Draft</option>
+    <option value="sent" {{if eq .Status "sent"}}selected{{end}}>Sent</option>
+    <option value="received" {{if eq .Status "received"}}selected{{end}}>Received</option>
+    <option value="cancelled" {{if eq .Status "cancelled"}}selected{{end}}>Cancelled</option>
+  </select>
+  <div class="flex gap-2">
+    <button class="btn btn-secondary" hx-post="/procurement/generate-from-wo" hx-target="#content" hx-confirm="Generate POs from WO shortages?">Generate from WO Shortage</button>
+    <a href="/procurement/new" class="btn btn-primary">+ New PO</a>
+  </div>
+</div>
+
+<div class="card overflow-x-auto">
+  <div id="po-table">
+    {{template "po-table" .}}
+  </div>
+</div>
+{{end}}
+
+{{define "po-table"}}
+<table class="w-full text-sm">
+  <thead>
+    <tr class="border-b border-gray-200 dark:border-gray-700 text-left">
+      <th class="px-3 py-2 font-medium text-gray-500">PO #</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Vendor</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Status</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Expected</th>
+      <th class="px-3 py-2 font-medium text-gray-500">Created</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{range .POs}}
+    <tr class="table-row border-b border-gray-100 dark:border-gray-700" onclick="window.location='/procurement/{{.ID}}'">
+      <td class="px-3 py-2 font-mono text-blue-600">{{.ID}}</td>
+      <td class="px-3 py-2">{{.VendorID}}</td>
+      <td class="px-3 py-2"><span class="badge badge-{{.Status}}">{{.Status}}</span></td>
+      <td class="px-3 py-2 text-gray-500">{{if .ExpectedDate}}{{formatDate .ExpectedDate}}{{else}}—{{end}}</td>
+      <td class="px-3 py-2 text-gray-500">{{formatDate .CreatedAt}}</td>
+    </tr>
+    {{else}}
+    <tr><td colspan="5" class="px-3 py-8 text-center text-gray-400">No purchase orders found</td></tr>
+    {{end}}
+  </tbody>
+</table>
+{{end}}

@@ -3,7 +3,7 @@ module.exports = defineConfig({
   testDir: './tests',
   workers: 4,
   use: {
-    video: 'on',
+    video: 'off',
     viewport: { width: 1440, height: 900 },
     baseURL: 'http://localhost:9000',
   },
