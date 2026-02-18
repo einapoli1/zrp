@@ -1,0 +1,57 @@
+window.module_devices = {
+  render: async (container) => {
+    async function load() {
+      const res = await api('GET', 'devices');
+      const items = res.data || [];
+      container.innerHTML = `<div class="card">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-semibold">Device Registry</h2>
+          <button class="btn btn-primary" onclick="window._devCreate()">+ Register Device</button>
+        </div>
+        <table class="w-full text-sm"><thead><tr class="border-b text-left text-gray-500">
+          <th class="pb-2">Serial</th><th class="pb-2">IPN</th><th class="pb-2">Customer</th><th class="pb-2">FW</th><th class="pb-2">Status</th><th class="pb-2">Location</th>
+        </tr></thead><tbody>
+          ${items.map(d => `<tr class="table-row border-b border-gray-100" onclick="window._devEdit('${d.serial_number}')">
+            <td class="py-2 font-mono text-blue-600">${d.serial_number}</td><td class="py-2">${d.ipn}</td>
+            <td class="py-2">${d.customer||''}</td><td class="py-2">${d.firmware_version||''}</td>
+            <td class="py-2">${badge(d.status)}</td><td class="py-2">${d.location||''}</td>
+          </tr>`).join('')}
+        </tbody></table>
+        ${items.length===0?'<p class="text-center text-gray-400 py-4">No devices</p>':''}
+      </div>`;
+    }
+    const form = (d={}) => `<div class="space-y-3">
+      <div><label class="label">Serial Number</label><input class="input" data-field="serial_number" value="${d.serial_number||''}" ${d.serial_number?'readonly':''}></div>
+      <div><label class="label">IPN</label><input class="input" data-field="ipn" value="${d.ipn||''}"></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="label">Firmware</label><input class="input" data-field="firmware_version" value="${d.firmware_version||''}"></div>
+        <div><label class="label">Status</label><select class="input" data-field="status">
+          ${['active','inactive','rma','decommissioned'].map(s=>`<option ${d.status===s?'selected':''}>${s}</option>`).join('')}
+        </select></div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="label">Customer</label><input class="input" data-field="customer" value="${d.customer||''}"></div>
+        <div><label class="label">Location</label><input class="input" data-field="location" value="${d.location||''}"></div>
+      </div>
+      <div><label class="label">Install Date</label><input class="input" type="date" data-field="install_date" value="${d.install_date||''}"></div>
+      <div><label class="label">Notes</label><textarea class="input" data-field="notes" rows="2">${d.notes||''}</textarea></div>
+    </div>`;
+    window._devCreate = () => showModal('Register Device', form(), async (o) => {
+      try { await api('POST','devices',getModalValues(o)); toast('Device registered'); o.remove(); load(); } catch(e) { toast(e.message,'error'); }
+    });
+    window._devEdit = async (sn) => {
+      const d = (await api('GET','devices/'+sn)).data;
+      showModal('Device: '+sn, form(d)+`<button class="btn btn-secondary mt-3" id="dev-hist">📜 View History</button>`, async (o) => {
+        try { await api('PUT','devices/'+sn,getModalValues(o)); toast('Updated'); o.remove(); load(); } catch(e) { toast(e.message,'error'); }
+      });
+      document.getElementById('dev-hist')?.addEventListener('click', async () => {
+        const h = (await api('GET','devices/'+sn+'/history')).data;
+        showModal('History: '+sn, `<h3 class="font-semibold mb-2">Test Records</h3>
+          ${(h.tests||[]).map(t=>`<div class="text-sm border-b py-1">${t.tested_at?.substring(0,16)} — ${badge(t.result)} ${t.test_type||''}</div>`).join('')||'<p class="text-gray-400">None</p>'}
+          <h3 class="font-semibold mb-2 mt-4">Firmware Campaigns</h3>
+          ${(h.campaigns||[]).map(c=>`<div class="text-sm border-b py-1">${c.campaign_id} — ${badge(c.status)}</div>`).join('')||'<p class="text-gray-400">None</p>'}`);
+      });
+    };
+    load();
+  }
+};

@@ -1,0 +1,58 @@
+window.module_workorders = {
+  render: async (container) => {
+    async function load() {
+      const res = await api('GET', 'workorders');
+      const items = res.data || [];
+      container.innerHTML = `<div class="card">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-lg font-semibold">Work Orders</h2>
+          <button class="btn btn-primary" onclick="window._woCreate()">+ New Work Order</button>
+        </div>
+        <table class="w-full text-sm"><thead><tr class="border-b text-left text-gray-500">
+          <th class="pb-2">WO #</th><th class="pb-2">Assembly</th><th class="pb-2">Qty</th><th class="pb-2">Status</th><th class="pb-2">Priority</th><th class="pb-2">Created</th>
+        </tr></thead><tbody>
+          ${items.map(w => `<tr class="table-row border-b border-gray-100" onclick="window._woEdit('${w.id}')">
+            <td class="py-2 font-mono text-blue-600">${w.id}</td><td class="py-2">${w.assembly_ipn}</td>
+            <td class="py-2">${w.qty}</td><td class="py-2">${badge(w.status)}</td>
+            <td class="py-2">${badge(w.priority)}</td><td class="py-2 text-gray-500">${w.created_at?.substring(0,10)}</td>
+          </tr>`).join('')}
+        </tbody></table>
+        ${items.length===0?'<p class="text-center text-gray-400 py-4">No work orders</p>':''}
+      </div>`;
+    }
+    const form = (w={}) => `<div class="space-y-3">
+      <div><label class="label">Assembly IPN</label><input class="input" data-field="assembly_ipn" value="${w.assembly_ipn||''}"></div>
+      <div class="grid grid-cols-3 gap-3">
+        <div><label class="label">Quantity</label><input class="input" type="number" data-field="qty" value="${w.qty||1}"></div>
+        <div><label class="label">Status</label><select class="input" data-field="status">
+          ${['open','in_progress','completed','cancelled'].map(s=>`<option ${w.status===s?'selected':''}>${s}</option>`).join('')}
+        </select></div>
+        <div><label class="label">Priority</label><select class="input" data-field="priority">
+          ${['low','normal','high','critical'].map(s=>`<option ${w.priority===s?'selected':''}>${s}</option>`).join('')}
+        </select></div>
+      </div>
+      <div><label class="label">Notes</label><textarea class="input" data-field="notes" rows="2">${w.notes||''}</textarea></div>
+    </div>`;
+    window._woCreate = () => showModal('New Work Order', form(), async (o) => {
+      const v = getModalValues(o); v.qty = parseInt(v.qty)||1;
+      try { await api('POST','workorders',v); toast('WO created'); o.remove(); load(); } catch(e) { toast(e.message,'error'); }
+    });
+    window._woEdit = async (id) => {
+      const w = (await api('GET','workorders/'+id)).data;
+      showModal('WO: '+id, form(w)+`<button class="btn btn-secondary mt-3" id="wo-bom">📋 View BOM</button>`, async (o) => {
+        const v = getModalValues(o); v.qty = parseInt(v.qty)||1;
+        try { await api('PUT','workorders/'+id,v); toast('Updated'); o.remove(); load(); } catch(e) { toast(e.message,'error'); }
+      });
+      document.getElementById('wo-bom')?.addEventListener('click', async () => {
+        const bom = (await api('GET','workorders/'+id+'/bom')).data;
+        const lines = bom.bom||[];
+        showModal('BOM for '+bom.assembly_ipn+' (×'+bom.wo_qty+')', `<table class="w-full text-sm"><thead><tr class="border-b text-gray-500">
+          <th class="pb-1 text-left">IPN</th><th class="pb-1">Required</th><th class="pb-1">On Hand</th><th class="pb-1">Status</th>
+        </tr></thead><tbody>
+          ${lines.map(l=>`<tr class="border-b border-gray-100"><td class="py-1 font-mono">${l.ipn}</td><td class="py-1 text-center">${l.qty_required}</td><td class="py-1 text-center">${l.qty_on_hand}</td><td class="py-1 text-center">${l.available?'✅':'❌'}</td></tr>`).join('')}
+        </tbody></table>${lines.length===0?'<p class="text-gray-400 text-center py-2">No BOM data</p>':''}`);
+      });
+    };
+    load();
+  }
+};

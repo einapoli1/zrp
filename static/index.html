@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-100">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZRP — Zonit Resource Planning</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  .sidebar-link { @apply flex items-center gap-3 px-4 py-2 text-sm text-gray-300 rounded-lg hover:bg-gray-700 hover:text-white transition-colors cursor-pointer; }
+  .sidebar-link.active { @apply bg-gray-700 text-white; }
+  .sidebar-group { @apply text-xs font-semibold text-gray-500 uppercase tracking-wider px-4 mt-4 mb-1; }
+  .badge { @apply inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium; }
+  .badge-draft { @apply bg-gray-200 text-gray-700; }
+  .badge-open { @apply bg-blue-100 text-blue-800; }
+  .badge-review { @apply bg-yellow-100 text-yellow-800; }
+  .badge-approved { @apply bg-green-100 text-green-800; }
+  .badge-active { @apply bg-green-100 text-green-800; }
+  .badge-sent { @apply bg-purple-100 text-purple-800; }
+  .badge-received { @apply bg-green-100 text-green-800; }
+  .badge-in_progress { @apply bg-blue-100 text-blue-800; }
+  .badge-completed { @apply bg-green-100 text-green-800; }
+  .badge-closed { @apply bg-gray-200 text-gray-700; }
+  .badge-cancelled { @apply bg-red-100 text-red-800; }
+  .badge-rejected { @apply bg-red-100 text-red-800; }
+  .badge-implemented { @apply bg-green-200 text-green-900; }
+  .badge-pass { @apply bg-green-100 text-green-800; }
+  .badge-fail { @apply bg-red-100 text-red-800; }
+  .badge-rma { @apply bg-orange-100 text-orange-800; }
+  .badge-preferred { @apply bg-blue-100 text-blue-800; }
+  .badge-minor { @apply bg-yellow-100 text-yellow-800; }
+  .badge-major { @apply bg-orange-100 text-orange-800; }
+  .badge-critical { @apply bg-red-100 text-red-800; }
+  .badge-high { @apply bg-orange-100 text-orange-800; }
+  .badge-low { @apply bg-gray-100 text-gray-600; }
+  .badge-normal { @apply bg-blue-100 text-blue-700; }
+  .badge-diagnosing { @apply bg-purple-100 text-purple-800; }
+  .badge-investigating { @apply bg-purple-100 text-purple-800; }
+  .badge-resolved { @apply bg-green-100 text-green-800; }
+  .badge-repaired { @apply bg-green-100 text-green-800; }
+  .badge-shipped { @apply bg-teal-100 text-teal-800; }
+  .badge-partial { @apply bg-yellow-100 text-yellow-800; }
+  .badge-obsolete { @apply bg-gray-300 text-gray-700; }
+  .badge-inactive { @apply bg-gray-200 text-gray-600; }
+  .badge-decommissioned { @apply bg-gray-300 text-gray-600; }
+  .badge-pending { @apply bg-yellow-100 text-yellow-700; }
+  .badge-updated { @apply bg-green-100 text-green-800; }
+  .badge-failed { @apply bg-red-100 text-red-800; }
+  .badge-accepted { @apply bg-green-100 text-green-800; }
+  .badge-declined { @apply bg-red-100 text-red-800; }
+  .badge-expired { @apply bg-gray-200 text-gray-600; }
+  .badge-building { @apply bg-blue-100 text-blue-700; }
+  .badge-testing { @apply bg-yellow-100 text-yellow-700; }
+  .badge-passed { @apply bg-green-100 text-green-800; }
+  .modal-overlay { @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50; }
+  .modal-content { @apply bg-white rounded-xl shadow-2xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto; }
+  .btn { @apply px-4 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer; }
+  .btn-primary { @apply bg-blue-600 text-white hover:bg-blue-700; }
+  .btn-secondary { @apply bg-gray-200 text-gray-700 hover:bg-gray-300; }
+  .btn-danger { @apply bg-red-600 text-white hover:bg-red-700; }
+  .btn-success { @apply bg-green-600 text-white hover:bg-green-700; }
+  .input { @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none; }
+  .label { @apply block text-sm font-medium text-gray-700 mb-1; }
+  .card { @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6; }
+  .table-row { @apply hover:bg-gray-50 cursor-pointer transition-colors; }
+  .toast { @apply fixed top-4 right-4 z-[100] px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all; }
+</style>
+</head>
+<body class="h-full">
+
+<!-- Login Page -->
+<div id="login-page" class="hidden min-h-full flex items-center justify-center bg-gray-100">
+  <div class="bg-white rounded-xl shadow-lg p-8 w-full max-w-sm">
+    <div class="flex items-center justify-center gap-3 mb-6">
+      <div class="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-lg">Z</div>
+      <span class="text-2xl font-bold text-gray-800">ZRP</span>
+    </div>
+    <h2 class="text-center text-gray-600 mb-6">Sign in to continue</h2>
+    <div id="login-error" class="hidden bg-red-50 text-red-700 text-sm rounded-lg px-4 py-2 mb-4"></div>
+    <form id="login-form" onsubmit="doLogin(event)">
+      <label class="label">Username</label>
+      <input id="login-username" type="text" class="input mb-3" placeholder="Username" required autofocus>
+      <label class="label">Password</label>
+      <input id="login-password" type="password" class="input mb-4" placeholder="Password" required>
+      <button type="submit" class="btn btn-primary w-full py-2.5">Sign In</button>
+    </form>
+  </div>
+</div>
+
+<div id="app" class="flex h-full hidden">
+  <!-- Sidebar -->
+  <aside id="sidebar" class="w-64 bg-gray-900 flex flex-col flex-shrink-0 overflow-y-auto">
+    <div class="px-4 py-5 flex items-center gap-3">
+      <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-sm">Z</div>
+      <span class="text-white font-bold text-lg">ZRP</span>
+      <span class="text-gray-500 text-xs">ERP</span>
+    </div>
+    <nav class="flex-1 px-2 pb-4">
+      <a class="sidebar-link" data-route="dashboard" onclick="navigate('dashboard')">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/></svg>
+        Dashboard
+      </a>
+      <div class="sidebar-group">Engineering</div>
+      <a class="sidebar-link" data-route="parts" onclick="navigate('parts')">📦 Parts (PLM)</a>
+      <a class="sidebar-link" data-route="ecos" onclick="navigate('ecos')">🔄 ECOs</a>
+      <a class="sidebar-link" data-route="docs" onclick="navigate('docs')">📄 Documents</a>
+      <div class="sidebar-group">Supply Chain</div>
+      <a class="sidebar-link" data-route="inventory" onclick="navigate('inventory')">📊 Inventory</a>
+      <a class="sidebar-link" data-route="procurement" onclick="navigate('procurement')">🛒 Purchase Orders</a>
+      <a class="sidebar-link" data-route="vendors" onclick="navigate('vendors')">🏭 Vendors</a>
+      <div class="sidebar-group">Manufacturing</div>
+      <a class="sidebar-link" data-route="workorders" onclick="navigate('workorders')">⚙️ Work Orders</a>
+      <a class="sidebar-link" data-route="testing" onclick="navigate('testing')">🧪 Test Records</a>
+      <a class="sidebar-link" data-route="ncr" onclick="navigate('ncr')">⚠️ NCRs</a>
+      <div class="sidebar-group">Field & Service</div>
+      <a class="sidebar-link" data-route="devices" onclick="navigate('devices')">📱 Devices</a>
+      <a class="sidebar-link" data-route="firmware" onclick="navigate('firmware')">💾 Firmware</a>
+      <a class="sidebar-link" data-route="rma" onclick="navigate('rma')">🔧 RMAs</a>
+      <div class="sidebar-group">Sales</div>
+      <a class="sidebar-link" data-route="quotes" onclick="navigate('quotes')">💰 Quotes</a>
+    </nav>
+  </aside>
+
+  <!-- Main -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <!-- Top bar -->
+    <header class="bg-white shadow-sm border-b border-gray-200 px-6 py-3 flex items-center justify-between">
+      <h1 id="page-title" class="text-lg font-semibold text-gray-800">Dashboard</h1>
+      <div class="flex items-center gap-3">
+        <input id="global-search" type="text" placeholder="Search..." class="input w-64" onkeyup="handleGlobalSearch(event)">
+        <span id="user-display" class="text-sm text-gray-600"></span>
+        <button onclick="doLogout()" class="btn btn-secondary text-xs">Sign Out</button>
+      </div>
+    </header>
+    <!-- Content -->
+    <main id="content" class="flex-1 overflow-y-auto p-6 bg-gray-50"></main>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container"></div>
+
+<script>
+// Global API helper
+async function api(method, path, body) {
+  const opts = { method, headers: { 'Content-Type': 'application/json' } };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch('/api/v1/' + path, opts);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+// Toast
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = `toast ${type === 'error' ? 'bg-red-600' : 'bg-green-600'}`;
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+// Badge helper
+function badge(value) {
+  if (!value) return '';
+  const cls = 'badge-' + value.replace(/\s/g, '_');
+  return `<span class="badge ${cls}">${value}</span>`;
+}
+
+// Modal helper
+function showModal(title, contentHTML, onSave) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.onclick = (e) => { if (e.target === overlay) overlay.remove(); };
+  overlay.innerHTML = `<div class="modal-content">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-lg font-semibold">${title}</h2>
+      <button onclick="this.closest('.modal-overlay').remove()" class="text-gray-400 hover:text-gray-600 text-xl">&times;</button>
+    </div>
+    <div id="modal-body">${contentHTML}</div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancel</button>
+      ${onSave ? '<button class="btn btn-primary" id="modal-save">Save</button>' : ''}
+    </div>
+  </div>`;
+  document.body.appendChild(overlay);
+  if (onSave) {
+    overlay.querySelector('#modal-save').onclick = () => { onSave(overlay); };
+  }
+  return overlay;
+}
+
+function getModalValues(overlay) {
+  const vals = {};
+  overlay.querySelectorAll('[data-field]').forEach(el => {
+    vals[el.dataset.field] = el.value;
+  });
+  return vals;
+}
+
+// Routing
+const modules = {};
+const moduleNames = {
+  dashboard: 'Dashboard', parts: 'Parts (PLM)', ecos: 'ECOs', docs: 'Documents',
+  inventory: 'Inventory', procurement: 'Purchase Orders', vendors: 'Vendors',
+  workorders: 'Work Orders', testing: 'Test Records', ncr: 'NCRs',
+  devices: 'Devices', firmware: 'Firmware', rma: 'RMAs', quotes: 'Quotes'
+};
+
+function navigate(route) {
+  window.location.hash = '#/' + route;
+}
+
+async function loadModule(name) {
+  if (!modules[name]) {
+    const modName = name;
+    try {
+      await loadScript(`/static/modules/${modName}.js`);
+      modules[name] = window[`module_${modName}`] || { render: () => {} };
+    } catch(e) {
+      console.error('Failed to load module:', name, e);
+      modules[name] = { render: (c) => { c.innerHTML = `<div class="card"><p>Module "${name}" failed to load</p></div>`; } };
+    }
+  }
+  return modules[name];
+}
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    // Remove old script if exists
+    const existing = document.querySelector(`script[src="${src}"]`);
+    if (existing) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = reject;
+    document.head.appendChild(s);
+  });
+}
+
+async function handleRoute() {
+  const hash = window.location.hash || '#/dashboard';
+  const route = hash.replace('#/', '') || 'dashboard';
+  
+  // Update sidebar
+  document.querySelectorAll('.sidebar-link').forEach(el => {
+    el.classList.toggle('active', el.dataset.route === route);
+  });
+  
+  document.getElementById('page-title').textContent = moduleNames[route] || route;
+  
+  const container = document.getElementById('content');
+  container.innerHTML = '<div class="flex items-center justify-center h-32"><div class="text-gray-400">Loading...</div></div>';
+  
+  const mod = await loadModule(route);
+  container.innerHTML = '';
+  mod.render(container);
+}
+
+function handleGlobalSearch(e) {
+  // Modules can check window._globalSearch
+  window._globalSearch = e.target.value;
+}
+
+// Auth
+let currentUser = null;
+
+async function checkAuth() {
+  try {
+    const res = await fetch('/auth/me');
+    if (!res.ok) throw new Error('Not authenticated');
+    const data = await res.json();
+    currentUser = data.user;
+    showApp();
+  } catch(e) {
+    showLogin();
+  }
+}
+
+function showLogin() {
+  document.getElementById('login-page').classList.remove('hidden');
+  document.getElementById('app').classList.add('hidden');
+}
+
+function showApp() {
+  document.getElementById('login-page').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('user-display').textContent = currentUser.display_name || currentUser.username;
+  handleRoute();
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('login-username').value;
+  const password = document.getElementById('login-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.classList.add('hidden');
+  try {
+    const res = await fetch('/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Login failed');
+    currentUser = data.user;
+    showApp();
+  } catch(err) {
+    errEl.textContent = err.message;
+    errEl.classList.remove('hidden');
+  }
+}
+
+async function doLogout() {
+  await fetch('/auth/logout', { method: 'POST' });
+  currentUser = null;
+  showLogin();
+}
+
+window.addEventListener('hashchange', handleRoute);
+window.addEventListener('load', checkAuth);
+</script>
+</body>
+</html>
