@@ -1,1 +1,5 @@
 zrp.db
+test-results/
+test-pw.db
+uploads/
+*.mp4
