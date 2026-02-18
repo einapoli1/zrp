@@ -130,7 +130,7 @@ Open [http://localhost:9000](http://localhost:9000) in your browser. The databas
 Summary cards showing open ECOs, low stock items, open POs, active work orders, open NCRs, open RMAs, total parts, and total devices. Click any card to jump to that module.
 
 ### Parts (PLM)
-Reads parts data from gitplm CSV files on disk. Supports category filtering, full-text search across all fields, and pagination. Parts are read-only through the API — edit the CSV files directly and they're reflected immediately.
+Reads parts data from [gitplm](https://github.com/git-plm/gitplm) CSV files on disk. gitplm is an open-source parts library manager by [Cliff Brake](https://github.com/cbrake) that stores component data as plain CSV files in Git — no database required. ZRP integrates directly with these CSV files, providing a web UI for browsing, searching, and viewing BOM trees. Parts are read-only through the API — edit the CSV files directly (or use the gitplm CLI) and changes are reflected immediately.
 
 ### ECOs (Engineering Change Orders)
 Track proposed changes to parts and assemblies. Workflow: `draft` → `review` → `approved` → `implemented`. Each ECO can reference affected IPNs and tracks who approved it and when.
@@ -250,6 +250,13 @@ go build -o zrp .
 ## Contributing
 
 See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md).
+
+## Acknowledgments
+
+- [gitplm](https://github.com/git-plm/gitplm) by [Cliff Brake](https://github.com/cbrake) — the open-source Git-based parts library manager that ZRP integrates with for parts/BOM data
+- [Driver.js](https://driverjs.com/) — lightweight onboarding tour library
+- [Chart.js](https://www.chartjs.org/) — dashboard charts
+- [Tailwind CSS](https://tailwindcss.com/) — utility-first CSS framework
 
 ## License
 
