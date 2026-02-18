@@ -73,6 +73,7 @@ cd zrp
 go build -o zrp .
 ./zrp --pmDir /path/to/gitplm/parts/database
 # Open http://localhost:9000
+# Login with username: admin, password: changeme
 ```
 
 ## Requirements
