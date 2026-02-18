@@ -1,0 +1,121 @@
+# Changelog
+
+All notable changes to ZRP are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
+
+## [0.3.0] - 2026-02-18
+
+### Added
+- **Email Notifications — Event Triggers & Email Log**
+  - New `email_log` table records all sent/failed emails with recipient, subject, status, error, and timestamp
+  - Email Log table visible on the Email Settings page
+  - `GET /api/v1/email-log` — list recent email log entries
+  - Settings aliases: `GET/PUT /api/v1/settings/email`, `POST /api/v1/settings/email/test`
+  - ECO approval trigger: emails the ECO creator when an ECO is approved
+  - Low stock trigger: emails admin when inventory drops below reorder point after a transaction
+  - Overdue work order trigger: emails admin when a WO with a past due date is updated
+  - `due_date` column added to work_orders table
+  - `email` column added to users table
+  - Audit logging on email config save and test send
+  - Go unit tests for all email handlers and triggers (mock SMTP)
+
+### Added
+- **Supplier Price Catalog** — new module (`/supplier-prices`) under Supply Chain for tracking vendor price quotes per IPN
+  - Full CRUD API: `GET/POST/PUT/DELETE /api/v1/supplier-prices`, plus `/trend` endpoint for chart data
+  - Sortable price table with "Best Price" highlight (green) per IPN
+  - Add Price Quote modal with IPN autocomplete from parts database
+  - Price history view with SVG line chart showing price trends per vendor over time
+  - Parts detail modal integration: new "📊 Price Quotes" tab
+  - Audit logging on create/update/delete
+  - Go unit tests for all handlers (CRUD, validation, trend, edge cases)
+
+
+### Added
+- **Supplier Price Catalog** — track price history per IPN across vendors with automatic recording from PO receipts:
+  - `GET /api/v1/prices/:ipn` — price history sorted newest first
+  - `POST /api/v1/prices` — manually add price entries
+  - `DELETE /api/v1/prices/:id` — remove entries
+  - `GET /api/v1/prices/:ipn/trend` — trend data for charting
+  - Pricing tab in part detail modal with history table, SVG sparkline, and "Add Price" form
+  - Best price highlighted with green badge
+  - Automatic price recording when PO lines are received
+- **Email Notifications** — SMTP-based email alerts for system notifications:
+  - `GET /api/v1/email/config` — view SMTP config (password masked)
+  - `PUT /api/v1/email/config` — update SMTP settings
+  - `POST /api/v1/email/test` — send test email
+  - Email Settings page under Admin (📧 Email Settings sidebar link)
+  - Background goroutine sends emails for new notifications when enabled
+  - Each notification emailed only once (tracked by `emailed` column)
+- **Custom Dashboard Widgets** — configurable KPI cards and charts:
+  - `GET /api/v1/dashboard/widgets` — list widgets with positions
+  - `PUT /api/v1/dashboard/widgets` — update positions and visibility
+  - "Customize" button opens drag-to-reorder modal with toggle switches
+  - 11 widgets: 8 KPI cards + 3 charts, all individually hideable
+  - Settings persist server-side
+- **Report Builder** — new Reports page with 5 built-in reports, all exportable to CSV:
+  - Inventory Valuation (qty × latest PO price, grouped by category)
+  - Open ECOs by Priority (sorted critical→low, with age in days)
+  - WO Throughput (30/60/90 day windows, count by status, avg cycle time)
+  - Low Stock Report (items below reorder point, suggested order qty)
+  - NCR Summary (by severity and defect type, avg resolve time)
+- **Quote Margin Analysis** — new "Margin Analysis" tab in quote detail showing BOM cost vs quoted price per line item with color-coded margin % (green >50%, yellow 20-50%, red <20%)
+- **gitplm-ui Deep Links** — parts table and detail modal link directly to gitplm-ui; configurable via `--gitplm-ui` flag
+- **Config endpoint** — `GET /api/v1/config` returns configurable settings (gitplm_ui_url)
+
+## [0.2.0] - 2026-02-18
+
+### Added
+- **Authentication** — session-based login/logout with bcrypt password hashing, 24-hour session tokens, and role-based access control (admin, user, readonly)
+- **User Management** — admin panel for creating, editing, deactivating users and resetting passwords
+- **API Keys** — generate Bearer tokens for programmatic access with optional expiration, enable/disable toggle, and automatic last-used tracking
+- **Readonly Role Enforcement** — readonly users can view all data but POST/PUT/DELETE requests return 403
+- **Notifications** — automatic notification generation for low stock, overdue work orders (>7 days), aging NCRs (>14 days), and new RMAs; bell icon with unread count; mark-as-read
+- **File Attachments** — upload files (up to 32MB) to any module record; file serving at `/files/`; delete with disk cleanup
+- **Audit Log** — all create/update/delete/bulk operations logged with username, action, module, record ID, and summary; filterable by module, user, and date range
+- **Global Search** — search across parts, ECOs, work orders, devices, NCRs, POs, and quotes simultaneously from the top bar
+- **Calendar View** — monthly calendar showing WO due dates (blue), PO expected deliveries (green), and quote expirations (orange)
+- **Dashboard Charts** — ECOs by status, work orders by status, and top inventory items by value
+- **Dashboard Low Stock Panel** — dedicated view of items below reorder point
+- **Bulk Operations** — multi-select with checkboxes for ECOs (approve/implement/reject/delete), work orders (complete/cancel/delete), NCRs (close/resolve/delete), devices (decommission/delete), RMAs (close/delete), and inventory (delete)
+- **Work Order PDF Traveler** — printable HTML traveler with assembly info, BOM table, and sign-off section
+- **Quote PDF** — printable HTML quote with customer info, line items, subtotal, terms
+- **WO BOM Shortage Highlighting** — color-coded status (ok/low/shortage) for each BOM component
+- **Parts BOM & Cost Rollup** — view Bill of Materials and cost breakdown for assembly IPNs
+- **ECO→Parts Enrichment** — affected IPNs enriched with part details when viewing an ECO
+- **NCR→ECO Auto-Link** — ECOs can reference an NCR ID for traceability
+- **Generate PO from WO Shortages** — automatically create draft POs for work order BOM shortages
+- **Device Import/Export** — CSV import (upsert on serial number) and export for the device registry
+- **Campaign SSE Stream** — real-time Server-Sent Events for firmware campaign progress monitoring
+- **Campaign Device Marking** — mark individual devices as updated or failed during rollout
+- **Campaign Device Listing** — view all devices enrolled in a campaign with status
+- **IPN Autocomplete** — suggested IPNs when entering part numbers in inventory and other modules
+- **Dark Mode** — toggle with localStorage persistence
+- **Keyboard Shortcuts** — `/` or `Ctrl+K` for search, `n` for new record, `Escape` to close, `?` for help
+
+### Changed
+- All API endpoints now require authentication (session cookie or Bearer token), except `/auth/*`, `/static/*`, `/files/*`
+- API responses include 401/403 status codes for auth failures
+- CORS headers include Authorization in allowed headers
+
+## [0.1.0] - 2026-02-18
+
+### Added
+- Single-binary Go server with embedded SQLite (WAL mode)
+- SPA frontend with Tailwind CSS and hash-based routing
+- **Dashboard** with 8 KPI cards (open ECOs, low stock, active WOs, open NCRs/RMAs, etc.)
+- **Parts (PLM)** — read-only browsing of gitplm CSV files with category filtering, full-text search, pagination
+- **ECOs** — engineering change order lifecycle (draft → review → approved → implemented)
+- **Documents** — revision-controlled documents with approval workflow
+- **Inventory** — per-IPN stock tracking with reorder points, locations, and full transaction history
+- **Purchase Orders** — PO lifecycle with line items and partial receiving (auto-updates inventory)
+- **Vendors** — supplier directory with contacts, lead times, and status
+- **Work Orders** — production tracking with BOM availability checks
+- **Test Records** — factory test results with serial numbers, measurements, and pass/fail
+- **NCRs** — non-conformance reports with defect classification, root cause, and corrective actions
+- **Device Registry** — field device tracking with firmware versions, customers, and history
+- **Firmware Campaigns** — OTA rollout management with per-device progress tracking
+- **RMAs** — return processing from complaint through resolution
+- **Quotes** — customer quotes with line items and cost rollup
+- CORS support for cross-origin API access
+- Request logging middleware
+- Seed data for all modules (demo-ready out of the box)
+- Auto-generated IDs with year prefix (ECO-2026-001, PO-2026-0001, etc.)
