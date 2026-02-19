@@ -60,6 +60,18 @@ export interface ReceivingInspection {
   created_at: string;
 }
 
+export interface PartChange {
+  id: number;
+  part_ipn: string;
+  eco_id?: string;
+  field_name: string;
+  old_value: string;
+  new_value: string;
+  status: 'draft' | 'pending' | 'applied' | 'rejected';
+  created_by: string;
+  created_at: string;
+}
+
 export interface WhereUsedEntry {
   assembly_ipn: string;
   description: string;
@@ -899,6 +911,38 @@ class ApiClient {
   // Where-used
   async getPartWhereUsed(ipn: string): Promise<WhereUsedEntry[]> {
     return this.request(`/parts/${ipn}/where-used`);
+  }
+
+  // Part Changes (ECO-gated editing)
+  async createPartChanges(ipn: string, changes: Array<{ field_name: string; old_value: string; new_value: string }>): Promise<PartChange[]> {
+    return this.request(`/parts/${encodeURIComponent(ipn)}/changes`, {
+      method: 'POST',
+      body: JSON.stringify({ changes }),
+    });
+  }
+
+  async getPartChanges(ipn: string): Promise<PartChange[]> {
+    return this.request(`/parts/${encodeURIComponent(ipn)}/changes`);
+  }
+
+  async deletePartChange(ipn: string, changeId: number): Promise<void> {
+    return this.request(`/parts/${encodeURIComponent(ipn)}/changes/${changeId}`, { method: 'DELETE' });
+  }
+
+  async createECOFromPartChanges(ipn: string, data: { title?: string; description?: string; priority?: string }): Promise<{ eco_id: string; changes_count: number }> {
+    return this.request(`/parts/${encodeURIComponent(ipn)}/changes/create-eco`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getECOPartChanges(ecoId: string): Promise<PartChange[]> {
+    return this.request(`/ecos/${ecoId}/part-changes`);
+  }
+
+  async getAllPartChanges(status?: string): Promise<PartChange[]> {
+    const params = status ? `?status=${status}` : '';
+    return this.request(`/part-changes${params}`);
   }
 
   async generatePOFromWorkOrder(woId: string, vendorId: string): Promise<{ po_id: string; lines: number }> {

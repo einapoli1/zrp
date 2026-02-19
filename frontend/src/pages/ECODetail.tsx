@@ -15,7 +15,15 @@ import {
   XCircle,
   Settings
 } from "lucide-react";
-import { api, type ECO, type ECORevision } from "../lib/api";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../components/ui/table";
+import { api, type ECO, type ECORevision, type PartChange } from "../lib/api";
 
 interface ECOWithDetails extends ECO {
   affected_parts?: Array<{
@@ -63,6 +71,7 @@ function ECODetail() {
   const navigate = useNavigate();
   const [eco, setECO] = useState<ECOWithDetails | null>(null);
   const [revisions, setRevisions] = useState<ECORevision[]>([]);
+  const [partChanges, setPartChanges] = useState<PartChange[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [gitConfigured, setGitConfigured] = useState(false);
@@ -71,6 +80,7 @@ function ECODetail() {
     if (id) {
       fetchECODetails();
       fetchRevisions();
+      fetchPartChanges();
     }
     api.getGitDocsSettings().then((cfg) => setGitConfigured(!!cfg?.repo_url)).catch(() => {});
   }, [id]);
@@ -96,6 +106,16 @@ function ECODetail() {
       setRevisions(data);
     } catch (error) {
       console.error("Failed to fetch revisions:", error);
+    }
+  };
+
+  const fetchPartChanges = async () => {
+    if (!id) return;
+    try {
+      const data = await api.getECOPartChanges(id);
+      setPartChanges(data);
+    } catch {
+      // ignore
     }
   };
 
@@ -283,6 +303,45 @@ function ECODetail() {
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          )}
+          {/* Part Changes Diff */}
+          {partChanges.length > 0 && (
+            <Card data-testid="eco-part-changes">
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Settings className="h-5 w-5 mr-2" />
+                  Part Changes ({partChanges.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Part</TableHead>
+                      <TableHead>Field</TableHead>
+                      <TableHead>Before</TableHead>
+                      <TableHead>After</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {partChanges.map((change) => (
+                      <TableRow key={change.id}>
+                        <TableCell className="font-mono">{change.part_ipn}</TableCell>
+                        <TableCell>{change.field_name}</TableCell>
+                        <TableCell className="text-red-600">{change.old_value}</TableCell>
+                        <TableCell className="text-green-600">{change.new_value}</TableCell>
+                        <TableCell>
+                          <Badge variant={change.status === 'applied' ? 'default' : 'secondary'}>
+                            {change.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </CardContent>
             </Card>
           )}

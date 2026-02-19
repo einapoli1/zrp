@@ -26,9 +26,10 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
-import { api, type Part, type BOMNode, type PartCost, type WhereUsedEntry, type MarketPricingResult } from "../lib/api";
+import { Input } from "../components/ui/input";
+import { api, type Part, type BOMNode, type PartCost, type WhereUsedEntry, type MarketPricingResult, type PartChange } from "../lib/api";
 import { useGitPLM } from "../hooks/useGitPLM";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Edit, Trash2, FilePlus } from "lucide-react";
 
 interface PartWithDetails extends Part {
   category?: string;
@@ -159,11 +160,96 @@ function PartDetail() {
   const [marketPricingCached, setMarketPricingCached] = useState(false);
   const [marketPricingError, setMarketPricingError] = useState<string>("");
   const [marketPricingUnconfigured, setMarketPricingUnconfigured] = useState<string[]>([]);
+  const [editing, setEditing] = useState(false);
+  const [editFields, setEditFields] = useState<Record<string, string>>({});
+  const [pendingChanges, setPendingChanges] = useState<PartChange[]>([]);
+  const [savingChanges, setSavingChanges] = useState(false);
+  const [, setPendingLoading] = useState(false);
+  const [creatingECO, setCreatingECO] = useState(false);
   const { configured: gitplmConfigured, buildUrl: gitplmUrl } = useGitPLM();
+
+  const fetchPendingChanges = async () => {
+    if (!ipn) return;
+    setPendingLoading(true);
+    try {
+      const data = await api.getPartChanges(decodeURIComponent(ipn));
+      setPendingChanges(data.filter((c: PartChange) => c.status === 'draft' || c.status === 'pending'));
+    } catch {
+      // ignore
+    } finally {
+      setPendingLoading(false);
+    }
+  };
+
+  const handleStartEdit = () => {
+    if (!part) return;
+    // Initialize edit fields from current part fields
+    const fields: Record<string, string> = {};
+    const excluded = ['_category'];
+    for (const [k, v] of Object.entries(part.fields || {})) {
+      if (!excluded.includes(k)) {
+        fields[k] = v;
+      }
+    }
+    setEditFields(fields);
+    setEditing(true);
+  };
+
+  const handleSaveChanges = async () => {
+    if (!ipn || !part) return;
+    setSavingChanges(true);
+    try {
+      const changes: Array<{ field_name: string; old_value: string; new_value: string }> = [];
+      const currentFields = part.fields || {};
+      for (const [k, v] of Object.entries(editFields)) {
+        const oldVal = currentFields[k] || '';
+        if (v !== oldVal) {
+          changes.push({ field_name: k, old_value: oldVal, new_value: v });
+        }
+      }
+      if (changes.length === 0) {
+        setEditing(false);
+        return;
+      }
+      await api.createPartChanges(decodeURIComponent(ipn), changes);
+      setEditing(false);
+      fetchPendingChanges();
+    } catch (error) {
+      console.error("Failed to save changes:", error);
+    } finally {
+      setSavingChanges(false);
+    }
+  };
+
+  const handleDeleteChange = async (changeId: number) => {
+    if (!ipn) return;
+    try {
+      await api.deletePartChange(decodeURIComponent(ipn), changeId);
+      fetchPendingChanges();
+    } catch (error) {
+      console.error("Failed to delete change:", error);
+    }
+  };
+
+  const handleCreateECO = async () => {
+    if (!ipn) return;
+    setCreatingECO(true);
+    try {
+      const result = await api.createECOFromPartChanges(decodeURIComponent(ipn), {
+        title: `Part changes for ${ipn}`,
+      });
+      navigate(`/ecos/${result.eco_id}`);
+    } catch (error) {
+      console.error("Failed to create ECO:", error);
+    } finally {
+      setCreatingECO(false);
+    }
+  };
 
   useEffect(() => {
     if (ipn) {
       fetchPartDetails();
+      fetchPendingChanges();
     }
   }, [ipn]);
 
@@ -351,6 +437,10 @@ function PartDetail() {
           <Badge variant={part.status === 'active' ? 'default' : 'secondary'}>
             {part.status || 'active'}
           </Badge>
+          <Button variant="default" size="sm" onClick={handleStartEdit} data-testid="edit-part-btn">
+            <Edit className="h-4 w-4 mr-2" />
+            Edit Part
+          </Button>
           {gitplmConfigured && ipn && (
             <Button variant="outline" size="sm" asChild>
               <a href={gitplmUrl(ipn)!} target="_blank" rel="noopener noreferrer">
@@ -361,6 +451,105 @@ function PartDetail() {
           )}
         </div>
       </div>
+
+      {/* Edit Form */}
+      {editing && (
+        <Card data-testid="edit-form">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Edit className="h-5 w-5 mr-2" />
+              Edit Part Fields
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Changes are saved as pending drafts. You must create an ECO to apply them.
+            </p>
+            <div className="grid grid-cols-2 gap-4">
+              {Object.entries(editFields).map(([key, value]) => (
+                <div key={key}>
+                  <label className="text-sm font-medium">{key}</label>
+                  <Input
+                    value={value}
+                    onChange={(e) => setEditFields(prev => ({ ...prev, [key]: e.target.value }))}
+                    data-testid={`edit-field-${key}`}
+                  />
+                </div>
+              ))}
+            </div>
+            <div className="flex space-x-2">
+              <Button onClick={handleSaveChanges} disabled={savingChanges} data-testid="save-changes-btn">
+                {savingChanges ? 'Saving...' : 'Save as Pending Changes'}
+              </Button>
+              <Button variant="outline" onClick={() => setEditing(false)}>Cancel</Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Pending Changes */}
+      {pendingChanges.length > 0 && (
+        <Card data-testid="pending-changes">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center">
+                <Edit className="h-5 w-5 mr-2" />
+                Pending Changes
+                <Badge variant="secondary" className="ml-2 bg-yellow-100 text-yellow-800">{pendingChanges.length}</Badge>
+              </CardTitle>
+              {pendingChanges.some(c => c.status === 'draft') && (
+                <Button size="sm" onClick={handleCreateECO} disabled={creatingECO} data-testid="create-eco-btn">
+                  <FilePlus className="h-4 w-4 mr-2" />
+                  {creatingECO ? 'Creating...' : 'Create ECO from Changes'}
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Field</TableHead>
+                  <TableHead>Old Value</TableHead>
+                  <TableHead>New Value</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>ECO</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {pendingChanges.map((change) => (
+                  <TableRow key={change.id}>
+                    <TableCell className="font-medium">{change.field_name}</TableCell>
+                    <TableCell className="text-red-600 line-through">{change.old_value}</TableCell>
+                    <TableCell className="text-green-600">{change.new_value}</TableCell>
+                    <TableCell>
+                      <Badge variant={change.status === 'draft' ? 'secondary' : 'default'}
+                        className={change.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : ''}>
+                        {change.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {change.eco_id ? (
+                        <Link to={`/ecos/${change.eco_id}`} className="text-blue-600 hover:underline">
+                          {change.eco_id}
+                        </Link>
+                      ) : '—'}
+                    </TableCell>
+                    <TableCell>
+                      {change.status === 'draft' && (
+                        <Button variant="ghost" size="sm" onClick={() => handleDeleteChange(change.id)} data-testid={`delete-change-${change.id}`}>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Part Details */}

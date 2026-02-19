@@ -51,6 +51,10 @@ const mockGetPart = vi.fn();
 const mockGetPartBOM = vi.fn();
 const mockGetPartCost = vi.fn();
 const mockGetPartWhereUsed = vi.fn();
+const mockGetPartChanges = vi.fn();
+const mockCreatePartChanges = vi.fn();
+const mockDeletePartChange = vi.fn();
+const mockCreateECOFromPartChanges = vi.fn();
 
 vi.mock("../lib/api", () => ({
   api: {
@@ -58,6 +62,10 @@ vi.mock("../lib/api", () => ({
     getPartBOM: (...args: any[]) => mockGetPartBOM(...args),
     getPartCost: (...args: any[]) => mockGetPartCost(...args),
     getPartWhereUsed: (...args: any[]) => mockGetPartWhereUsed(...args),
+    getPartChanges: (...args: any[]) => mockGetPartChanges(...args),
+    createPartChanges: (...args: any[]) => mockCreatePartChanges(...args),
+    deletePartChange: (...args: any[]) => mockDeletePartChange(...args),
+    createECOFromPartChanges: (...args: any[]) => mockCreateECOFromPartChanges(...args),
     getGitPLMConfig: vi.fn().mockResolvedValue({ base_url: "" }),
   },
 }));
@@ -76,6 +84,10 @@ beforeEach(() => {
   mockGetPartBOM.mockResolvedValue(mockBOM);
   mockGetPartCost.mockResolvedValue(mockCost);
   mockGetPartWhereUsed.mockResolvedValue([]);
+  mockGetPartChanges.mockResolvedValue([]);
+  mockCreatePartChanges.mockResolvedValue([]);
+  mockDeletePartChange.mockResolvedValue({});
+  mockCreateECOFromPartChanges.mockResolvedValue({ eco_id: "ECO-2026-001", changes_count: 1 });
 });
 
 const waitForLoad = () => waitFor(() => expect(screen.getByText("Part Details")).toBeInTheDocument());
@@ -465,6 +477,74 @@ describe("PartDetail - BOM (assembly IPN)", () => {
       expect(link).toBeInTheDocument();
       expect(link.closest("a")).toHaveAttribute("href", "https://plm.acme.com/parts/PCA-100");
       expect(link.closest("a")).toHaveAttribute("target", "_blank");
+    });
+  });
+
+  describe("ECO-gated part editing", () => {
+    it("shows Edit Part button", async () => {
+      render(<PartDetail />);
+      await waitForLoad();
+      expect(screen.getByTestId("edit-part-btn")).toBeInTheDocument();
+    });
+
+    it("opens edit form when Edit Part is clicked", async () => {
+      render(<PartDetail />);
+      await waitForLoad();
+      fireEvent.click(screen.getByTestId("edit-part-btn"));
+      expect(screen.getByTestId("edit-form")).toBeInTheDocument();
+      expect(screen.getByTestId("save-changes-btn")).toBeInTheDocument();
+    });
+
+    it("shows pending changes when they exist", async () => {
+      mockGetPartChanges.mockResolvedValue([
+        { id: 1, part_ipn: "IPN-003", field_name: "description", old_value: "MCU STM32", new_value: "Updated MCU", status: "draft", created_by: "admin", created_at: "2026-01-01" },
+      ]);
+      render(<PartDetail />);
+      await waitFor(() => expect(screen.getByTestId("pending-changes")).toBeInTheDocument());
+      expect(screen.getByText("description")).toBeInTheDocument();
+      expect(screen.getByText("Updated MCU")).toBeInTheDocument();
+    });
+
+    it("shows Create ECO button for draft changes", async () => {
+      mockGetPartChanges.mockResolvedValue([
+        { id: 1, part_ipn: "IPN-003", field_name: "description", old_value: "old", new_value: "new", status: "draft", created_by: "admin", created_at: "2026-01-01" },
+      ]);
+      render(<PartDetail />);
+      await waitFor(() => expect(screen.getByTestId("create-eco-btn")).toBeInTheDocument());
+    });
+
+    it("saves changes as pending when form is submitted", async () => {
+      mockCreatePartChanges.mockResolvedValue([{ id: 1, part_ipn: "IPN-003", field_name: "description", old_value: "MCU STM32", new_value: "Changed", status: "draft" }]);
+      render(<PartDetail />);
+      await waitForLoad();
+      fireEvent.click(screen.getByTestId("edit-part-btn"));
+      
+      // Modify a field
+      const descField = screen.getByTestId("edit-field-description");
+      fireEvent.change(descField, { target: { value: "Changed" } });
+      
+      fireEvent.click(screen.getByTestId("save-changes-btn"));
+      await waitFor(() => expect(mockCreatePartChanges).toHaveBeenCalled());
+    });
+
+    it("can delete a draft change", async () => {
+      mockGetPartChanges.mockResolvedValue([
+        { id: 42, part_ipn: "IPN-003", field_name: "description", old_value: "old", new_value: "new", status: "draft", created_by: "admin", created_at: "2026-01-01" },
+      ]);
+      render(<PartDetail />);
+      await waitFor(() => expect(screen.getByTestId("delete-change-42")).toBeInTheDocument());
+      fireEvent.click(screen.getByTestId("delete-change-42"));
+      await waitFor(() => expect(mockDeletePartChange).toHaveBeenCalled());
+    });
+
+    it("navigates to ECO after creating one from changes", async () => {
+      mockGetPartChanges.mockResolvedValue([
+        { id: 1, part_ipn: "IPN-003", field_name: "description", old_value: "old", new_value: "new", status: "draft", created_by: "admin", created_at: "2026-01-01" },
+      ]);
+      render(<PartDetail />);
+      await waitFor(() => expect(screen.getByTestId("create-eco-btn")).toBeInTheDocument());
+      fireEvent.click(screen.getByTestId("create-eco-btn"));
+      await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith("/ecos/ECO-2026-001"));
     });
   });
 });

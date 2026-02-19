@@ -236,7 +236,7 @@ func applyPartChangesForECO(ecoID string) error {
 		var id int64
 		var ipn, fn, nv string
 		rows.Scan(&id, &ipn, &fn, &nv)
-		changesByIPN[ipn] = append(changesByIPN[ipn], fieldChange{id: id, field: fn, newValue: nv})
+		changesByIPN[ipn] = append(changesByIPN[ipn], partFieldChange{id: id, field: fn, newValue: nv})
 	}
 
 	for ipn, changes := range changesByIPN {
@@ -300,7 +300,7 @@ func applyChangesToCSV(ipn string, changes []partFieldChange) error {
 	records[rowIdx] = row
 
 	// Write back
-	return writeCSV(csvPath, records)
+	return writePartCSV(csvPath, records)
 }
 
 func findPartInCSV(ipn string) (string, int, []string, [][]string, error) {
@@ -359,7 +359,7 @@ func findPartInCSV(ipn string) (string, int, []string, [][]string, error) {
 	return "", 0, nil, nil, fmt.Errorf("part %s not found in any CSV", ipn)
 }
 
-func writeCSV(path string, records [][]string) error {
+func writePartCSV(path string, records [][]string) error {
 	f, err := os.Create(path)
 	if err != nil {
 		return err
