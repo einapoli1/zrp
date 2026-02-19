@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { api, type RFQ, type RFQCompare, type RFQQuote } from "../lib/api";
+import { api, type RFQ, type RFQCompare } from "../lib/api";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
