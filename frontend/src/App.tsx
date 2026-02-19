@@ -33,12 +33,17 @@ const Firmware = React.lazy(() => import("./pages/Firmware"));
 const FirmwareDetail = React.lazy(() => import("./pages/FirmwareDetail"));
 const Quotes = React.lazy(() => import("./pages/Quotes"));
 const QuoteDetail = React.lazy(() => import("./pages/QuoteDetail"));
+const Shipments = React.lazy(() => import("./pages/Shipments"));
+const ShipmentDetail = React.lazy(() => import("./pages/ShipmentDetail"));
+const ShipmentPrint = React.lazy(() => import("./pages/ShipmentPrint"));
 const Receiving = React.lazy(() => import("./pages/Receiving"));
 const Reports = React.lazy(() => import("./pages/Reports"));
 const Audit = React.lazy(() => import("./pages/Audit"));
 const Users = React.lazy(() => import("./pages/Users"));
 const APIKeys = React.lazy(() => import("./pages/APIKeys"));
 const EmailSettings = React.lazy(() => import("./pages/EmailSettings"));
+const EmailPreferences = React.lazy(() => import("./pages/EmailPreferences"));
+const EmailLog = React.lazy(() => import("./pages/EmailLog"));
 const GitPLMSettings = React.lazy(() => import("./pages/GitPLMSettings"));
 const Login = React.lazy(() => import("./pages/Login"));
 const Backups = React.lazy(() => import("./pages/Backups"));
@@ -73,6 +78,7 @@ function App() {
           {/* Print routes - outside AppLayout for clean printing */}
           <Route path="/work-orders/:id/print" element={<WorkOrderPrint />} />
           <Route path="/purchase-orders/:id/print" element={<POPrint />} />
+          <Route path="/shipments/:id/print" element={<ShipmentPrint />} />
           <Route path="/" element={<AppLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
@@ -102,6 +108,8 @@ function App() {
             <Route path="/purchase-orders/:id" element={<PODetail />} />
             <Route path="/procurement" element={<Procurement />} />
             <Route path="/receiving" element={<Receiving />} />
+            <Route path="/shipments" element={<Shipments />} />
+            <Route path="/shipments/:id" element={<ShipmentDetail />} />
             
             {/* Manufacturing */}
             <Route path="/work-orders" element={<WorkOrders />} />
@@ -122,6 +130,8 @@ function App() {
             <Route path="/audit" element={<Audit />} />
             <Route path="/api-keys" element={<APIKeys />} />
             <Route path="/email-settings" element={<EmailSettings />} />
+            <Route path="/email-preferences" element={<EmailPreferences />} />
+            <Route path="/email-log" element={<EmailLog />} />
             <Route path="/gitplm-settings" element={<GitPLMSettings />} />
             <Route path="/backups" element={<Backups />} />
             <Route path="/scan" element={<Scan />} />

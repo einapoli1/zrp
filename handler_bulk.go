@@ -46,6 +46,7 @@ func handleBulkECOs(w http.ResponseWriter, r *http.Request) {
 		case "reject":
 			_, err = db.Exec("UPDATE ecos SET status='rejected',updated_at=? WHERE id=?", now, id)
 		case "delete":
+			createUndoEntry(user, "delete", "eco", id)
 			_, err = db.Exec("DELETE FROM ecos WHERE id=?", id)
 		}
 		if err != nil {
@@ -83,6 +84,7 @@ func handleBulkWorkOrders(w http.ResponseWriter, r *http.Request) {
 		case "cancel":
 			_, err = db.Exec("UPDATE work_orders SET status='cancelled' WHERE id=?", id)
 		case "delete":
+			createUndoEntry(user, "delete", "workorder", id)
 			_, err = db.Exec("DELETE FROM work_orders WHERE id=?", id)
 		}
 		if err != nil {
@@ -120,6 +122,7 @@ func handleBulkNCRs(w http.ResponseWriter, r *http.Request) {
 		case "resolve":
 			_, err = db.Exec("UPDATE ncrs SET status='resolved',resolved_at=? WHERE id=?", now, id)
 		case "delete":
+			createUndoEntry(user, "delete", "ncr", id)
 			_, err = db.Exec("DELETE FROM ncrs WHERE id=?", id)
 		}
 		if err != nil {
@@ -154,6 +157,7 @@ func handleBulkDevices(w http.ResponseWriter, r *http.Request) {
 		case "decommission":
 			_, err = db.Exec("UPDATE devices SET status='decommissioned' WHERE serial_number=?", id)
 		case "delete":
+			createUndoEntry(user, "delete", "device", id)
 			_, err = db.Exec("DELETE FROM devices WHERE serial_number=?", id)
 		}
 		if err != nil {
@@ -182,6 +186,7 @@ func handleBulkInventory(w http.ResponseWriter, r *http.Request) {
 		if exists == 0 {
 			resp.Failed++; resp.Errors = append(resp.Errors, id+": not found"); continue
 		}
+		createUndoEntry(user, "delete", "inventory", id)
 		_, err := db.Exec("DELETE FROM inventory WHERE ipn=?", id)
 		if err != nil {
 			resp.Failed++; resp.Errors = append(resp.Errors, id+": "+err.Error())
@@ -216,6 +221,7 @@ func handleBulkRMAs(w http.ResponseWriter, r *http.Request) {
 		case "close":
 			_, err = db.Exec("UPDATE rmas SET status='closed',resolved_at=? WHERE id=?", now, id)
 		case "delete":
+			createUndoEntry(user, "delete", "rma", id)
 			_, err = db.Exec("DELETE FROM rmas WHERE id=?", id)
 		}
 		if err != nil {

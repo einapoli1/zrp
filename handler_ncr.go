@@ -45,6 +45,7 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	n.CreatedAt = now
 	logAudit(db, getUsername(r), "created", "ncr", n.ID, "Created "+n.ID+": "+n.Title)
+	go emailOnNCRCreated(n.ID, n.Title)
 	jsonResp(w, n)
 }
 

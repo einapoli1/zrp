@@ -12,7 +12,12 @@ vi.mock("../lib/api", () => ({
     getCategories: (...args: any[]) => mockGetCategories(...args),
     createPart: (...args: any[]) => mockCreatePart(...args),
     deletePart: vi.fn().mockResolvedValue(undefined),
+    getGitPLMConfig: vi.fn().mockResolvedValue({ base_url: "" }),
   },
+}));
+
+vi.mock("../hooks/useGitPLM", () => ({
+  useGitPLM: () => ({ baseUrl: "", configured: false, loading: false, buildUrl: () => null }),
 }));
 
 import Parts from "./Parts";

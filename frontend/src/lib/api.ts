@@ -232,6 +232,40 @@ export interface RMA {
   resolved_at?: string;
 }
 
+export interface Shipment {
+  id: string;
+  type: string;
+  status: string;
+  tracking_number: string;
+  carrier: string;
+  ship_date?: string;
+  delivery_date?: string;
+  from_address: string;
+  to_address: string;
+  notes: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  lines?: ShipmentLine[];
+}
+
+export interface ShipmentLine {
+  id: number;
+  shipment_id: string;
+  ipn: string;
+  serial_number: string;
+  qty: number;
+  work_order_id: string;
+  rma_id: string;
+}
+
+export interface PackList {
+  id: number;
+  shipment_id: string;
+  created_at: string;
+  lines?: ShipmentLine[];
+}
+
 export interface TestRecord {
   id: number;
   serial_number: string;
@@ -347,6 +381,17 @@ export interface APIKey {
   created_by: string;
 }
 
+export interface UndoEntry {
+  id: number;
+  user_id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  previous_data: string;
+  created_at: string;
+  expires_at: string;
+}
+
 export interface EmailConfig {
   enabled: boolean;
   smtp_host: string;
@@ -356,6 +401,17 @@ export interface EmailConfig {
   smtp_password: string;
   from_address: string;
   from_name: string;
+}
+
+export interface EmailLogEntry {
+  id: number;
+  to_address: string;
+  subject: string;
+  body: string;
+  event_type: string;
+  status: string;
+  error: string;
+  sent_at: string;
 }
 
 // API client class
@@ -619,6 +675,27 @@ class ApiClient {
     });
   }
 
+  async bulkUpdateInventory(ids: string[], updates: Record<string, string>): Promise<{ success: number; failed: number; errors: string[] }> {
+    return this.request('/inventory/bulk-update', {
+      method: 'POST',
+      body: JSON.stringify({ ids, updates }),
+    });
+  }
+
+  async bulkUpdateWorkOrders(ids: string[], updates: Record<string, string>): Promise<{ success: number; failed: number; errors: string[] }> {
+    return this.request('/workorders/bulk-update', {
+      method: 'POST',
+      body: JSON.stringify({ ids, updates }),
+    });
+  }
+
+  async bulkUpdateDevices(ids: string[], updates: Record<string, string>): Promise<{ success: number; failed: number; errors: string[] }> {
+    return this.request('/devices/bulk-update', {
+      method: 'POST',
+      body: JSON.stringify({ ids, updates }),
+    });
+  }
+
   // Purchase Orders
   async getPurchaseOrders(): Promise<PurchaseOrder[]> {
     return this.request('/pos');
@@ -718,6 +795,47 @@ class ApiClient {
       method: 'PUT',
       body: JSON.stringify(rma),
     });
+  }
+
+  // Shipments
+  async getShipments(): Promise<Shipment[]> {
+    return this.request('/shipments');
+  }
+
+  async getShipment(id: string): Promise<Shipment> {
+    return this.request(`/shipments/${id}`);
+  }
+
+  async createShipment(shipment: Partial<Shipment>): Promise<Shipment> {
+    return this.request('/shipments', {
+      method: 'POST',
+      body: JSON.stringify(shipment),
+    });
+  }
+
+  async updateShipment(id: string, shipment: Partial<Shipment>): Promise<Shipment> {
+    return this.request(`/shipments/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(shipment),
+    });
+  }
+
+  async shipShipment(id: string, trackingNumber: string, carrier: string): Promise<Shipment> {
+    return this.request(`/shipments/${id}/ship`, {
+      method: 'POST',
+      body: JSON.stringify({ tracking_number: trackingNumber, carrier }),
+    });
+  }
+
+  async deliverShipment(id: string): Promise<Shipment> {
+    return this.request(`/shipments/${id}/deliver`, {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
+  }
+
+  async getShipmentPackList(id: string): Promise<PackList> {
+    return this.request(`/shipments/${id}/pack-list`);
   }
 
   // Testing
@@ -973,6 +1091,22 @@ class ApiClient {
     });
   }
 
+  // GitPLM Settings
+  async getGitPLMConfig(): Promise<{ base_url: string }> {
+    return this.request('/settings/gitplm');
+  }
+
+  async updateGitPLMConfig(config: { base_url: string }): Promise<{ base_url: string }> {
+    return this.request('/settings/gitplm', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    });
+  }
+
+  async getGitPLMURL(ipn: string): Promise<{ url: string; configured: boolean }> {
+    return this.request(`/parts/${encodeURIComponent(ipn)}/gitplm-url`);
+  }
+
   // Email Settings
   async getEmailConfig(): Promise<EmailConfig> {
     return this.request('/email/config');
@@ -990,6 +1124,33 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify({ test_email: testEmail }),
     });
+  }
+
+  // Email subscriptions
+  async getEmailSubscriptions(): Promise<Record<string, boolean>> {
+    return this.request('/email/subscriptions');
+  }
+
+  async updateEmailSubscriptions(subs: Record<string, boolean>): Promise<Record<string, boolean>> {
+    return this.request('/email/subscriptions', {
+      method: 'PUT',
+      body: JSON.stringify(subs),
+    });
+  }
+
+  // Email log
+  async getEmailLog(): Promise<EmailLogEntry[]> {
+    return this.request('/email-log');
+  }
+
+  // Undo
+  async getUndoList(limit?: number): Promise<UndoEntry[]> {
+    const params = limit ? `?limit=${limit}` : '';
+    return this.request(`/undo${params}`);
+  }
+
+  async performUndo(id: number): Promise<{ status: string; entity_type: string; entity_id: string }> {
+    return this.request(`/undo/${id}`, { method: 'POST' });
   }
 
   // Backups

@@ -1486,3 +1486,95 @@ Get price trend data for charting.
   ]
 }
 ```
+
+---
+
+## Shipments
+
+### GET /api/v1/shipments
+
+List all shipments, ordered by creation date descending.
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": "SHP-2026-0001",
+      "type": "outbound",
+      "status": "draft",
+      "tracking_number": "",
+      "carrier": "FedEx",
+      "ship_date": null,
+      "delivery_date": null,
+      "from_address": "123 Main St",
+      "to_address": "456 Oak Ave",
+      "notes": "",
+      "created_by": "admin",
+      "created_at": "2026-02-18 10:00:00",
+      "updated_at": "2026-02-18 10:00:00"
+    }
+  ]
+}
+```
+
+### POST /api/v1/shipments
+
+Create a new shipment. Optionally include `lines` array.
+
+**Request Body:**
+```json
+{
+  "type": "outbound|inbound",
+  "carrier": "FedEx",
+  "tracking_number": "",
+  "from_address": "123 Main St",
+  "to_address": "456 Oak Ave",
+  "notes": "Optional notes",
+  "lines": [
+    { "ipn": "IPN-001", "serial_number": "SN-100", "qty": 5, "work_order_id": "WO-2026-0001", "rma_id": "" }
+  ]
+}
+```
+
+### GET /api/v1/shipments/:id
+
+Get a single shipment with line items.
+
+### PUT /api/v1/shipments/:id
+
+Update a shipment. If `lines` array is provided, existing lines are replaced.
+
+### POST /api/v1/shipments/:id/ship
+
+Mark a shipment as shipped, setting tracking number and carrier.
+
+**Request Body:**
+```json
+{
+  "tracking_number": "1Z999",
+  "carrier": "UPS"
+}
+```
+
+### POST /api/v1/shipments/:id/deliver
+
+Mark a shipment as delivered. For inbound shipments, inventory is automatically updated (qty_on_hand increased for each line item IPN).
+
+### GET /api/v1/shipments/:id/pack-list
+
+Generate and return a pack list for the shipment. Auto-creates a `pack_lists` record.
+
+**Response:**
+```json
+{
+  "data": {
+    "id": 1,
+    "shipment_id": "SHP-2026-0001",
+    "created_at": "2026-02-18 10:00:00",
+    "lines": [
+      { "id": 1, "shipment_id": "SHP-2026-0001", "ipn": "IPN-001", "serial_number": "", "qty": 5, "work_order_id": "", "rma_id": "" }
+    ]
+  }
+}
+```

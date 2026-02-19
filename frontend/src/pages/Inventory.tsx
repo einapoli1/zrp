@@ -6,7 +6,8 @@ import {
   Plus, 
   MoreHorizontal,
   Trash2,
-  ScanLine
+  ScanLine,
+  Pencil
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -31,6 +32,7 @@ import {
 } from "../components/ui/dropdown-menu";
 import { api, type InventoryItem } from "../lib/api";
 import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTable";
+import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog";
 import { BarcodeScanner } from "../components/BarcodeScanner";
 
 function Inventory() {
@@ -39,6 +41,7 @@ function Inventory() {
   const [showLowStock, setShowLowStock] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [parts, setParts] = useState<{ ipn: string; description?: string }[]>([]);
 
   // Quick receive form state
@@ -107,6 +110,19 @@ function Inventory() {
     } catch (error) {
       console.error("Failed to delete items:", error);
     }
+  };
+
+  const inventoryBulkEditFields: BulkEditField[] = [
+    { key: "location", label: "Location", type: "text" },
+    { key: "reorder_point", label: "Reorder Point", type: "text" },
+    { key: "reorder_qty", label: "Reorder Qty", type: "text" },
+  ];
+
+  const handleBulkUpdate = async (updates: Record<string, string>) => {
+    await api.bulkUpdateInventory(Array.from(selectedItems), updates);
+    setSelectedItems(new Set());
+    setBulkEditOpen(false);
+    fetchInventory();
   };
 
   const toggleSelectAll = () => {
@@ -406,14 +422,24 @@ function Inventory() {
         <Card>
           <CardContent className="p-4">
             {selectedItems.size > 0 ? (
-              <Button 
-                variant="destructive" 
-                className="w-full" 
-                onClick={handleBulkDelete}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Delete Selected
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1" 
+                  onClick={() => setBulkEditOpen(true)}
+                >
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Bulk Edit
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  className="flex-1" 
+                  onClick={handleBulkDelete}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Selected
+                </Button>
+              </div>
             ) : (
               <div className="text-center text-muted-foreground">
                 Select items for bulk actions
@@ -454,6 +480,15 @@ function Inventory() {
           />
         </CardContent>
       </Card>
+
+      <BulkEditDialog
+        open={bulkEditOpen}
+        onOpenChange={setBulkEditOpen}
+        fields={inventoryBulkEditFields}
+        selectedCount={selectedItems.size}
+        onSubmit={handleBulkUpdate}
+        title="Bulk Edit Inventory"
+      />
     </div>
   );
 }

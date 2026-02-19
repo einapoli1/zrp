@@ -33,12 +33,17 @@ import {
 } from "../components/ui/select";
 import { api, type WorkOrder, type Part } from "../lib/api";
 import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTable";
+import { Checkbox } from "../components/ui/checkbox";
+import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog";
+import { Pencil, Trash2 } from "lucide-react";
 
 function WorkOrders() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
 
   const [woForm, setWoForm] = useState({
     assembly_ipn: "",
@@ -176,6 +181,58 @@ function WorkOrders() {
   const filteredParts = parts.filter(part => 
     part.ipn.toLowerCase().includes(woForm.assembly_ipn.toLowerCase())
   );
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === workOrders.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(workOrders.map(wo => wo.id)));
+    }
+  };
+
+  const toggleSelectItem = (id: string) => {
+    const next = new Set(selectedItems);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedItems(next);
+  };
+
+  const woBulkEditFields: BulkEditField[] = [
+    { key: "status", label: "Status", type: "select", options: [
+      { value: "open", label: "Open" },
+      { value: "in_progress", label: "In Progress" },
+      { value: "completed", label: "Completed" },
+      { value: "cancelled", label: "Cancelled" },
+    ]},
+    { key: "priority", label: "Priority", type: "select", options: [
+      { value: "low", label: "Low" },
+      { value: "normal", label: "Normal" },
+      { value: "high", label: "High" },
+      { value: "urgent", label: "Urgent" },
+    ]},
+    { key: "due_date", label: "Due Date", type: "text" },
+  ];
+
+  const handleBulkUpdate = async (updates: Record<string, string>) => {
+    await api.bulkUpdateWorkOrders(Array.from(selectedItems), updates);
+    setSelectedItems(new Set());
+    setBulkEditOpen(false);
+    fetchWorkOrders();
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedItems.size === 0 || !confirm(`Delete ${selectedItems.size} work orders?`)) return;
+    try {
+      // Use existing bulk action endpoint
+      for (const id of selectedItems) {
+        await api.updateWorkOrder(id, { status: "cancelled" } as Partial<WorkOrder>);
+      }
+      setSelectedItems(new Set());
+      fetchWorkOrders();
+    } catch (error) {
+      console.error("Failed to delete work orders:", error);
+    }
+  };
 
   const woColumns: ColumnDef<WorkOrder>[] = [
     {
@@ -448,6 +505,23 @@ function WorkOrders() {
         </Card>
       </div>
 
+      {/* Bulk Actions */}
+      {selectedItems.size > 0 && (
+        <Card>
+          <CardContent className="p-4 flex items-center gap-4">
+            <span className="text-sm font-medium">{selectedItems.size} selected</span>
+            <Button variant="outline" size="sm" onClick={() => setBulkEditOpen(true)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Bulk Edit
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleBulkDelete}>
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Selected
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Work Orders Table */}
       <Card>
         <CardHeader>
@@ -460,9 +534,32 @@ function WorkOrders() {
             data={workOrders}
             rowKey={(wo) => wo.id}
             emptyMessage="No work orders found"
+            leadingColumn={{
+              header: (
+                <Checkbox
+                  checked={selectedItems.size === workOrders.length && workOrders.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+              ),
+              cell: (wo) => (
+                <Checkbox
+                  checked={selectedItems.has(wo.id)}
+                  onCheckedChange={() => toggleSelectItem(wo.id)}
+                />
+              ),
+              className: "w-12",
+            }}
           />
         </CardContent>
       </Card>
+      <BulkEditDialog
+        open={bulkEditOpen}
+        onOpenChange={setBulkEditOpen}
+        fields={woBulkEditFields}
+        selectedCount={selectedItems.size}
+        onSubmit={handleBulkUpdate}
+        title="Bulk Edit Work Orders"
+      />
     </div>
   );
 }

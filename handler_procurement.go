@@ -51,8 +51,9 @@ func handleCreatePO(w http.ResponseWriter, r *http.Request) {
 	p.ID = nextID("PO", "purchase_orders", 4)
 	if p.Status == "" { p.Status = "draft" }
 	now := time.Now().Format("2006-01-02 15:04:05")
-	_, err := db.Exec("INSERT INTO purchase_orders (id,vendor_id,status,notes,created_at,expected_date) VALUES (?,?,?,?,?,?)",
-		p.ID, p.VendorID, p.Status, p.Notes, now, p.ExpectedDate)
+	createdBy := getUsername(r)
+	_, err := db.Exec("INSERT INTO purchase_orders (id,vendor_id,status,notes,created_at,expected_date,created_by) VALUES (?,?,?,?,?,?,?)",
+		p.ID, p.VendorID, p.Status, p.Notes, now, p.ExpectedDate, createdBy)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 
 	for _, l := range p.Lines {
@@ -196,5 +197,6 @@ func handleReceivePO(w http.ResponseWriter, r *http.Request, id string) {
 		db.Exec("UPDATE purchase_orders SET status='partial' WHERE id=?", id)
 	}
 	logAudit(db, getUsername(r), "received", "po", id, "Received items on PO "+id)
+	go emailOnPOReceived(id)
 	handleGetPO(w, r, id)
 }

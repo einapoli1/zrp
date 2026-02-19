@@ -24,6 +24,34 @@ func initDB(path string) error {
 }
 
 func runMigrations() error {
+	shipmentTables := []string{
+		`CREATE TABLE IF NOT EXISTS shipments (
+			id TEXT PRIMARY KEY, type TEXT NOT NULL DEFAULT 'outbound',
+			status TEXT DEFAULT 'draft', tracking_number TEXT DEFAULT '',
+			carrier TEXT DEFAULT '', ship_date DATETIME, delivery_date DATETIME,
+			from_address TEXT DEFAULT '', to_address TEXT DEFAULT '',
+			notes TEXT DEFAULT '', created_by TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS shipment_lines (
+			id INTEGER PRIMARY KEY AUTOINCREMENT, shipment_id TEXT NOT NULL,
+			ipn TEXT DEFAULT '', serial_number TEXT DEFAULT '', qty INTEGER DEFAULT 1,
+			work_order_id TEXT DEFAULT '', rma_id TEXT DEFAULT '',
+			FOREIGN KEY (shipment_id) REFERENCES shipments(id)
+		)`,
+		`CREATE TABLE IF NOT EXISTS pack_lists (
+			id INTEGER PRIMARY KEY AUTOINCREMENT, shipment_id TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (shipment_id) REFERENCES shipments(id)
+		)`,
+	}
+	for _, t := range shipmentTables {
+		if _, err := db.Exec(t); err != nil {
+			return fmt.Errorf("shipment migration: %w", err)
+		}
+	}
+
 	tables := []string{
 		`CREATE TABLE IF NOT EXISTS ecos (
 			id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT,
@@ -133,6 +161,16 @@ func runMigrations() error {
 			ipn TEXT NOT NULL, description TEXT, qty INTEGER NOT NULL,
 			unit_price REAL, notes TEXT
 		)`,
+		`CREATE TABLE IF NOT EXISTS undo_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id TEXT NOT NULL,
+			action TEXT NOT NULL,
+			entity_type TEXT NOT NULL,
+			entity_id TEXT NOT NULL,
+			previous_data TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			expires_at DATETIME NOT NULL
+		)`,
 		`CREATE TABLE IF NOT EXISTS users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			username TEXT UNIQUE NOT NULL,
@@ -223,6 +261,13 @@ func runMigrations() error {
 			error TEXT,
 			sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
+		`CREATE TABLE IF NOT EXISTS email_subscriptions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			user_id TEXT NOT NULL,
+			event_type TEXT NOT NULL,
+			enabled INTEGER DEFAULT 1,
+			UNIQUE(user_id, event_type)
+		)`,
 		`CREATE TABLE IF NOT EXISTS eco_revisions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			eco_id TEXT NOT NULL,
@@ -260,6 +305,46 @@ func runMigrations() error {
 			notes TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
+		`CREATE TABLE IF NOT EXISTS rfqs (
+			id TEXT PRIMARY KEY,
+			title TEXT NOT NULL,
+			status TEXT DEFAULT 'draft',
+			created_by TEXT DEFAULT 'system',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			due_date TEXT,
+			notes TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS rfq_vendors (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			rfq_id TEXT NOT NULL,
+			vendor_id TEXT NOT NULL,
+			status TEXT DEFAULT 'pending',
+			quoted_at DATETIME,
+			notes TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS rfq_lines (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			rfq_id TEXT NOT NULL,
+			ipn TEXT NOT NULL,
+			description TEXT,
+			qty REAL NOT NULL DEFAULT 0,
+			unit TEXT DEFAULT 'ea'
+		)`,
+		`CREATE TABLE IF NOT EXISTS rfq_quotes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			rfq_id TEXT NOT NULL,
+			rfq_vendor_id INTEGER NOT NULL,
+			rfq_line_id INTEGER NOT NULL,
+			unit_price REAL DEFAULT 0,
+			lead_time_days INTEGER DEFAULT 0,
+			moq INTEGER DEFAULT 0,
+			notes TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS app_settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL DEFAULT ''
+		)`,
 	}
 	for _, t := range tables {
 		if _, err := db.Exec(t); err != nil {
@@ -275,6 +360,8 @@ func runMigrations() error {
 		"ALTER TABLE notifications ADD COLUMN emailed INTEGER DEFAULT 0",
 		"ALTER TABLE work_orders ADD COLUMN due_date TEXT DEFAULT ''",
 		"ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''",
+		"ALTER TABLE email_log ADD COLUMN event_type TEXT DEFAULT ''",
+		"ALTER TABLE purchase_orders ADD COLUMN created_by TEXT DEFAULT ''",
 	}
 	for _, s := range alterStmts {
 		db.Exec(s) // ignore errors (column already exists)

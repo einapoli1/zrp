@@ -70,11 +70,16 @@ func handleUpdateVendor(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 func handleDeleteVendor(w http.ResponseWriter, r *http.Request, id string) {
+	undoID, _ := createUndoEntry(getUsername(r), "delete", "vendor", id)
 	_, err := db.Exec("DELETE FROM vendors WHERE id=?", id)
 	if err != nil {
 		jsonErr(w, err.Error(), 500)
 		return
 	}
 	logAudit(db, getUsername(r), "deleted", "vendor", id, "Deleted vendor "+id)
-	jsonResp(w, map[string]string{"deleted": id})
+	resp := map[string]interface{}{"deleted": id}
+	if undoID > 0 {
+		resp["undo_id"] = undoID
+	}
+	jsonResp(w, resp)
 }

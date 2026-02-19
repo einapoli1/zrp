@@ -36,6 +36,8 @@ import {
 import { api, type Part, type Category, type ApiResponse } from "../lib/api";
 import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTable";
 import { BarcodeScanner } from "../components/BarcodeScanner";
+import { useGitPLM } from "../hooks/useGitPLM";
+import { ExternalLink } from "lucide-react";
 
 interface PartWithFields extends Part {
   category?: string;
@@ -68,6 +70,7 @@ function Parts() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalParts, setTotalParts] = useState(0);
+  const { configured: gitplmConfigured, buildUrl: gitplmUrl } = useGitPLM();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const pageSize = 50;
@@ -266,6 +269,26 @@ function Parts() {
       ),
       defaultVisible: true,
     },
+    ...(gitplmConfigured ? [{
+      id: "gitplm" as const,
+      label: "GitPLM",
+      accessor: (part: PartWithFields) => {
+        const url = gitplmUrl(part.ipn);
+        return url ? (
+          <a
+            href={url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="text-muted-foreground hover:text-primary"
+            title="Open in gitplm"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </a>
+        ) : null;
+      },
+      defaultVisible: true,
+    }] : []),
   ];
 
   return (

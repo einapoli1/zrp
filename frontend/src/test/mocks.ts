@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import type {
   Part, Category, ECO, WorkOrder, Vendor, PurchaseOrder,
-  InventoryItem, NCR, RMA, TestRecord, Device, FirmwareCampaign,
+  InventoryItem, NCR, RMA, Shipment, PackList, TestRecord, Device, FirmwareCampaign,
   Quote, DashboardStats, CalendarEvent, AuditLogEntry, User,
   APIKey, EmailConfig, Document,
 } from "../lib/api";
@@ -68,6 +68,16 @@ export const mockRMAs: RMA[] = [
   { id: "RMA-001", serial_number: "SN-500", customer: "Acme Inc", reason: "Device not working", status: "received", defect_description: "No power", resolution: "", created_at: "2024-01-22" },
   { id: "RMA-002", serial_number: "SN-600", customer: "Tech Co", reason: "Wrong firmware", status: "resolved", defect_description: "Incorrect FW version", resolution: "Reflashed", created_at: "2024-01-15", resolved_at: "2024-01-20" },
 ];
+
+export const mockShipments: Shipment[] = [
+  { id: "SHP-2024-0001", type: "outbound", status: "draft", tracking_number: "", carrier: "FedEx", from_address: "123 Main St", to_address: "456 Oak Ave", notes: "Test shipment", created_by: "admin", created_at: "2024-01-25", updated_at: "2024-01-25", lines: [{ id: 1, shipment_id: "SHP-2024-0001", ipn: "IPN-001", serial_number: "", qty: 5, work_order_id: "", rma_id: "" }] },
+  { id: "SHP-2024-0002", type: "inbound", status: "shipped", tracking_number: "1Z999", carrier: "UPS", from_address: "Vendor HQ", to_address: "Our Warehouse", notes: "", created_by: "admin", created_at: "2024-01-20", updated_at: "2024-01-22", ship_date: "2024-01-22", lines: [] },
+];
+
+export const mockPackList: PackList = {
+  id: 1, shipment_id: "SHP-2024-0001", created_at: "2024-01-25",
+  lines: [{ id: 1, shipment_id: "SHP-2024-0001", ipn: "IPN-001", serial_number: "", qty: 5, work_order_id: "", rma_id: "" }],
+};
 
 export const mockTestRecords: TestRecord[] = [
   { id: 1, serial_number: "SN-100", ipn: "IPN-003", firmware_version: "1.0.0", test_type: "functional", result: "pass", measurements: "{}", notes: "", tested_by: "tech1", tested_at: "2024-01-20" },
@@ -176,6 +186,13 @@ export function createMockApi() {
     getRMA: vi.fn().mockResolvedValue(mockRMAs[0]),
     createRMA: vi.fn().mockResolvedValue(mockRMAs[0]),
     updateRMA: vi.fn().mockResolvedValue(mockRMAs[0]),
+    getShipments: vi.fn().mockResolvedValue(mockShipments),
+    getShipment: vi.fn().mockResolvedValue(mockShipments[0]),
+    createShipment: vi.fn().mockResolvedValue(mockShipments[0]),
+    updateShipment: vi.fn().mockResolvedValue(mockShipments[0]),
+    shipShipment: vi.fn().mockResolvedValue({ ...mockShipments[0], status: "shipped" }),
+    deliverShipment: vi.fn().mockResolvedValue({ ...mockShipments[0], status: "delivered" }),
+    getShipmentPackList: vi.fn().mockResolvedValue(mockPackList),
     getTestRecords: vi.fn().mockResolvedValue(mockTestRecords),
     getTestRecord: vi.fn().mockResolvedValue(mockTestRecords[0]),
     createTestRecord: vi.fn().mockResolvedValue(mockTestRecords[0]),

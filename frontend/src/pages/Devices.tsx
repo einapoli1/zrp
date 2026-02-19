@@ -9,8 +9,10 @@ import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Textarea } from "../components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { Smartphone, Plus, Upload, Download } from "lucide-react";
+import { Smartphone, Plus, Upload, Download, Pencil, Trash2 } from "lucide-react";
+import { Checkbox } from "../components/ui/checkbox";
 import { api, type Device } from "../lib/api";
+import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog";
 
 function Devices() {
   const navigate = useNavigate();
@@ -21,6 +23,8 @@ function Devices() {
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<{ success: number; errors: string[] } | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
+  const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [deviceForm, setDeviceForm] = useState({
     serial_number: "",
@@ -94,6 +98,40 @@ function Devices() {
       console.error("Failed to import devices:", error);
       setImportResult({ success: 0, errors: ["Import failed: " + (error as Error).message] });
     }
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedItems.size === devices.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(devices.map(d => d.serial_number)));
+    }
+  };
+
+  const toggleSelectItem = (sn: string) => {
+    const next = new Set(selectedItems);
+    if (next.has(sn)) next.delete(sn);
+    else next.add(sn);
+    setSelectedItems(next);
+  };
+
+  const deviceBulkEditFields: BulkEditField[] = [
+    { key: "status", label: "Status", type: "select", options: [
+      { value: "active", label: "Active" },
+      { value: "inactive", label: "Inactive" },
+      { value: "decommissioned", label: "Decommissioned" },
+      { value: "rma", label: "RMA" },
+    ]},
+    { key: "customer", label: "Customer", type: "text" },
+    { key: "location", label: "Location", type: "text" },
+  ];
+
+  const handleBulkUpdate = async (updates: Record<string, string>) => {
+    await api.bulkUpdateDevices(Array.from(selectedItems), updates);
+    setSelectedItems(new Set());
+    setBulkEditOpen(false);
+    const data = await api.getDevices();
+    setDevices(data);
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -307,6 +345,19 @@ function Devices() {
         </div>
       </div>
 
+      {/* Bulk Actions */}
+      {selectedItems.size > 0 && (
+        <Card>
+          <CardContent className="p-4 flex items-center gap-4">
+            <span className="text-sm font-medium">{selectedItems.size} selected</span>
+            <Button variant="outline" size="sm" onClick={() => setBulkEditOpen(true)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Bulk Edit
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -318,6 +369,12 @@ function Devices() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={selectedItems.size === devices.length && devices.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                </TableHead>
                 <TableHead>Serial Number</TableHead>
                 <TableHead>IPN</TableHead>
                 <TableHead>Firmware Version</TableHead>
@@ -331,7 +388,7 @@ function Devices() {
             <TableBody>
               {devices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <div className="text-muted-foreground">
                       No devices found. Add devices manually or import from CSV.
                     </div>
@@ -340,6 +397,12 @@ function Devices() {
               ) : (
                 devices.map((device) => (
                   <TableRow key={device.serial_number} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/devices/${device.serial_number}`)}>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <Checkbox
+                        checked={selectedItems.has(device.serial_number)}
+                        onCheckedChange={() => toggleSelectItem(device.serial_number)}
+                      />
+                    </TableCell>
                     <TableCell className="font-mono font-medium">{device.serial_number}</TableCell>
                     <TableCell>{device.ipn}</TableCell>
                     <TableCell className="font-mono text-sm">{device.firmware_version || "—"}</TableCell>

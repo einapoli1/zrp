@@ -128,6 +128,7 @@ func handleImplementECO(w http.ResponseWriter, r *http.Request, id string) {
 	// Record implementation in latest revision
 	updateRevisionImplementation(id, user, now)
 	logAudit(db, user, "implemented", "eco", id, "Implemented "+id)
+	go emailOnECOImplemented(id)
 	handleGetECO(w, r, id)
 }
 

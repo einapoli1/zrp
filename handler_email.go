@@ -28,9 +28,27 @@ type EmailLogEntry struct {
 	To        string `json:"to_address"`
 	Subject   string `json:"subject"`
 	Body      string `json:"body"`
+	EventType string `json:"event_type"`
 	Status    string `json:"status"`
 	Error     string `json:"error"`
 	SentAt    string `json:"sent_at"`
+}
+
+type EmailSubscription struct {
+	ID        int    `json:"id"`
+	UserID    string `json:"user_id"`
+	EventType string `json:"event_type"`
+	Enabled   int    `json:"enabled"`
+}
+
+// All supported email event types
+var EmailEventTypes = []string{
+	"eco_approved",
+	"eco_implemented",
+	"low_stock",
+	"overdue_work_order",
+	"po_received",
+	"ncr_created",
 }
 
 func handleGetEmailConfig(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +125,7 @@ func handleTestEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleListEmailLog(w http.ResponseWriter, r *http.Request) {
-	rows, err := db.Query("SELECT id, to_address, subject, COALESCE(body,''), status, COALESCE(error,''), sent_at FROM email_log ORDER BY sent_at DESC LIMIT 100")
+	rows, err := db.Query("SELECT id, to_address, subject, COALESCE(body,''), COALESCE(event_type,''), status, COALESCE(error,''), sent_at FROM email_log ORDER BY sent_at DESC LIMIT 100")
 	if err != nil {
 		jsonErr(w, err.Error(), 500)
 		return
@@ -116,7 +134,7 @@ func handleListEmailLog(w http.ResponseWriter, r *http.Request) {
 	var items []EmailLogEntry
 	for rows.Next() {
 		var e EmailLogEntry
-		rows.Scan(&e.ID, &e.To, &e.Subject, &e.Body, &e.Status, &e.Error, &e.SentAt)
+		rows.Scan(&e.ID, &e.To, &e.Subject, &e.Body, &e.EventType, &e.Status, &e.Error, &e.SentAt)
 		items = append(items, e)
 	}
 	if items == nil {
@@ -138,7 +156,7 @@ func getEmailConfig() (*EmailConfig, error) {
 	return &c, nil
 }
 
-func sendEmail(to, subject, body string) error {
+func sendEmailWithEvent(to, subject, body, eventType string) error {
 	c, err := getEmailConfig()
 	if err != nil {
 		return err
@@ -167,10 +185,14 @@ func sendEmail(to, subject, body string) error {
 		status = "failed"
 		errStr = sendErr.Error()
 	}
-	db.Exec("INSERT INTO email_log (to_address, subject, body, status, error, sent_at) VALUES (?, ?, ?, ?, ?, ?)",
-		to, subject, body, status, errStr, time.Now().Format("2006-01-02 15:04:05"))
+	db.Exec("INSERT INTO email_log (to_address, subject, body, event_type, status, error, sent_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+		to, subject, body, eventType, status, errStr, time.Now().Format("2006-01-02 15:04:05"))
 
 	return sendErr
+}
+
+func sendEmail(to, subject, body string) error {
+	return sendEmailWithEvent(to, subject, body, "")
 }
 
 // sendNotificationEmail sends an email for a notification if email is configured
@@ -226,6 +248,66 @@ func isValidEmail(email string) bool {
 	return strings.Contains(email, "@") && strings.Contains(email, ".")
 }
 
+// --- Subscription management ---
+
+func handleGetEmailSubscriptions(w http.ResponseWriter, r *http.Request) {
+	username := getUsername(r)
+	subs := make(map[string]bool)
+	// Default all event types to enabled
+	for _, et := range EmailEventTypes {
+		subs[et] = true
+	}
+	rows, err := db.Query("SELECT event_type, enabled FROM email_subscriptions WHERE user_id=?", username)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var eventType string
+			var enabled int
+			rows.Scan(&eventType, &enabled)
+			subs[eventType] = enabled == 1
+		}
+	}
+	jsonResp(w, subs)
+}
+
+func handleUpdateEmailSubscriptions(w http.ResponseWriter, r *http.Request) {
+	username := getUsername(r)
+	var body map[string]bool
+	if err := decodeBody(r, &body); err != nil {
+		jsonErr(w, "invalid body", 400)
+		return
+	}
+	for eventType, enabled := range body {
+		enabledInt := 0
+		if enabled {
+			enabledInt = 1
+		}
+		db.Exec("INSERT OR REPLACE INTO email_subscriptions (user_id, event_type, enabled) VALUES (?, ?, ?)",
+			username, eventType, enabledInt)
+	}
+	logAudit(db, username, "updated", "email_subscriptions", username, "Updated email subscriptions")
+	handleGetEmailSubscriptions(w, r)
+}
+
+// isUserSubscribed checks if a user has opted out of a specific event type.
+// Default is subscribed (true) unless explicitly disabled.
+func isUserSubscribed(username, eventType string) bool {
+	var enabled int
+	err := db.QueryRow("SELECT enabled FROM email_subscriptions WHERE user_id=? AND event_type=?", username, eventType).Scan(&enabled)
+	if err != nil {
+		return true // default: subscribed
+	}
+	return enabled == 1
+}
+
+// sendEventEmail sends an email for a specific event type, checking subscription.
+func sendEventEmail(to, subject, body, eventType, username string) error {
+	if username != "" && !isUserSubscribed(username, eventType) {
+		return nil
+	}
+	return sendEmailWithEvent(to, subject, body, eventType)
+}
+
 // --- Email triggers for key events ---
 
 // emailOnECOApproved sends email to the ECO creator when an ECO is approved.
@@ -254,7 +336,7 @@ func emailOnECOApproved(ecoID string) {
 	}
 	subject := fmt.Sprintf("ECO %s Approved", ecoID)
 	body := fmt.Sprintf("Your Engineering Change Order %s (%s) has been approved.\n\n— ZRP", ecoID, title)
-	if err := sendEmail(userEmail, subject, body); err != nil {
+	if err := sendEventEmail(userEmail, subject, body, "eco_approved", createdBy); err != nil {
 		log.Printf("Failed to send ECO approval email: %v", err)
 	}
 }
@@ -275,7 +357,7 @@ func emailOnLowStock(ipn string) {
 	}
 	subject := fmt.Sprintf("Low Stock Alert: %s", ipn)
 	body := fmt.Sprintf("Inventory item %s has dropped below its reorder point.\n\nCurrent qty: %d\nReorder point: %d\n\n— ZRP", ipn, qtyOnHand, reorderPoint)
-	if err := sendEmail(c.FromAddress, subject, body); err != nil {
+	if err := sendEventEmail(c.FromAddress, subject, body, "low_stock", ""); err != nil {
 		log.Printf("Failed to send low stock email: %v", err)
 	}
 }
@@ -307,7 +389,70 @@ func emailOnOverdueWorkOrder(woID string) {
 	}
 	subject := fmt.Sprintf("Overdue Work Order: %s", woID)
 	body := fmt.Sprintf("Work Order %s is past its due date (%s) and has status '%s'.\n\n— ZRP", woID, *dueDate, status)
-	if err := sendEmail(c.FromAddress, subject, body); err != nil {
+	if err := sendEventEmail(c.FromAddress, subject, body, "overdue_work_order", ""); err != nil {
 		log.Printf("Failed to send overdue WO email: %v", err)
+	}
+}
+
+// emailOnECOImplemented sends email to all affected part owners when an ECO is implemented.
+func emailOnECOImplemented(ecoID string) {
+	if !emailConfigEnabled() {
+		return
+	}
+	var title, affectedIPNs string
+	err := db.QueryRow("SELECT title, COALESCE(affected_ipns,'') FROM ecos WHERE id=?", ecoID).Scan(&title, &affectedIPNs)
+	if err != nil {
+		return
+	}
+	c, err := getEmailConfig()
+	if err != nil || c.FromAddress == "" {
+		return
+	}
+	subject := fmt.Sprintf("ECO %s Implemented", ecoID)
+	body := fmt.Sprintf("Engineering Change Order %s (%s) has been implemented.\n\nAffected parts: %s\n\n— ZRP", ecoID, title, affectedIPNs)
+	if err := sendEventEmail(c.FromAddress, subject, body, "eco_implemented", ""); err != nil {
+		log.Printf("Failed to send ECO implemented email: %v", err)
+	}
+}
+
+// emailOnPOReceived sends email to the PO creator when a PO is received.
+func emailOnPOReceived(poID string) {
+	if !emailConfigEnabled() {
+		return
+	}
+	var createdBy string
+	db.QueryRow("SELECT COALESCE(created_by,'') FROM purchase_orders WHERE id=?", poID).Scan(&createdBy)
+	var userEmail string
+	if createdBy != "" {
+		db.QueryRow("SELECT COALESCE(email,'') FROM users WHERE username=?", createdBy).Scan(&userEmail)
+	}
+	if userEmail == "" || !isValidEmail(userEmail) {
+		c, err := getEmailConfig()
+		if err != nil || c.FromAddress == "" {
+			return
+		}
+		userEmail = c.FromAddress
+		createdBy = ""
+	}
+	subject := fmt.Sprintf("PO %s Received", poID)
+	body := fmt.Sprintf("Purchase Order %s has been received.\n\n— ZRP", poID)
+	if err := sendEventEmail(userEmail, subject, body, "po_received", createdBy); err != nil {
+		log.Printf("Failed to send PO received email: %v", err)
+	}
+}
+
+// emailOnNCRCreated sends email to quality team when an NCR is created.
+func emailOnNCRCreated(ncrID, title string) {
+	if !emailConfigEnabled() {
+		return
+	}
+	c, err := getEmailConfig()
+	if err != nil || c.FromAddress == "" {
+		return
+	}
+	subject := fmt.Sprintf("NCR Created: %s", ncrID)
+	body := fmt.Sprintf("A new Non-Conformance Report has been created.\n\nNCR: %s\nTitle: %s\n\n— ZRP", ncrID, title)
+	if err := sendEventEmail(c.FromAddress, subject, body, "ncr_created", ""); err != nil {
+		log.Printf("Failed to send NCR created email: %v", err)
 	}
 }

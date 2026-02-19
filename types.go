@@ -255,4 +255,83 @@ type Category struct {
 	Columns []string `json:"columns"`
 }
 
+type Shipment struct {
+	ID             string         `json:"id"`
+	Type           string         `json:"type"`
+	Status         string         `json:"status"`
+	TrackingNumber string         `json:"tracking_number"`
+	Carrier        string         `json:"carrier"`
+	ShipDate       *string        `json:"ship_date"`
+	DeliveryDate   *string        `json:"delivery_date"`
+	FromAddress    string         `json:"from_address"`
+	ToAddress      string         `json:"to_address"`
+	Notes          string         `json:"notes"`
+	CreatedBy      string         `json:"created_by"`
+	CreatedAt      string         `json:"created_at"`
+	UpdatedAt      string         `json:"updated_at"`
+	Lines          []ShipmentLine `json:"lines,omitempty"`
+}
+
+type ShipmentLine struct {
+	ID           int    `json:"id"`
+	ShipmentID   string `json:"shipment_id"`
+	IPN          string `json:"ipn"`
+	SerialNumber string `json:"serial_number"`
+	Qty          int    `json:"qty"`
+	WorkOrderID  string `json:"work_order_id"`
+	RMAID        string `json:"rma_id"`
+}
+
+type PackList struct {
+	ID         int            `json:"id"`
+	ShipmentID string         `json:"shipment_id"`
+	CreatedAt  string         `json:"created_at"`
+	Lines      []ShipmentLine `json:"lines,omitempty"`
+}
+
+// RFQ types
+type RFQ struct {
+	ID        string      `json:"id"`
+	Title     string      `json:"title"`
+	Status    string      `json:"status"`
+	CreatedBy string      `json:"created_by"`
+	CreatedAt string      `json:"created_at"`
+	UpdatedAt string      `json:"updated_at"`
+	DueDate   string      `json:"due_date"`
+	Notes     string      `json:"notes"`
+	Lines     []RFQLine   `json:"lines,omitempty"`
+	Vendors   []RFQVendor `json:"vendors,omitempty"`
+	Quotes    []RFQQuote  `json:"quotes,omitempty"`
+}
+
+type RFQLine struct {
+	ID          int     `json:"id"`
+	RFQID       string  `json:"rfq_id"`
+	IPN         string  `json:"ipn"`
+	Description string  `json:"description"`
+	Qty         float64 `json:"qty"`
+	Unit        string  `json:"unit"`
+}
+
+type RFQVendor struct {
+	ID         int    `json:"id"`
+	RFQID      string `json:"rfq_id"`
+	VendorID   string `json:"vendor_id"`
+	VendorName string `json:"vendor_name,omitempty"`
+	Status     string `json:"status"`
+	QuotedAt   string `json:"quoted_at"`
+	Notes      string `json:"notes"`
+}
+
+type RFQQuote struct {
+	ID           int     `json:"id"`
+	RFQID        string  `json:"rfq_id"`
+	RFQVendorID  int     `json:"rfq_vendor_id"`
+	RFQLineID    int     `json:"rfq_line_id"`
+	UnitPrice    float64 `json:"unit_price"`
+	LeadTimeDays int     `json:"lead_time_days"`
+	MOQ          int     `json:"moq"`
+	Notes        string  `json:"notes"`
+}
+
 var _ = time.Now // keep time imported

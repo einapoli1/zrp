@@ -58,7 +58,13 @@ vi.mock("../lib/api", () => ({
     getPartBOM: (...args: any[]) => mockGetPartBOM(...args),
     getPartCost: (...args: any[]) => mockGetPartCost(...args),
     getPartWhereUsed: (...args: any[]) => mockGetPartWhereUsed(...args),
+    getGitPLMConfig: vi.fn().mockResolvedValue({ base_url: "" }),
   },
+}));
+
+const mockGitPLM = { baseUrl: "", configured: false, loading: false, buildUrl: () => null as string | null };
+vi.mock("../hooks/useGitPLM", () => ({
+  useGitPLM: () => mockGitPLM,
 }));
 
 import PartDetail from "./PartDetail";
@@ -437,6 +443,28 @@ describe("PartDetail - BOM (assembly IPN)", () => {
       const links = screen.getAllByText("PCA-100");
       const linkEl = links.find(el => el.closest("a"));
       expect(linkEl?.closest("a")).toHaveAttribute("href", "/parts/PCA-100");
+    });
+  });
+
+  describe("GitPLM integration", () => {
+    it("hides gitplm button when not configured", async () => {
+      mockGitPLM.configured = false;
+      mockGitPLM.buildUrl = () => null;
+      render(<PartDetail />);
+      await waitForLoad();
+      expect(screen.queryByText("Edit in gitplm")).not.toBeInTheDocument();
+    });
+
+    it("shows gitplm button when configured", async () => {
+      mockGitPLM.configured = true;
+      mockGitPLM.baseUrl = "https://plm.acme.com";
+      mockGitPLM.buildUrl = (ipn: string) => `https://plm.acme.com/parts/${ipn}`;
+      render(<PartDetail />);
+      await waitForLoad();
+      const link = screen.getByText("Edit in gitplm");
+      expect(link).toBeInTheDocument();
+      expect(link.closest("a")).toHaveAttribute("href", "https://plm.acme.com/parts/IPN-003");
+      expect(link.closest("a")).toHaveAttribute("target", "_blank");
     });
   });
 });

@@ -25,6 +25,8 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { api, type Part, type BOMNode, type PartCost, type WhereUsedEntry } from "../lib/api";
+import { useGitPLM } from "../hooks/useGitPLM";
+import { ExternalLink } from "lucide-react";
 
 interface PartWithDetails extends Part {
   category?: string;
@@ -44,9 +46,10 @@ interface BOMTreeProps {
   node: BOMNode;
   level?: number;
   onPartClick?: (ipn: string) => void;
+  gitplmBuildUrl?: (ipn: string) => string | null;
 }
 
-function BOMTree({ node, level = 0, onPartClick }: BOMTreeProps) {
+function BOMTree({ node, level = 0, onPartClick, gitplmBuildUrl }: BOMTreeProps) {
   const [expanded, setExpanded] = useState(level < 2); // Auto-expand first 2 levels
   const hasChildren = node.children && node.children.length > 0;
   
@@ -81,7 +84,7 @@ function BOMTree({ node, level = 0, onPartClick }: BOMTreeProps) {
           
           <div className="flex items-center min-w-0 flex-1">
             <span 
-              className="font-mono text-sm font-medium text-primary hover:underline mr-3"
+              className="font-mono text-sm font-medium text-primary hover:underline mr-1"
               onClick={(e) => {
                 e.stopPropagation();
                 handlePartClick(node.ipn);
@@ -89,6 +92,18 @@ function BOMTree({ node, level = 0, onPartClick }: BOMTreeProps) {
             >
               {node.ipn}
             </span>
+            {gitplmBuildUrl && gitplmBuildUrl(node.ipn) && (
+              <a
+                href={gitplmBuildUrl(node.ipn)!}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="text-muted-foreground hover:text-primary mr-2"
+                title="Open in gitplm"
+              >
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
             <span className="text-sm text-muted-foreground truncate">
               {node.description || 'No description'}
             </span>
@@ -117,6 +132,7 @@ function BOMTree({ node, level = 0, onPartClick }: BOMTreeProps) {
               node={child} 
               level={level + 1}
               onPartClick={onPartClick}
+              gitplmBuildUrl={gitplmBuildUrl}
             />
           ))}
         </div>
@@ -136,6 +152,7 @@ function PartDetail() {
   const [costLoading, setCostLoading] = useState(false);
   const [whereUsed, setWhereUsed] = useState<WhereUsedEntry[]>([]);
   const [whereUsedLoading, setWhereUsedLoading] = useState(false);
+  const { configured: gitplmConfigured, buildUrl: gitplmUrl } = useGitPLM();
 
   useEffect(() => {
     if (ipn) {
@@ -294,6 +311,14 @@ function PartDetail() {
           <Badge variant={part.status === 'active' ? 'default' : 'secondary'}>
             {part.status || 'active'}
           </Badge>
+          {gitplmConfigured && ipn && (
+            <Button variant="outline" size="sm" asChild>
+              <a href={gitplmUrl(ipn)!} target="_blank" rel="noopener noreferrer">
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Edit in gitplm
+              </a>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -450,7 +475,7 @@ function PartDetail() {
               </div>
             ) : bom ? (
               <div className="border rounded-md p-4">
-                <BOMTree node={bom} onPartClick={handleBOMPartClick} />
+                <BOMTree node={bom} onPartClick={handleBOMPartClick} gitplmBuildUrl={gitplmConfigured ? gitplmUrl : undefined} />
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
