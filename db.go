@@ -405,6 +405,19 @@ func runMigrations() error {
 			key TEXT PRIMARY KEY,
 			value TEXT NOT NULL DEFAULT ''
 		)`,
+		`CREATE TABLE IF NOT EXISTS document_versions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			document_id TEXT NOT NULL,
+			revision TEXT NOT NULL,
+			content TEXT DEFAULT '',
+			file_path TEXT DEFAULT '',
+			change_summary TEXT DEFAULT '',
+			status TEXT DEFAULT 'draft',
+			created_by TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			eco_id TEXT,
+			FOREIGN KEY (document_id) REFERENCES documents(id)
+		)`,
 		`CREATE TABLE IF NOT EXISTS market_pricing (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			part_ipn TEXT NOT NULL,

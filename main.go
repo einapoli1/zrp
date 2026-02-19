@@ -199,6 +199,20 @@ func main() {
 			handleUpdateDoc(w, r, parts[1])
 		case parts[0] == "docs" && len(parts) == 3 && parts[2] == "approve" && r.Method == "POST":
 			handleApproveDoc(w, r, parts[1])
+		case parts[0] == "docs" && len(parts) == 3 && parts[2] == "versions" && r.Method == "GET":
+			handleListDocVersions(w, r, parts[1])
+		case parts[0] == "docs" && len(parts) == 4 && parts[2] == "versions" && r.Method == "GET":
+			handleGetDocVersion(w, r, parts[1], parts[3])
+		case parts[0] == "docs" && len(parts) == 3 && parts[2] == "diff" && r.Method == "GET":
+			handleDocDiff(w, r, parts[1])
+		case parts[0] == "docs" && len(parts) == 3 && parts[2] == "release" && r.Method == "POST":
+			handleReleaseDoc(w, r, parts[1])
+		case parts[0] == "docs" && len(parts) == 4 && parts[2] == "revert" && r.Method == "POST":
+			handleRevertDoc(w, r, parts[1], parts[3])
+		case parts[0] == "docs" && len(parts) == 3 && parts[2] == "push" && r.Method == "POST":
+			handlePushDocToGit(w, r, parts[1])
+		case parts[0] == "docs" && len(parts) == 3 && parts[2] == "sync" && r.Method == "POST":
+			handleSyncDocFromGit(w, r, parts[1])
 
 		// Vendors
 		case parts[0] == "vendors" && len(parts) == 1 && r.Method == "GET":
@@ -433,6 +447,16 @@ func main() {
 			handleGetGitPLMConfig(w, r)
 		case parts[0] == "settings" && len(parts) == 2 && parts[1] == "gitplm" && r.Method == "PUT":
 			handleUpdateGitPLMConfig(w, r)
+
+		// Settings/Git Docs
+		case parts[0] == "settings" && len(parts) == 2 && parts[1] == "git-docs" && r.Method == "GET":
+			handleGetGitDocsSettings(w, r)
+		case parts[0] == "settings" && len(parts) == 2 && parts[1] == "git-docs" && r.Method == "PUT":
+			handlePutGitDocsSettings(w, r)
+
+		// ECO PR
+		case parts[0] == "ecos" && len(parts) == 3 && parts[2] == "create-pr" && r.Method == "POST":
+			handleCreateECOPR(w, r, parts[1])
 
 		// Parts gitplm-url
 		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "gitplm-url" && r.Method == "GET":

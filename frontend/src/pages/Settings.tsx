@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Settings as SettingsIcon, Mail, Globe, Database, Users, Wrench } from "lucide-react";
 import EmailSettings from "./EmailSettings";
 import GitPLMSettings from "./GitPLMSettings";
+import GitDocsSettings from "./GitDocsSettings";
 import DistributorSettings from "./DistributorSettings";
 import Backups from "./Backups";
 
@@ -161,6 +162,7 @@ export default function Settings() {
           <TabsTrigger value="email"><Mail className="h-4 w-4 mr-1" />Email / SMTP</TabsTrigger>
           <TabsTrigger value="distributors"><Globe className="h-4 w-4 mr-1" />Distributor APIs</TabsTrigger>
           <TabsTrigger value="gitplm">GitPLM</TabsTrigger>
+          <TabsTrigger value="git-docs">Git Docs</TabsTrigger>
           <TabsTrigger value="backups"><Database className="h-4 w-4 mr-1" />Backups</TabsTrigger>
           <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Users / Auth</TabsTrigger>
         </TabsList>
@@ -179,6 +181,10 @@ export default function Settings() {
 
         <TabsContent value="gitplm">
           <GitPLMSettings />
+        </TabsContent>
+
+        <TabsContent value="git-docs">
+          <GitDocsSettings />
         </TabsContent>
 
         <TabsContent value="backups">

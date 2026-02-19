@@ -90,6 +90,36 @@ export interface Document {
   updated_at: string;
 }
 
+export interface DocumentVersion {
+  id: number;
+  document_id: string;
+  revision: string;
+  content: string;
+  file_path: string;
+  change_summary: string;
+  status: string;
+  created_by: string;
+  created_at: string;
+  eco_id: string | null;
+}
+
+export interface DiffLine {
+  type: 'same' | 'added' | 'removed';
+  text: string;
+}
+
+export interface DocumentDiff {
+  from: string;
+  to: string;
+  lines: DiffLine[];
+}
+
+export interface GitDocsConfig {
+  repo_url: string;
+  branch: string;
+  token: string;
+}
+
 export interface Attachment {
   id: string;
   module: string;
@@ -1147,6 +1177,50 @@ class ApiClient {
       method: 'PUT',
       body: JSON.stringify(doc),
     });
+  }
+
+  // Document Version Control
+  async getDocumentVersions(id: string): Promise<DocumentVersion[]> {
+    return this.request(`/docs/${id}/versions`);
+  }
+
+  async getDocumentVersion(id: string, revision: string): Promise<DocumentVersion> {
+    return this.request(`/docs/${id}/versions/${revision}`);
+  }
+
+  async getDocumentDiff(id: string, from: string, to: string): Promise<DocumentDiff> {
+    return this.request(`/docs/${id}/diff?from=${from}&to=${to}`);
+  }
+
+  async releaseDocument(id: string): Promise<Document> {
+    return this.request(`/docs/${id}/release`, { method: 'POST' });
+  }
+
+  async revertDocument(id: string, revision: string): Promise<Document> {
+    return this.request(`/docs/${id}/revert/${revision}`, { method: 'POST' });
+  }
+
+  async pushDocumentToGit(id: string): Promise<{ status: string; file: string }> {
+    return this.request(`/docs/${id}/push`, { method: 'POST' });
+  }
+
+  async syncDocumentFromGit(id: string): Promise<Document> {
+    return this.request(`/docs/${id}/sync`, { method: 'POST' });
+  }
+
+  async getGitDocsSettings(): Promise<GitDocsConfig> {
+    return this.request('/settings/git-docs');
+  }
+
+  async updateGitDocsSettings(cfg: GitDocsConfig): Promise<{ status: string }> {
+    return this.request('/settings/git-docs', {
+      method: 'PUT',
+      body: JSON.stringify(cfg),
+    });
+  }
+
+  async createECOPR(ecoId: string): Promise<{ status: string; branch: string }> {
+    return this.request(`/ecos/${ecoId}/create-pr`, { method: 'POST' });
   }
 
   async uploadAttachment(file: File, module: string, recordId: string): Promise<Attachment> {

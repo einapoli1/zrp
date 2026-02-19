@@ -47,6 +47,7 @@ import {
   X
 } from "lucide-react";
 import { api, type Document } from "../lib/api";
+import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 
 interface DocumentWithAttachments extends Document {
@@ -80,6 +81,7 @@ const categories = [
 ];
 
 function Documents() {
+  const navigate = useNavigate();
   const [documents, setDocuments] = useState<DocumentWithAttachments[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -504,7 +506,7 @@ function Documents() {
                   documents.map((doc) => {
                     const statusConfig_ = getStatusConfig(doc.status);
                     return (
-                      <TableRow key={doc.id} className="hover:bg-muted/50">
+                      <TableRow key={doc.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => navigate(`/documents/${doc.id}`)}>
                         <TableCell>
                           <div className="flex items-center space-x-2">
                             <FileText className="h-4 w-4 text-muted-foreground" />

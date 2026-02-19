@@ -356,4 +356,18 @@ type RFQQuote struct {
 	Notes        string  `json:"notes"`
 }
 
+// DocumentVersion represents a snapshot of a document at a specific revision
+type DocumentVersion struct {
+	ID            int     `json:"id"`
+	DocumentID    string  `json:"document_id"`
+	Revision      string  `json:"revision"`
+	Content       string  `json:"content"`
+	FilePath      string  `json:"file_path"`
+	ChangeSummary string  `json:"change_summary"`
+	Status        string  `json:"status"`
+	CreatedBy     string  `json:"created_by"`
+	CreatedAt     string  `json:"created_at"`
+	ECOID         *string `json:"eco_id"`
+}
+
 var _ = time.Now // keep time imported

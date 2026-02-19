@@ -17,6 +17,8 @@ const mockApproveECO = vi.fn();
 const mockImplementECO = vi.fn();
 const mockRejectECO = vi.fn();
 const mockGetECORevisions = vi.fn();
+const mockGetGitDocsSettings = vi.fn();
+const mockCreateECOPR = vi.fn();
 
 vi.mock("../lib/api", () => ({
   api: {
@@ -25,6 +27,8 @@ vi.mock("../lib/api", () => ({
     implementECO: (...args: any[]) => mockImplementECO(...args),
     rejectECO: (...args: any[]) => mockRejectECO(...args),
     getECORevisions: (...args: any[]) => mockGetECORevisions(...args),
+    getGitDocsSettings: (...args: any[]) => mockGetGitDocsSettings(...args),
+    createECOPR: (...args: any[]) => mockCreateECOPR(...args),
   },
 }));
 
@@ -123,6 +127,8 @@ beforeEach(() => {
   mockImplementECO.mockResolvedValue({ ...mockECOApproved, status: "implemented" });
   mockRejectECO.mockResolvedValue({ ...mockECODraft, status: "rejected" });
   mockGetECORevisions.mockResolvedValue(mockRevisions);
+  mockGetGitDocsSettings.mockResolvedValue({ repo_url: "", branch: "", token: "" });
+  mockCreateECOPR.mockResolvedValue({ pr_url: "" });
 });
 
 describe("ECODetail", () => {

@@ -65,12 +65,14 @@ function ECODetail() {
   const [revisions, setRevisions] = useState<ECORevision[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const [gitConfigured, setGitConfigured] = useState(false);
 
   useEffect(() => {
     if (id) {
       fetchECODetails();
       fetchRevisions();
     }
+    api.getGitDocsSettings().then((cfg) => setGitConfigured(!!cfg?.repo_url)).catch(() => {});
   }, [id]);
 
   const fetchECODetails = async () => {
@@ -389,6 +391,23 @@ function ECODetail() {
                 >
                   <XCircle className="h-4 w-4 mr-2" />
                   {actionLoading === 'reject' ? 'Rejecting...' : 'Reject ECO'}
+                </Button>
+              )}
+
+              {gitConfigured && eco && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={async () => {
+                    try {
+                      const result = await api.createECOPR(eco.id);
+                      alert(`PR branch created: ${result.branch}`);
+                    } catch (e: any) {
+                      alert(`Failed to create PR: ${e.message}`);
+                    }
+                  }}
+                >
+                  Create PR
                 </Button>
               )}
 

@@ -72,6 +72,11 @@ func handleCreateDoc(w http.ResponseWriter, r *http.Request) {
 func handleUpdateDoc(w http.ResponseWriter, r *http.Request, id string) {
 	var d Document
 	if err := decodeBody(r, &d); err != nil { jsonErr(w, "invalid body", 400); return }
+
+	// Snapshot current state before updating
+	username := getUsername(r)
+	snapshotDocumentVersion(id, "Before update", username, nil)
+
 	now := time.Now().Format("2006-01-02 15:04:05")
 	_, err := db.Exec("UPDATE documents SET title=?,category=?,ipn=?,revision=?,status=?,content=?,file_path=?,updated_at=? WHERE id=?",
 		d.Title, d.Category, d.IPN, d.Revision, d.Status, d.Content, d.FilePath, now, id)

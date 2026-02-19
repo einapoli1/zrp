@@ -14,6 +14,7 @@ const PartDetail = React.lazy(() => import("./pages/PartDetail"));
 const ECOs = React.lazy(() => import("./pages/ECOs"));
 const ECODetail = React.lazy(() => import("./pages/ECODetail"));
 const Documents = React.lazy(() => import("./pages/Documents"));
+const DocumentDetail = React.lazy(() => import("./pages/DocumentDetail"));
 const Inventory = React.lazy(() => import("./pages/Inventory"));
 const InventoryDetail = React.lazy(() => import("./pages/InventoryDetail"));
 const Procurement = React.lazy(() => import("./pages/Procurement"));
@@ -84,6 +85,7 @@ function App() {
             <Route path="/ecos" element={<ECOs />} />
             <Route path="/ecos/:id" element={<ECODetail />} />
             <Route path="/documents" element={<Documents />} />
+            <Route path="/documents/:id" element={<DocumentDetail />} />
             <Route path="/testing" element={<Testing />} />
             <Route path="/ncrs" element={<NCRs />} />
             <Route path="/ncrs/:id" element={<NCRDetail />} />
