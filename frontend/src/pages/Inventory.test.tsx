@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "../test/test-utils";
+import userEvent from "@testing-library/user-event";
 import { mockInventory, mockParts } from "../test/mocks";
 
 const mockGetInventory = vi.fn();
@@ -249,6 +250,96 @@ describe("Inventory", () => {
     expect(mockBulkDeleteInventory).not.toHaveBeenCalled();
 
     confirmSpy.mockRestore();
+  });
+
+  it("quick receive autocomplete dropdown filters by typed IPN", async () => {
+    render(<Inventory />);
+    await waitForLoad();
+    fireEvent.click(screen.getByText("Quick Receive"));
+    await waitFor(() => expect(screen.getByLabelText("IPN")).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText("IPN"), { target: { value: "IPN-00" } });
+    const dialog = screen.getByRole("dialog");
+    await waitFor(() => {
+      const suggestions = dialog.querySelectorAll(".font-medium");
+      // All 3 mock parts match "IPN-00"
+      expect(suggestions.length).toBeGreaterThanOrEqual(3);
+    });
+    // Now type a more specific filter
+    fireEvent.change(screen.getByLabelText("IPN"), { target: { value: "IPN-003" } });
+    await waitFor(() => {
+      const suggestions = dialog.querySelectorAll(".hover\\:bg-muted");
+      expect(suggestions.length).toBe(1);
+    });
+  });
+
+  it("selecting from autocomplete populates IPN field", async () => {
+    render(<Inventory />);
+    await waitForLoad();
+    fireEvent.click(screen.getByText("Quick Receive"));
+    await waitFor(() => expect(screen.getByLabelText("IPN")).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText("IPN"), { target: { value: "IPN" } });
+    const dialog = screen.getByRole("dialog");
+    await waitFor(() => {
+      expect(dialog.querySelectorAll(".hover\\:bg-muted").length).toBeGreaterThan(0);
+    });
+    // Click first suggestion
+    const firstSuggestion = dialog.querySelector(".hover\\:bg-muted") as HTMLElement;
+    fireEvent.click(firstSuggestion);
+    expect(screen.getByLabelText("IPN")).toHaveValue("IPN-001");
+  });
+
+  it("displays available qty as Math.max(0, on_hand - reserved)", async () => {
+    render(<Inventory />);
+    await waitForLoad();
+    // IPN-001: 500 - 50 = 450, IPN-002: 20 - 5 = 15, IPN-003: 10 - 0 = 10
+    // Check available column (6th td, index 5) per row
+    const row1 = screen.getByText("IPN-001").closest("tr")!;
+    expect(row1.querySelectorAll("td")[5].textContent).toBe("450");
+    const row2 = screen.getByText("IPN-002").closest("tr")!;
+    expect(row2.querySelectorAll("td")[5].textContent).toBe("15");
+    const row3 = screen.getByText("IPN-003").closest("tr")!;
+    expect(row3.querySelectorAll("td")[5].textContent).toBe("10");
+  });
+
+  it("displays available qty as 0 when reserved exceeds on_hand", async () => {
+    mockGetInventory.mockResolvedValue([
+      { ipn: "IPN-NEG", qty_on_hand: 5, qty_reserved: 10, location: "X", reorder_point: 0, reorder_qty: 0, description: "Negative test", updated_at: "2024-01-01" },
+    ]);
+    render(<Inventory />);
+    await waitFor(() => expect(screen.getByText("IPN-NEG")).toBeInTheDocument());
+    // Available should be 0, not -5
+    const row = screen.getByText("IPN-NEG").closest("tr")!;
+    const cells = row.querySelectorAll("td");
+    // Available is the 6th cell (index 5)
+    expect(cells[5].textContent).toBe("0");
+  });
+
+  it("dropdown menu shows View Details and Quick Receive options", async () => {
+    const user = userEvent.setup();
+    render(<Inventory />);
+    await waitForLoad();
+    const firstRow = screen.getByText("IPN-001").closest("tr")!;
+    const allBtns = firstRow.querySelectorAll("button");
+    await user.click(allBtns[allBtns.length - 1]);
+    await waitFor(() => {
+      expect(screen.getByText("View Details")).toBeInTheDocument();
+    });
+    const menuItems = screen.getAllByRole("menuitem");
+    expect(menuItems.find(m => m.textContent === "Quick Receive")).toBeDefined();
+  });
+
+  it("Quick Receive from dropdown pre-fills IPN", async () => {
+    const user = userEvent.setup();
+    render(<Inventory />);
+    await waitForLoad();
+    const firstRow = screen.getByText("IPN-001").closest("tr")!;
+    const allBtns = firstRow.querySelectorAll("button");
+    await user.click(allBtns[allBtns.length - 1]);
+    await waitFor(() => expect(screen.getByText("View Details")).toBeInTheDocument());
+    const menuItems = screen.getAllByRole("menuitem");
+    await user.click(menuItems.find(m => m.textContent === "Quick Receive")!);
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    expect(screen.getByLabelText("IPN")).toHaveValue("IPN-001");
   });
 
   it("highlights low stock items with bg-red-50 class", async () => {

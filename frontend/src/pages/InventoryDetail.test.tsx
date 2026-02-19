@@ -296,6 +296,51 @@ describe("InventoryDetail", () => {
     });
   });
 
+  it("shows adjust type hint text when adjust is selected", async () => {
+    render(<InventoryDetail />);
+    await waitForLoad();
+    fireEvent.click(screen.getByText("New Transaction"));
+    await waitFor(() => expect(screen.getByText("Create Inventory Transaction")).toBeInTheDocument());
+    const selectTrigger = screen.getByText("Transaction Type").parentElement?.querySelector("[role='combobox']") as HTMLElement;
+    fireEvent.click(selectTrigger);
+    await waitFor(() => expect(screen.getByText("Adjust")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Adjust"));
+    expect(screen.getByText("For adjustments, enter the new total quantity")).toBeInTheDocument();
+  });
+
+  it("handles transaction API error gracefully", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockCreateInventoryTransaction.mockRejectedValue(new Error("Server error"));
+    render(<InventoryDetail />);
+    await waitForLoad();
+    fireEvent.click(screen.getByText("New Transaction"));
+    await waitFor(() => expect(screen.getByLabelText("Quantity")).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "10" } });
+    fireEvent.click(screen.getByText("Create Transaction"));
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to create transaction:", expect.any(Error));
+    });
+    // Dialog should still be open (transaction failed, no close)
+    expect(screen.getByText("Create Inventory Transaction")).toBeInTheDocument();
+    consoleSpy.mockRestore();
+  });
+
+  it("refreshes detail and history after successful transaction", async () => {
+    render(<InventoryDetail />);
+    await waitForLoad();
+    // Clear call counts after initial load
+    mockGetInventoryItem.mockClear();
+    mockGetInventoryHistory.mockClear();
+    fireEvent.click(screen.getByText("New Transaction"));
+    await waitFor(() => expect(screen.getByLabelText("Quantity")).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "25" } });
+    fireEvent.click(screen.getByText("Create Transaction"));
+    await waitFor(() => {
+      expect(mockGetInventoryItem).toHaveBeenCalledWith("IPN-001");
+      expect(mockGetInventoryHistory).toHaveBeenCalledWith("IPN-001");
+    });
+  });
+
   it("shows LOW badge when stock is at or below reorder point", async () => {
     mockGetInventoryItem.mockResolvedValue({
       ...mockItem,
