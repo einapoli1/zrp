@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"html"
 	"net/http"
 	"strings"
 	"time"
@@ -232,6 +233,8 @@ func handleWorkOrderCompletion(tx *sql.Tx, woID, assemblyIPN string, qty int, us
 		
 		// Consume the reserved quantity (already calculated during kitting)
 		// The reserved amount represents the total needed for this WO
+		// TODO: Track which inventory is reserved for which WO to avoid consuming
+		// inventory reserved for other WOs
 		consumed := reserved
 		
 		// Deduct from on_hand and release reservation
@@ -409,7 +412,7 @@ func handleWorkOrderPDF(w http.ResponseWriter, r *http.Request, id string) {
 	bomRows := ""
 	for _, bl := range bom {
 		bomRows += fmt.Sprintf(`<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td style="text-align:center">%.0f</td><td>%s</td></tr>`,
-			bl.IPN, bl.Description, bl.MPN, bl.Manufacturer, bl.QtyRequired, bl.RefDes)
+			html.EscapeString(bl.IPN), html.EscapeString(bl.Description), html.EscapeString(bl.MPN), html.EscapeString(bl.Manufacturer), bl.QtyRequired, html.EscapeString(bl.RefDes))
 	}
 	if bomRows == "" {
 		bomRows = `<tr><td colspan="6" style="text-align:center;color:#999">No BOM data</td></tr>`
@@ -420,7 +423,7 @@ func handleWorkOrderPDF(w http.ResponseWriter, r *http.Request, id string) {
 		date = date[:10]
 	}
 
-	html := fmt.Sprintf(`<!DOCTYPE html>
+	htmlOutput := fmt.Sprintf(`<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>Work Order Traveler — %s</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -480,11 +483,14 @@ func handleWorkOrderPDF(w http.ResponseWriter, r *http.Request, id string) {
 
 <script>window.onload = () => window.print()</script>
 </body></html>`,
-		wo.ID, wo.ID, date, wo.Status, wo.Priority,
-		wo.AssemblyIPN, assemblyDesc, wo.Qty, wo.Notes, bomRows)
+		html.EscapeString(wo.ID), html.EscapeString(wo.ID), html.EscapeString(date), html.EscapeString(wo.Status), html.EscapeString(wo.Priority),
+		html.EscapeString(wo.AssemblyIPN), html.EscapeString(assemblyDesc), wo.Qty, html.EscapeString(wo.Notes), bomRows)
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(html))
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "DENY")
+	w.Write([]byte(htmlOutput))
 }
 
 func handleWorkOrderKit(w http.ResponseWriter, r *http.Request, id string) {

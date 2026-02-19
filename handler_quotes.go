@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"fmt"
+	"html"
 	"math"
 	"net/http"
 	"time"
@@ -188,7 +189,7 @@ func handleQuotePDF(w http.ResponseWriter, r *http.Request, id string) {
 		date = date[:10]
 	}
 
-	html := fmt.Sprintf(`<!DOCTYPE html>
+	htmlOutput := fmt.Sprintf(`<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>Quote — %s</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -241,15 +242,18 @@ func handleQuotePDF(w http.ResponseWriter, r *http.Request, id string) {
 
 <script>window.onload = () => window.print()</script>
 </body></html>`,
-		q.ID, q.ID, date, q.ValidUntil, q.Status,
-		q.Customer, lineRows, total,
+		html.EscapeString(q.ID), html.EscapeString(q.ID), html.EscapeString(date), html.EscapeString(q.ValidUntil), html.EscapeString(q.Status),
+		html.EscapeString(q.Customer), lineRows, total,
 		func() string {
 			if q.Notes != "" {
-				return fmt.Sprintf(`<h2>Notes</h2><p style="font-size:10pt">%s</p>`, q.Notes)
+				return fmt.Sprintf(`<h2>Notes</h2><p style="font-size:10pt">%s</p>`, html.EscapeString(q.Notes))
 			}
 			return ""
 		}())
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(html))
+	w.Header().Set("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'")
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "DENY")
+	w.Write([]byte(htmlOutput))
 }
