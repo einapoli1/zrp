@@ -103,7 +103,12 @@ func handleCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 		"id":         id,
 		"name":       req.Name,
 		"key":        key,
+		"full_key":   key, // For frontend compatibility
 		"key_prefix": keyPrefix,
+		"created_by": "admin", // TODO: get from session
+		"created_at": time.Now().Format(time.RFC3339),
+		"enabled":    1,
+		"status":     "active",
 		"message":    "Store this key securely. It will not be shown again.",
 	})
 }

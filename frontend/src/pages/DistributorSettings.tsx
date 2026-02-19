@@ -2,31 +2,39 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Badge } from "../components/ui/badge";
 import { Store, Save, ExternalLink } from "lucide-react";
 import { api } from "../lib/api";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
+import { FormField } from "../components/FormField";
+import { toast } from "sonner";
 
 export default function DistributorSettings() {
   const [digikeyClientId, setDigikeyClientId] = useState("");
   const [digikeyClientSecret, setDigikeyClientSecret] = useState("");
   const [mouserKey, setMouserKey] = useState("");
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState("");
-  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings();
   }, []);
 
   const loadSettings = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const settings = await api.getDistributorSettings();
       setDigikeyClientId(settings.digikey?.client_id || "");
       setDigikeyClientSecret(settings.digikey?.client_secret || "");
       setMouserKey(settings.mouser?.api_key || "");
-      setLoaded(true);
-    } catch {
-      setLoaded(true);
+    } catch (err: any) {
+      const message = err?.message || "Failed to load settings";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -34,10 +42,9 @@ export default function DistributorSettings() {
     setSaving(true);
     try {
       await api.updateDigikeySettings({ client_id: digikeyClientId, client_secret: digikeyClientSecret });
-      setMessage("Digikey settings saved");
-      setTimeout(() => setMessage(""), 3000);
-    } catch {
-      setMessage("Failed to save Digikey settings");
+      toast.success("Digikey settings saved");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save Digikey settings");
     } finally {
       setSaving(false);
     }
@@ -47,16 +54,27 @@ export default function DistributorSettings() {
     setSaving(true);
     try {
       await api.updateMouserSettings({ api_key: mouserKey });
-      setMessage("Mouser settings saved");
-      setTimeout(() => setMessage(""), 3000);
-    } catch {
-      setMessage("Failed to save Mouser settings");
+      toast.success("Mouser settings saved");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to save Mouser settings");
     } finally {
       setSaving(false);
     }
   };
 
-  if (!loaded) return null;
+  if (loading) {
+    return <LoadingState variant="spinner" message="Loading distributor settings..." />;
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Failed to load settings"
+        message={error}
+        onRetry={loadSettings}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6 p-6 max-w-2xl">
@@ -69,10 +87,6 @@ export default function DistributorSettings() {
         Configure API credentials to fetch live pricing and stock data from distributors.
         Keys are stored securely in the database.
       </p>
-
-      {message && (
-        <Badge variant="secondary" className="text-sm">{message}</Badge>
-      )}
 
       <Card>
         <CardHeader>
@@ -89,23 +103,23 @@ export default function DistributorSettings() {
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <label className="text-sm font-medium">Client ID</label>
+          <FormField label="Client ID" htmlFor="digikey-client-id">
             <Input
+              id="digikey-client-id"
               value={digikeyClientId}
               onChange={e => setDigikeyClientId(e.target.value)}
               placeholder="Digikey OAuth2 Client ID"
             />
-          </div>
-          <div>
-            <label className="text-sm font-medium">Client Secret</label>
+          </FormField>
+          <FormField label="Client Secret" htmlFor="digikey-secret">
             <Input
+              id="digikey-secret"
               value={digikeyClientSecret}
               onChange={e => setDigikeyClientSecret(e.target.value)}
               placeholder="Digikey OAuth2 Client Secret"
               type="password"
             />
-          </div>
+          </FormField>
           <Button onClick={saveDigikey} disabled={saving}>
             <Save className="h-4 w-4 mr-1" /> Save Digikey Settings
           </Button>
@@ -129,15 +143,15 @@ export default function DistributorSettings() {
           <p className="text-sm text-muted-foreground">
             Get your API key from <a href="https://api.mouser.com/api/docs/" target="_blank" rel="noopener noreferrer" className="underline">api.mouser.com</a> (Search API v2).
           </p>
-          <div>
-            <label className="text-sm font-medium">API Key</label>
+          <FormField label="API Key" htmlFor="mouser-key">
             <Input
+              id="mouser-key"
               value={mouserKey}
               onChange={e => setMouserKey(e.target.value)}
               placeholder="Mouser Search API Key"
               type="password"
             />
-          </div>
+          </FormField>
           <Button onClick={saveMouser} disabled={saving}>
             <Save className="h-4 w-4 mr-1" /> Save Mouser Settings
           </Button>

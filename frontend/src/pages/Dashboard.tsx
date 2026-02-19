@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { api, type DashboardStats } from "../lib/api";
 import { toast } from "sonner";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
+import { EmptyState } from "../components/EmptyState";
 interface ExtendedDashboardStats extends DashboardStats {
   open_ecos: number;
   open_pos: number;
@@ -85,8 +88,11 @@ function Dashboard() {
   const [stats, setStats] = useState<ExtendedDashboardStats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
       const [dashboardData, chartsData] = await Promise.all([
         api.getDashboard(),
@@ -129,8 +135,11 @@ function Dashboard() {
           user: "System",
         },
       ]);
-    } catch (error) {
-      toast.error("Failed to fetch dashboard data"); console.error("Failed to fetch dashboard data:", error);
+    } catch (error: any) {
+      const message = error?.message || "Failed to fetch dashboard data";
+      setError(message);
+      toast.error("Failed to fetch dashboard data");
+      console.error("Failed to fetch dashboard data:", error);
     } finally {
       setLoading(false);
     }
@@ -149,13 +158,16 @@ function Dashboard() {
   );
 
   if (loading) {
+    return <LoadingState variant="spinner" message="Loading dashboard..." />;
+  }
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading dashboard...</p>
-        </div>
-      </div>
+      <ErrorState
+        title="Failed to load dashboard"
+        message={error}
+        onRetry={fetchDashboardData}
+      />
     );
   }
 
@@ -232,9 +244,11 @@ function Dashboard() {
               ))}
               
               {activities.length === 0 && (
-                <div className="text-center text-muted-foreground py-8">
-                  No recent activity
-                </div>
+                <EmptyState
+                  title="No recent activity"
+                  description="Activity will appear here as changes are made in the system"
+                  className="py-8"
+                />
               )}
             </div>
           </CardContent>

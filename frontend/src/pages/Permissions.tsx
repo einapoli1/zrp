@@ -13,6 +13,9 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { Shield, Save } from "lucide-react";
+import { LoadingState } from "../components/LoadingState";
+import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
 
 const MODULE_LABELS: Record<string, string> = {
   parts: "Parts",
@@ -52,8 +55,12 @@ export default function Permissions() {
   const [permSet, setPermSet] = useState<Set<string>>(new Set());
   const [originalPermSet, setOriginalPermSet] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const loadPermissions = useCallback(async (role: string) => {
+    setLoading(true);
+    setError(null);
     try {
       const [mods, perms] = await Promise.all([
         getPermissionModules(),
@@ -63,8 +70,11 @@ export default function Permissions() {
       const set = new Set(perms.map((p) => `${p.module}:${p.action}`));
       setPermSet(set);
       setOriginalPermSet(new Set(set));
-    } catch (err) {
+    } catch (err: any) {
+      setError(err.message || "Failed to load permissions");
       toast.error("Failed to load permissions");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -124,6 +134,30 @@ export default function Permissions() {
       setSaving(false);
     }
   };
+
+  if (loading) {
+    return <LoadingState variant="skeleton" rows={8} message="Loading permissions..." />;
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Failed to load permissions"
+        message={error}
+        onRetry={() => loadPermissions(selectedRole)}
+      />
+    );
+  }
+
+  if (modules.length === 0) {
+    return (
+      <EmptyState
+        icon={Shield}
+        title="No modules found"
+        description="There are no permission modules configured in the system."
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">

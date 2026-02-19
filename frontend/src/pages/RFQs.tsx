@@ -6,8 +6,13 @@ import { Badge } from "../components/ui/badge";
 import { Dialog, DialogContent,
   DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
+import { LoadingState } from "../components/LoadingState";
+import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
+import { FormField } from "../components/FormField";
+import { FileQuestion } from "lucide-react";
+import { toast } from "sonner";
 
 const statusColors: Record<string, string> = {
   draft: "secondary",
@@ -20,30 +25,59 @@ const statusColors: Record<string, string> = {
 export default function RFQs() {
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newDueDate, setNewDueDate] = useState("");
   const [newNotes, setNewNotes] = useState("");
   const navigate = useNavigate();
 
-  useEffect(() => {
-    api.getRFQs().then((data) => {
+  const fetchRFQs = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getRFQs();
       setRfqs(data);
+    } catch (err: any) {
+      const message = err?.message || "Failed to load RFQs";
+      setError(message);
+      toast.error(message);
+    } finally {
       setLoading(false);
-    });
+    }
+  };
+
+  useEffect(() => {
+    fetchRFQs();
   }, []);
 
   const handleCreate = async () => {
     if (!newTitle.trim()) return;
-    const rfq = await api.createRFQ({ title: newTitle, due_date: newDueDate, notes: newNotes });
-    setDialogOpen(false);
-    setNewTitle("");
-    setNewDueDate("");
-    setNewNotes("");
-    navigate(`/rfqs/${rfq.id}`);
+    try {
+      const rfq = await api.createRFQ({ title: newTitle, due_date: newDueDate, notes: newNotes });
+      setDialogOpen(false);
+      setNewTitle("");
+      setNewDueDate("");
+      setNewNotes("");
+      navigate(`/rfqs/${rfq.id}`);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to create RFQ");
+    }
   };
 
-  if (loading) return <div className="p-6">Loading RFQs...</div>;
+  if (loading) {
+    return <LoadingState variant="spinner" message="Loading RFQs..." />;
+  }
+
+  if (error) {
+    return (
+      <ErrorState
+        title="Failed to load RFQs"
+        message={error}
+        onRetry={fetchRFQs}
+      />
+    );
+  }
 
   return (
     <div className="p-6 space-y-4">
@@ -62,18 +96,15 @@ export default function RFQs() {
               </DialogDescription>
               </DialogHeader>
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="rfq-title">Title</Label>
+              <FormField label="Title" htmlFor="rfq-title" required>
                 <Input id="rfq-title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="RFQ title" />
-              </div>
-              <div>
-                <Label htmlFor="rfq-due">Due Date</Label>
+              </FormField>
+              <FormField label="Due Date" htmlFor="rfq-due">
                 <Input id="rfq-due" type="date" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)} />
-              </div>
-              <div>
-                <Label htmlFor="rfq-notes">Notes</Label>
+              </FormField>
+              <FormField label="Notes" htmlFor="rfq-notes">
                 <Textarea id="rfq-notes" value={newNotes} onChange={(e) => setNewNotes(e.target.value)} />
-              </div>
+              </FormField>
               <Button onClick={handleCreate} disabled={!newTitle.trim()}>Create</Button>
             </div>
           </DialogContent>
@@ -81,7 +112,16 @@ export default function RFQs() {
       </div>
 
       {rfqs.length === 0 ? (
-        <p className="text-muted-foreground">No RFQs found</p>
+        <EmptyState
+          icon={FileQuestion}
+          title="No RFQs found"
+          description="Create your first Request for Quote to get started"
+          action={
+            <Button onClick={() => setDialogOpen(true)}>
+              Create RFQ
+            </Button>
+          }
+        />
       ) : (
         <div className="border rounded-lg">
           <table className="w-full">
