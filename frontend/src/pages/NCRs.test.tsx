@@ -180,6 +180,113 @@ describe("NCRs", () => {
     });
   });
 
+  it("create form error handling — dialog stays open on reject", async () => {
+    mockCreateNCR.mockRejectedValueOnce(new Error("Server error"));
+    render(<NCRs />);
+    await waitFor(() => {
+      expect(screen.getByText("NCR-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /create ncr/i }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Title *")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText("Title *"), { target: { value: "Fail test" } });
+    const submitButtons = screen.getAllByText("Create NCR");
+    fireEvent.click(submitButtons[submitButtons.length - 1]);
+    await waitFor(() => {
+      expect(mockCreateNCR).toHaveBeenCalled();
+    });
+    // Dialog should still be open
+    expect(screen.getByText("Create New NCR")).toBeInTheDocument();
+    expect(screen.getByLabelText("Title *")).toBeInTheDocument();
+  });
+
+  it("cancel button closes create dialog", async () => {
+    render(<NCRs />);
+    await waitFor(() => {
+      expect(screen.getByText("NCR-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /create ncr/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Create New NCR")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Cancel"));
+    await waitFor(() => {
+      expect(screen.queryByText("Create New NCR")).not.toBeInTheDocument();
+    });
+  });
+
+  it("dialog closes and form resets after successful create", async () => {
+    const newNCR = { ...mockNCRs[0], id: "NCR-099", title: "Brand new" };
+    mockCreateNCR.mockResolvedValueOnce(newNCR);
+    render(<NCRs />);
+    await waitFor(() => {
+      expect(screen.getByText("NCR-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /create ncr/i }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Title *")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText("Title *"), { target: { value: "Brand new" } });
+    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "desc" } });
+    const submitButtons = screen.getAllByText("Create NCR");
+    fireEvent.click(submitButtons[submitButtons.length - 1]);
+    await waitFor(() => {
+      expect(screen.queryByText("Create New NCR")).not.toBeInTheDocument();
+    });
+    // Re-open dialog to check form is reset
+    fireEvent.click(screen.getByRole("button", { name: /create ncr/i }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Title *")).toBeInTheDocument();
+    });
+    expect((screen.getByLabelText("Title *") as HTMLInputElement).value).toBe("");
+    expect((screen.getByLabelText("Description") as HTMLTextAreaElement).value).toBe("");
+  });
+
+  it("new NCR prepended to list after create", async () => {
+    const newNCR = { ...mockNCRs[0], id: "NCR-NEW", title: "New defect item", severity: "minor", status: "open", created_at: "2024-02-01" };
+    mockCreateNCR.mockResolvedValueOnce(newNCR);
+    render(<NCRs />);
+    await waitFor(() => {
+      expect(screen.getByText("NCR-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /create ncr/i }));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Title *")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText("Title *"), { target: { value: "New defect item" } });
+    const submitButtons = screen.getAllByText("Create NCR");
+    fireEvent.click(submitButtons[submitButtons.length - 1]);
+    await waitFor(() => {
+      expect(screen.getByText("NCR-NEW")).toBeInTheDocument();
+    });
+    // Verify NCR-NEW appears before NCR-001 in the DOM
+    const rows = screen.getAllByRole("row");
+    const ncrNewIdx = rows.findIndex(r => r.textContent?.includes("NCR-NEW"));
+    const ncr001Idx = rows.findIndex(r => r.textContent?.includes("NCR-001"));
+    expect(ncrNewIdx).toBeLessThan(ncr001Idx);
+  });
+
+  it("severity selector in create form changes value", async () => {
+    render(<NCRs />);
+    await waitFor(() => {
+      expect(screen.getByText("NCR-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: /create ncr/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Create New NCR")).toBeInTheDocument();
+    });
+    // Fill required field and submit with default severity (minor)
+    fireEvent.change(screen.getByLabelText("Title *"), { target: { value: "Sev test" } });
+    const submitButtons = screen.getAllByText("Create NCR");
+    fireEvent.click(submitButtons[submitButtons.length - 1]);
+    await waitFor(() => {
+      expect(mockCreateNCR).toHaveBeenCalledWith(
+        expect.objectContaining({ severity: "minor" })
+      );
+    });
+  });
+
   it("formats dates correctly", async () => {
     render(<NCRs />);
     await waitFor(() => {

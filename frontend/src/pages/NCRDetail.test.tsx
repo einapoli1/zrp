@@ -339,6 +339,130 @@ describe("NCRDetail", () => {
     expect(screen.queryByText("Create ECO from corrective action")).not.toBeInTheDocument();
   });
 
+  it("edit mode: editable fields — description, IPN, serial_number, defect_type, root_cause, corrective_action", async () => {
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit NCR")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit NCR"));
+
+    // Description
+    const descInput = screen.getByPlaceholderText("Detailed description");
+    expect(descInput).toBeInTheDocument();
+    fireEvent.change(descInput, { target: { value: "Updated desc" } });
+    expect((descInput as HTMLTextAreaElement).value).toBe("Updated desc");
+
+    // IPN
+    const ipnInput = screen.getByPlaceholderText("Part number");
+    fireEvent.change(ipnInput, { target: { value: "IPN-999" } });
+    expect((ipnInput as HTMLInputElement).value).toBe("IPN-999");
+
+    // Serial Number
+    const snInput = screen.getByPlaceholderText("Device serial number");
+    fireEvent.change(snInput, { target: { value: "SN-999" } });
+    expect((snInput as HTMLInputElement).value).toBe("SN-999");
+
+    // Defect Type
+    const dtInput = screen.getByPlaceholderText("Type of defect");
+    fireEvent.change(dtInput, { target: { value: "electrical" } });
+    expect((dtInput as HTMLInputElement).value).toBe("electrical");
+
+    // Root Cause
+    const rcInput = screen.getByPlaceholderText("Identified root cause of the issue");
+    fireEvent.change(rcInput, { target: { value: "Bad solder" } });
+    expect((rcInput as HTMLTextAreaElement).value).toBe("Bad solder");
+
+    // Corrective Action
+    const caInput = screen.getByPlaceholderText("Actions taken to correct the issue");
+    fireEvent.change(caInput, { target: { value: "Reflow" } });
+    expect((caInput as HTMLTextAreaElement).value).toBe("Reflow");
+
+    // Save and verify all fields sent
+    mockUpdateNCR.mockResolvedValueOnce({ ...mockNCROpen, description: "Updated desc" });
+    fireEvent.click(screen.getByText("Save Changes"));
+    await waitFor(() => {
+      expect(mockUpdateNCR).toHaveBeenCalledWith(
+        "NCR-001",
+        expect.objectContaining({
+          description: "Updated desc",
+          ipn: "IPN-999",
+          serial_number: "SN-999",
+          defect_type: "electrical",
+          root_cause: "Bad solder",
+          corrective_action: "Reflow",
+        })
+      );
+    });
+  });
+
+  it("save error handling — stays in edit mode on reject", async () => {
+    mockUpdateNCR.mockRejectedValueOnce(new Error("Save failed"));
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit NCR")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit NCR"));
+    fireEvent.change(screen.getByPlaceholderText("NCR title"), { target: { value: "Changed" } });
+    fireEvent.click(screen.getByText("Save Changes"));
+    await waitFor(() => {
+      expect(mockUpdateNCR).toHaveBeenCalled();
+    });
+    // Should remain in edit mode (Save Changes button still visible)
+    expect(screen.getByText("Save Changes")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("NCR title")).toBeInTheDocument();
+  });
+
+  it("checkbox not visible when not in edit mode even with corrective_action and resolved status", async () => {
+    mockGetNCR.mockResolvedValue({
+      ...mockNCRResolved,
+      corrective_action: "New packaging",
+      status: "resolved",
+    });
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("NCR-002")).toBeInTheDocument();
+    });
+    // In view mode, checkbox should not be visible
+    expect(screen.queryByText("Create ECO from corrective action")).not.toBeInTheDocument();
+  });
+
+  it("checkbox not visible when status is investigating", async () => {
+    mockGetNCR.mockResolvedValue({
+      ...mockNCROpen,
+      corrective_action: "Some fix",
+      status: "investigating",
+    });
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit NCR")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit NCR"));
+    expect(screen.queryByText("Create ECO from corrective action")).not.toBeInTheDocument();
+  });
+
+  it("severity select shows current value in edit mode", async () => {
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit NCR")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit NCR"));
+    // The severity select trigger should display the current value
+    // mockNCROpen has severity "major"
+    const severitySection = screen.getByText("Severity").closest("div")!;
+    expect(severitySection.textContent).toContain("Major");
+  });
+
+  it("status select shows current value in edit mode", async () => {
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit NCR")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit NCR"));
+    // mockNCROpen has status "open"
+    const statusSection = screen.getByText("Status").closest("div")!;
+    expect(statusSection.textContent).toContain("Open");
+  });
+
   it("includes create_eco: true in API payload when checkbox checked and saved", async () => {
     mockGetNCR.mockResolvedValue({
       ...mockNCRResolved,
