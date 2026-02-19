@@ -20,8 +20,9 @@ import (
 func TestAPIHealth(t *testing.T) {
 	// Setup test database
 	oldDB := db
-	db = setupHealthTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupHealthTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Seed test data
 	seedHealthTestData(t, db)
@@ -62,7 +63,7 @@ func TestAPIHealth(t *testing.T) {
 		{"List Categories", "GET", "/api/v1/parts/categories", "", 200, false, false},
 		{"Check IPN", "GET", "/api/v1/parts/check-ipn?ipn=TEST-001", "", 200, false, false},
 		{"Get Part", "GET", "/api/v1/parts/TEST-PART-001", "", 200, true, false},
-		{"Part BOM", "GET", "/api/v1/parts/TEST-PART-001/bom", "", 200, true, false},
+		{"Part BOM", "GET", "/api/v1/parts/PCA-TEST-001/bom", "", 200, true, false},
 		{"Part Cost", "GET", "/api/v1/parts/TEST-PART-001/cost", "", 200, true, false},
 		{"Part Where Used", "GET", "/api/v1/parts/TEST-PART-001/where-used", "", 200, true, false},
 		{"Part Changes", "GET", "/api/v1/parts/TEST-PART-001/changes", "", 200, true, false},
@@ -243,8 +244,11 @@ func TestAPIHealth(t *testing.T) {
 					w.Header().Set("Content-Type", "application/json")
 					w.Write([]byte(`{"status":"ok"}`))
 				}).ServeHTTP(w, req)
+			} else if tt.skipAuth && tt.path == "/auth/login" {
+				// Login endpoint
+				handleLogin(w, req)
 			} else if tt.skipAuth {
-				// Auth endpoints don't require session
+				// Other auth endpoints don't require session
 				http.DefaultServeMux.ServeHTTP(w, req)
 			} else {
 				// Regular API endpoints - use the API router
@@ -272,7 +276,7 @@ func TestAPIHealth(t *testing.T) {
 // handleAPIRequest simulates the main API router
 func handleAPIRequest(w http.ResponseWriter, r *http.Request) {
 	// Extract session from cookie (auth check)
-	cookie, err := r.Cookie("session")
+	cookie, err := r.Cookie("zrp_session")
 	if err != nil {
 		http.Error(w, "Unauthorized", 401)
 		return
@@ -632,6 +636,10 @@ func setupHealthTestDB(t *testing.T) *sql.DB {
 		db = oldDB
 		t.Fatalf("Failed to run migrations: %v", err)
 	}
+	if err := initPermissionsTable(); err != nil {
+		db = oldDB
+		t.Fatalf("Failed to init permissions: %v", err)
+	}
 	db = oldDB
 
 	return testDB
@@ -685,6 +693,16 @@ func seedHealthTestData(t *testing.T, testDB *sql.DB) {
 		t.Fatalf("Failed to create inventory: %v", err)
 	}
 
+	// Create test assembly part for Part BOM test
+	// Note: BOM data comes from files in partsDir, not DB
+	_, err = testDB.Exec(
+		"INSERT INTO parts (ipn, description, category, lifecycle) VALUES (?, ?, ?, ?)",
+		"PCA-TEST-001", "Test Assembly", "Electronics", "active",
+	)
+	if err != nil {
+		t.Fatalf("Failed to create assembly part: %v", err)
+	}
+
 	// Create test device
 	_, err = testDB.Exec(
 		"INSERT INTO devices (serial_number, ipn, firmware_version, status, location) VALUES (?, ?, ?, ?, ?)",
@@ -719,7 +737,7 @@ func loginAsAdmin(t *testing.T) *http.Cookie {
 	}
 
 	return &http.Cookie{
-		Name:    "session",
+		Name:    "zrp_session",
 		Value:   token,
 		Expires: expires,
 		Path:    "/",

@@ -400,7 +400,11 @@ func handleCloseRFQ(w http.ResponseWriter, r *http.Request, id string) {
 	}
 
 	now := time.Now().Format(time.RFC3339)
-	db.Exec(`UPDATE rfqs SET status='closed', updated_at=? WHERE id=?`, now, id)
+	_, err = db.Exec(`UPDATE rfqs SET status='closed', updated_at=? WHERE id=?`, now, id)
+	if err != nil {
+		jsonErr(w, "failed to update RFQ: "+err.Error(), 500)
+		return
+	}
 	logAudit(db, getUser(r), "close", "rfq", id, "Closed RFQ")
 	handleGetRFQ(w, r, id)
 }

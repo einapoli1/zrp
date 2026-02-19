@@ -405,7 +405,7 @@ func runMigrations() error {
 		`CREATE TABLE IF NOT EXISTS rfqs (
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
-			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','sent','quoting','awarded','cancelled')),
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','sent','quoting','awarded','cancelled','closed')),
 			created_by TEXT DEFAULT 'system',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
