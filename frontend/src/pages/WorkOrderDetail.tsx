@@ -67,7 +67,7 @@ function WorkOrderDetail() {
   const [loading, setLoading] = useState(true);
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [generatePODialogOpen, setGeneratePODialogOpen] = useState(false);
-  const [kitDialogOpen, setKitDialogOpen] = useState(false);
+  const [_kitDialogOpen, setKitDialogOpen] = useState(false);
   const [serialDialogOpen, setSerialDialogOpen] = useState(false);
   const [kittingResults, setKittingResults] = useState<any>(null);
 

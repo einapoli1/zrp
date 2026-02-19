@@ -95,7 +95,7 @@ export default function Pricing() {
       setPricing(pricingData);
       setAnalysis(analysisData);
     } catch (err) {
-      toast.error("Failed to load pricing data"); console.error("Failed to load pricing data:", error);
+      toast.error("Failed to load pricing data"); console.error("Failed to load pricing data:", err);
     } finally {
       setLoading(false);
     }
@@ -141,7 +141,7 @@ export default function Pricing() {
       resetForm();
       loadData();
     } catch (err) {
-      toast.error("Failed to create"); console.error("Failed to create:", error);
+      toast.error("Failed to create"); console.error("Failed to create:", err);
     }
   }
 
@@ -164,7 +164,7 @@ export default function Pricing() {
       resetForm();
       loadData();
     } catch (err) {
-      toast.error("Failed to update"); console.error("Failed to update:", error);
+      toast.error("Failed to update"); console.error("Failed to update:", err);
     }
   }
 
@@ -173,7 +173,7 @@ export default function Pricing() {
       await api.deleteProductPricing(id);
       loadData();
     } catch (err) {
-      toast.error("Failed to delete"); console.error("Failed to delete:", error);
+      toast.error("Failed to delete"); console.error("Failed to delete:", err);
     }
   }
 
@@ -186,7 +186,7 @@ export default function Pricing() {
       setBulkValue("");
       loadData();
     } catch (err) {
-      toast.error("Failed to bulk update"); console.error("Failed to bulk update:", error);
+      toast.error("Failed to bulk update"); console.error("Failed to bulk update:", err);
     }
   }
 

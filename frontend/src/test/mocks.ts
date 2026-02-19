@@ -2,7 +2,7 @@ import { vi } from "vitest";
 import type {
   Part, Category, ECO, WorkOrder, Vendor, PurchaseOrder,
   InventoryItem, NCR, RMA, Shipment, PackList, TestRecord, Device, FirmwareCampaign,
-  Quote, SalesOrder, SalesOrderLine, DashboardStats, CalendarEvent, AuditLogEntry, User,
+  Quote, SalesOrder, DashboardStats, CalendarEvent, AuditLogEntry, User,
   APIKey, EmailConfig, Document, RFQ, CAPA, CAPADashboard,
 } from "../lib/api";
 
