@@ -1,16 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useGlobalUndo } from "../hooks/useUndo";
 import { useWS } from "../contexts/WebSocketContext";
 import { ErrorBoundary } from "../components/ErrorBoundary";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { api } from "../lib/api";
 import {
+  AlertTriangle,
   BarChart3,
   Building2,
   Calendar,
+  CheckCircle2,
   ClipboardList,
   Cog,
   FileText,
   Home,
+  Info,
   Package,
   Search,
   Settings,
@@ -25,6 +29,7 @@ import {
   ScanLine,
   RotateCcw,
   Clock,
+  XCircle,
 } from "lucide-react";
 
 import { Button } from "../components/ui/button";
@@ -59,6 +64,15 @@ import {
   CommandList,
   CommandSeparator,
 } from "../components/ui/command";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../components/ui/dialog";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 import { Badge } from "../components/ui/badge";
 
 const navigationItems = [
@@ -121,13 +135,101 @@ const navigationItems = [
   },
 ];
 
+interface Notification {
+  id: string;
+  title: string;
+  severity: "info" | "warning" | "error" | "success";
+  type: string;
+  link: string;
+  timestamp: string;
+  read: boolean;
+}
+
+const severityConfig = {
+  info: { icon: Info, color: "text-blue-500" },
+  warning: { icon: AlertTriangle, color: "text-yellow-500" },
+  error: { icon: XCircle, color: "text-red-500" },
+  success: { icon: CheckCircle2, color: "text-green-500" },
+};
+
+const defaultNotifications: Notification[] = [
+  { id: "1", title: "Low stock: Resistor 10kΩ (5 remaining)", severity: "warning", type: "inventory", link: "/inventory", timestamp: new Date(Date.now() - 3600000).toISOString(), read: false },
+  { id: "2", title: "ECO-2024-042 approved", severity: "success", type: "eco", link: "/ecos", timestamp: new Date(Date.now() - 7200000).toISOString(), read: false },
+  { id: "3", title: "Work Order WO-118 overdue", severity: "error", type: "work-order", link: "/work-orders", timestamp: new Date(Date.now() - 18000000).toISOString(), read: false },
+];
+
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return `${Math.floor(hrs / 24)}d ago`;
+}
+
 export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [notifications, setNotifications] = useState<Notification[]>(defaultNotifications);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<{ id: number; username: string; display_name: string; role: string } | null>(null);
+  const [pwForm, setPwForm] = useState({ current: "", new_pw: "", confirm: "" });
+  const [pwError, setPwError] = useState("");
+  const [pwSuccess, setPwSuccess] = useState("");
+  const [pwLoading, setPwLoading] = useState(false);
   const { status: wsStatus } = useWS();
   useGlobalUndo();
+
+  useEffect(() => {
+    api.getMe().then((res) => { if (res?.user) setCurrentUser(res.user); });
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    try { await api.logout(); } catch { /* ignore */ }
+    window.location.href = "/login";
+  }, []);
+
+  const handleChangePassword = useCallback(async () => {
+    setPwError("");
+    setPwSuccess("");
+    if (pwForm.new_pw !== pwForm.confirm) { setPwError("Passwords do not match"); return; }
+    if (!pwForm.current || !pwForm.new_pw) { setPwError("All fields are required"); return; }
+    setPwLoading(true);
+    try {
+      await api.changePassword(pwForm.current, pwForm.new_pw);
+      setPwSuccess("Password changed successfully");
+      setPwForm({ current: "", new_pw: "", confirm: "" });
+    } catch (e: any) {
+      setPwError(e.message || "Failed to change password");
+    } finally {
+      setPwLoading(false);
+    }
+  }, [pwForm]);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
+    }
+    if (notifOpen) document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [notifOpen]);
+
+  const markAllRead = () => setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  const dismissNotification = (id: string) => setNotifications((prev) => prev.filter((n) => n.id !== id));
+  const handleNotifClick = (n: Notification) => {
+    setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+    setNotifOpen(false);
+    navigate(n.link);
+  };
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -225,12 +327,60 @@ export function AppLayout() {
                 <Clock className="h-4 w-4" />
               </Button>
 
-              <Button variant="ghost" size="icon">
-                <Bell className="h-4 w-4" />
-                <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs">
-                  3
-                </Badge>
-              </Button>
+              <div className="relative" ref={notifRef}>
+                <Button variant="ghost" size="icon" onClick={() => setNotifOpen((v) => !v)} aria-label="Notifications">
+                  <Bell className="h-4 w-4" />
+                  {unreadCount > 0 && (
+                    <Badge variant="destructive" className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 text-xs flex items-center justify-center">
+                      {unreadCount}
+                    </Badge>
+                  )}
+                </Button>
+                {notifOpen && (
+                  <div className="absolute right-0 top-full mt-2 w-80 rounded-md border bg-popover shadow-lg z-50">
+                    <div className="flex items-center justify-between border-b px-4 py-2">
+                      <span className="text-sm font-semibold">Notifications</span>
+                      {unreadCount > 0 && (
+                        <button className="text-xs text-muted-foreground hover:text-foreground" onClick={markAllRead}>
+                          Mark all read
+                        </button>
+                      )}
+                    </div>
+                    <div className="max-h-72 overflow-y-auto">
+                      {notifications.length === 0 ? (
+                        <p className="px-4 py-6 text-center text-sm text-muted-foreground">No notifications</p>
+                      ) : (
+                        notifications.map((n) => {
+                          const cfg = severityConfig[n.severity];
+                          const Icon = cfg.icon;
+                          return (
+                            <div
+                              key={n.id}
+                              className={`flex items-start gap-3 px-4 py-3 hover:bg-accent cursor-pointer ${!n.read ? "bg-accent/40" : ""}`}
+                              onClick={() => handleNotifClick(n)}
+                              role="button"
+                              tabIndex={0}
+                            >
+                              <Icon className={`h-4 w-4 mt-0.5 shrink-0 ${cfg.color}`} />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm leading-tight truncate">{n.title}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">{timeAgo(n.timestamp)}</p>
+                              </div>
+                              <button
+                                className="text-muted-foreground hover:text-foreground shrink-0"
+                                onClick={(e) => { e.stopPropagation(); dismissNotification(n.id); }}
+                                aria-label="Dismiss"
+                              >
+                                <XCircle className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -248,11 +398,11 @@ export function AppLayout() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setProfileOpen(true)}>
                     <User className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </DropdownMenuItem>
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
                     <Cog className="mr-2 h-4 w-4" />
                     <span>Settings</span>
                   </DropdownMenuItem>
@@ -261,7 +411,7 @@ export function AppLayout() {
                     <span>Undo History</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleLogout}>
                     <span>Log out</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -315,6 +465,53 @@ export function AppLayout() {
             </CommandGroup>
           </CommandList>
         </CommandDialog>
+
+        {/* Profile Dialog */}
+        <Dialog open={profileOpen} onOpenChange={(v) => { setProfileOpen(v); if (!v) { setPwError(""); setPwSuccess(""); setPwForm({ current: "", new_pw: "", confirm: "" }); } }}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Profile</DialogTitle>
+              <DialogDescription>Your account information and password management.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right text-muted-foreground">Username</Label>
+                <span className="col-span-3 text-sm">{currentUser?.username || "—"}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right text-muted-foreground">Display Name</Label>
+                <span className="col-span-3 text-sm">{currentUser?.display_name || "—"}</span>
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label className="text-right text-muted-foreground">Role</Label>
+                <span className="col-span-3"><Badge variant="outline">{currentUser?.role || "—"}</Badge></span>
+              </div>
+
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium mb-3">Change Password</h4>
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="pw-current">Current Password</Label>
+                    <Input id="pw-current" type="password" value={pwForm.current} onChange={(e) => setPwForm((f) => ({ ...f, current: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label htmlFor="pw-new">New Password</Label>
+                    <Input id="pw-new" type="password" value={pwForm.new_pw} onChange={(e) => setPwForm((f) => ({ ...f, new_pw: e.target.value }))} />
+                  </div>
+                  <div>
+                    <Label htmlFor="pw-confirm">Confirm New Password</Label>
+                    <Input id="pw-confirm" type="password" value={pwForm.confirm} onChange={(e) => setPwForm((f) => ({ ...f, confirm: e.target.value }))} />
+                  </div>
+                  {pwError && <p className="text-sm text-destructive">{pwError}</p>}
+                  {pwSuccess && <p className="text-sm text-green-600">{pwSuccess}</p>}
+                  <Button onClick={handleChangePassword} disabled={pwLoading} className="w-full">
+                    {pwLoading ? "Changing..." : "Change Password"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </SidebarProvider>
   );
