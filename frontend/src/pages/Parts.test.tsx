@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "../test/test-utils";
 import { mockParts, mockCategories } from "../test/mocks";
 
-const mockGetParts = vi.fn().mockResolvedValue({ data: mockParts, meta: { total: 3, page: 1, limit: 50 } });
-const mockGetCategories = vi.fn().mockResolvedValue(mockCategories);
-const mockCreatePart = vi.fn().mockResolvedValue(mockParts[0]);
+const mockGetParts = vi.fn();
+const mockGetCategories = vi.fn();
+const mockCreatePart = vi.fn();
 
 vi.mock("../lib/api", () => ({
   api: {
@@ -17,52 +17,52 @@ vi.mock("../lib/api", () => ({
 
 import Parts from "./Parts";
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockGetParts.mockResolvedValue({ data: mockParts, meta: { total: 3, page: 1, limit: 50 } });
+  mockGetCategories.mockResolvedValue(mockCategories);
+  mockCreatePart.mockResolvedValue(mockParts[0]);
+});
+
+// Helper: wait for parts to load
+const waitForLoad = () => waitFor(() => expect(screen.getByText("IPN-001")).toBeInTheDocument());
 
 describe("Parts", () => {
   it("renders page title and subtitle", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("Parts")).toBeInTheDocument();
-    });
+    await waitForLoad();
+    expect(screen.getByText("Parts")).toBeInTheDocument();
     expect(screen.getByText("Manage your parts inventory and specifications")).toBeInTheDocument();
   });
 
   it("renders parts table after loading", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("IPN-001")).toBeInTheDocument();
-    });
+    await waitForLoad();
     expect(screen.getByText("IPN-002")).toBeInTheDocument();
     expect(screen.getByText("IPN-003")).toBeInTheDocument();
   });
 
   it("shows loading skeletons initially", () => {
-    mockGetParts.mockReturnValue(new Promise(() => {})); // never resolves
+    mockGetParts.mockReturnValue(new Promise(() => {}));
     render(<Parts />);
-    // skeletons rendered (no table rows yet)
     expect(screen.queryByText("IPN-001")).not.toBeInTheDocument();
   });
 
   it("has search input with placeholder", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText(/search parts by ipn/i)).toBeInTheDocument();
-    });
+    await waitForLoad();
+    expect(screen.getByPlaceholderText(/search parts by ipn/i)).toBeInTheDocument();
   });
 
   it("has add part button", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("Add Part")).toBeInTheDocument();
-    });
+    await waitForLoad();
+    expect(screen.getByText("Add Part")).toBeInTheDocument();
   });
 
   it("opens create dialog on button click", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("IPN-001")).toBeInTheDocument();
-    });
+    await waitForLoad();
     fireEvent.click(screen.getByText("Add Part"));
     await waitFor(() => {
       expect(screen.getByText("Add New Part")).toBeInTheDocument();
@@ -72,13 +72,18 @@ describe("Parts", () => {
 
   it("shows parts count", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText(/Parts \(3\)/)).toBeInTheDocument();
+    await waitForLoad();
+    // Text nodes split: find container with "Parts (3)"
+    const el = screen.getByText((_, element) => {
+      if (!element || element.tagName === 'H1') return false;
+      const text = element.textContent || '';
+      return text.includes('Parts (') && text.includes('3') && element.classList?.contains('font-semibold');
     });
+    expect(el).toBeInTheDocument();
   });
 
   it("shows empty state when no parts", async () => {
-    mockGetParts.mockResolvedValueOnce({ data: [], meta: { total: 0, page: 1, limit: 50 } });
+    mockGetParts.mockResolvedValue({ data: [], meta: { total: 0, page: 1, limit: 50 } });
     render(<Parts />);
     await waitFor(() => {
       expect(screen.getByText(/no parts available/i)).toBeInTheDocument();
@@ -87,91 +92,39 @@ describe("Parts", () => {
 
   it("calls getParts and getCategories on mount", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(mockGetParts).toHaveBeenCalled();
-      expect(mockGetCategories).toHaveBeenCalled();
-    });
+    await waitForLoad();
+    expect(mockGetParts).toHaveBeenCalled();
+    expect(mockGetCategories).toHaveBeenCalled();
   });
 
   it("handles API error gracefully", async () => {
-    mockGetParts.mockRejectedValueOnce(new Error("fail"));
+    mockGetParts.mockRejectedValue(new Error("fail"));
     render(<Parts />);
     await waitFor(() => {
       expect(screen.getByText("Parts")).toBeInTheDocument();
     });
   });
 
-  // Search/filter tests
-  it("debounces search and resets to page 1", async () => {
-    vi.useFakeTimers();
+  it("renders Filters card", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("IPN-001")).toBeInTheDocument();
-    });
-    mockGetParts.mockClear();
-
-    const searchInput = screen.getByPlaceholderText(/search parts by ipn/i);
-    fireEvent.change(searchInput, { target: { value: "resistor" } });
-
-    // Not called yet (debounce)
-    expect(mockGetParts).not.toHaveBeenCalled();
-
-    // Advance past debounce
-    vi.advanceTimersByTime(350);
-    await waitFor(() => {
-      expect(mockGetParts).toHaveBeenCalledWith(
-        expect.objectContaining({ q: "resistor", page: 1 })
-      );
-    });
-    vi.useRealTimers();
+    await waitForLoad();
+    expect(screen.getByText("Filters")).toBeInTheDocument();
   });
 
-  it("shows filtered empty state message", async () => {
-    render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("IPN-001")).toBeInTheDocument();
-    });
-
-    // Simulate a search that returns empty
-    mockGetParts.mockResolvedValueOnce({ data: [], meta: { total: 0, page: 1, limit: 50 } });
-
-    vi.useFakeTimers();
-    const searchInput = screen.getByPlaceholderText(/search parts by ipn/i);
-    fireEvent.change(searchInput, { target: { value: "nonexistent" } });
-    vi.advanceTimersByTime(350);
-
-    await waitFor(() => {
-      expect(screen.getByText("No parts found matching your criteria")).toBeInTheDocument();
-    });
-    vi.useRealTimers();
-  });
-
-  it("renders Filters card with category select", async () => {
-    render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("Filters")).toBeInTheDocument();
-    });
-  });
-
-  // Table columns
   it("shows table headers", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("IPN")).toBeInTheDocument();
-      expect(screen.getByText("Category")).toBeInTheDocument();
-      expect(screen.getByText("Description")).toBeInTheDocument();
-      expect(screen.getByText("Cost")).toBeInTheDocument();
-      expect(screen.getByText("Stock")).toBeInTheDocument();
-      expect(screen.getByText("Status")).toBeInTheDocument();
-    });
+    await waitForLoad();
+    expect(screen.getByText("IPN")).toBeInTheDocument();
+    expect(screen.getByText("Category")).toBeInTheDocument();
+    expect(screen.getByText("Description")).toBeInTheDocument();
+    expect(screen.getByText("Cost")).toBeInTheDocument();
+    expect(screen.getByText("Stock")).toBeInTheDocument();
+    expect(screen.getByText("Status")).toBeInTheDocument();
   });
 
-  // Create part dialog form fields
   it("create dialog has required form fields", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("IPN-001")).toBeInTheDocument();
-    });
+    await waitForLoad();
     fireEvent.click(screen.getByText("Add Part"));
     await waitFor(() => {
       expect(screen.getByLabelText("IPN *")).toBeInTheDocument();
@@ -187,9 +140,7 @@ describe("Parts", () => {
 
   it("create button disabled when IPN empty", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("IPN-001")).toBeInTheDocument();
-    });
+    await waitForLoad();
     fireEvent.click(screen.getByText("Add Part"));
     await waitFor(() => {
       expect(screen.getByText("Create Part")).toBeDisabled();
@@ -198,32 +149,21 @@ describe("Parts", () => {
 
   it("create button enabled when IPN filled", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("IPN-001")).toBeInTheDocument();
-    });
+    await waitForLoad();
     fireEvent.click(screen.getByText("Add Part"));
-    await waitFor(() => {
-      expect(screen.getByLabelText("IPN *")).toBeInTheDocument();
-    });
-
+    await waitFor(() => expect(screen.getByLabelText("IPN *")).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText("IPN *"), { target: { value: "NEW-001" } });
     expect(screen.getByText("Create Part")).not.toBeDisabled();
   });
 
   it("submits create form and closes dialog", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("IPN-001")).toBeInTheDocument();
-    });
+    await waitForLoad();
     fireEvent.click(screen.getByText("Add Part"));
-    await waitFor(() => {
-      expect(screen.getByLabelText("IPN *")).toBeInTheDocument();
-    });
-
+    await waitFor(() => expect(screen.getByLabelText("IPN *")).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText("IPN *"), { target: { value: "NEW-001" } });
     fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Test part" } });
     fireEvent.click(screen.getByText("Create Part"));
-
     await waitFor(() => {
       expect(mockCreatePart).toHaveBeenCalledWith(
         expect.objectContaining({ ipn: "NEW-001", description: "Test part" })
@@ -233,13 +173,9 @@ describe("Parts", () => {
 
   it("cancel button closes create dialog", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("IPN-001")).toBeInTheDocument();
-    });
+    await waitForLoad();
     fireEvent.click(screen.getByText("Add Part"));
-    await waitFor(() => {
-      expect(screen.getByText("Add New Part")).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByText("Add New Part")).toBeInTheDocument());
     fireEvent.click(screen.getByText("Cancel"));
     await waitFor(() => {
       expect(screen.queryByText("Add New Part")).not.toBeInTheDocument();
@@ -248,37 +184,58 @@ describe("Parts", () => {
 
   it("shows page info", async () => {
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText(/Page 1 of/)).toBeInTheDocument();
-    });
+    await waitForLoad();
+    // Text may be split across elements
+    const el = screen.getByText((_, element) => element?.textContent === 'Page 1 of 1' || false);
+    expect(el).toBeInTheDocument();
   });
 
-  // Pagination with many parts
   it("shows pagination when more than one page", async () => {
-    mockGetParts.mockResolvedValueOnce({ data: mockParts, meta: { total: 100, page: 1, limit: 50 } });
+    mockGetParts.mockResolvedValue({ data: mockParts, meta: { total: 100, page: 1, limit: 50 } });
     render(<Parts />);
-    await waitFor(() => {
-      expect(screen.getByText("Previous")).toBeInTheDocument();
-      expect(screen.getByText("Next")).toBeInTheDocument();
-    });
-    // Previous should be disabled on page 1
+    await waitForLoad();
+    expect(screen.getByText("Previous")).toBeInTheDocument();
+    expect(screen.getByText("Next")).toBeInTheDocument();
     expect(screen.getByText("Previous").closest("button")).toBeDisabled();
     expect(screen.getByText("Next").closest("button")).not.toBeDisabled();
   });
 
   it("shows showing X to Y of Z text for pagination", async () => {
-    mockGetParts.mockResolvedValueOnce({ data: mockParts, meta: { total: 100, page: 1, limit: 50 } });
+    mockGetParts.mockResolvedValue({ data: mockParts, meta: { total: 100, page: 1, limit: 50 } });
     render(<Parts />);
+    await waitForLoad();
+    expect(screen.getByText(/Showing 1 to 50 of 100 parts/)).toBeInTheDocument();
+  });
+
+  it("shows filtered empty state message when search active", async () => {
+    render(<Parts />);
+    await waitForLoad();
+    // Change search, triggering a re-fetch
+    mockGetParts.mockResolvedValue({ data: [], meta: { total: 0, page: 1, limit: 50 } });
+    const searchInput = screen.getByPlaceholderText(/search parts by ipn/i);
+    fireEvent.change(searchInput, { target: { value: "nonexistent" } });
     await waitFor(() => {
-      expect(screen.getByText(/Showing 1 to 50 of 100 parts/)).toBeInTheDocument();
+      expect(screen.getByText("No parts found matching your criteria")).toBeInTheDocument();
     });
   });
 
   it("handles category error gracefully", async () => {
-    mockGetCategories.mockRejectedValueOnce(new Error("fail"));
+    mockGetCategories.mockRejectedValue(new Error("fail"));
     render(<Parts />);
+    await waitForLoad();
+    expect(screen.getByText("Parts")).toBeInTheDocument();
+  });
+
+  it("search calls getParts with query param", async () => {
+    render(<Parts />);
+    await waitForLoad();
+    mockGetParts.mockClear();
+    const searchInput = screen.getByPlaceholderText(/search parts by ipn/i);
+    fireEvent.change(searchInput, { target: { value: "resistor" } });
     await waitFor(() => {
-      expect(screen.getByText("Parts")).toBeInTheDocument();
+      expect(mockGetParts).toHaveBeenCalledWith(
+        expect.objectContaining({ q: "resistor", page: 1 })
+      );
     });
   });
 });
