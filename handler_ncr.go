@@ -39,7 +39,13 @@ func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 
 	ve := &ValidationErrors{}
 	requireField(ve, "title", n.Title)
-	validateMaxLength(ve, "title", n.Title, 500)
+	validateMaxLength(ve, "title", n.Title, 255)
+	validateMaxLength(ve, "description", n.Description, 1000)
+	validateMaxLength(ve, "ipn", n.IPN, 100)
+	validateMaxLength(ve, "serial_number", n.SerialNumber, 100)
+	validateMaxLength(ve, "defect_type", n.DefectType, 255)
+	validateMaxLength(ve, "root_cause", n.RootCause, 1000)
+	validateMaxLength(ve, "corrective_action", n.CorrectiveAction, 1000)
 	if n.Severity != "" { validateEnum(ve, "severity", n.Severity, validNCRSeverities) }
 	if n.Status != "" { validateEnum(ve, "status", n.Status, validNCRStatuses) }
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
@@ -89,6 +95,16 @@ func handleUpdateNCR(w http.ResponseWriter, r *http.Request, id string) {
 	correctiveAction := getString("corrective_action")
 	createECO := getBool("create_eco")
 
+	ve := &ValidationErrors{}
+	validateMaxLength(ve, "title", title, 255)
+	validateMaxLength(ve, "description", description, 1000)
+	validateMaxLength(ve, "ipn", ipn, 100)
+	validateMaxLength(ve, "serial_number", serialNumber, 100)
+	validateMaxLength(ve, "defect_type", defectType, 255)
+	validateMaxLength(ve, "root_cause", rootCause, 1000)
+	validateMaxLength(ve, "corrective_action", correctiveAction, 1000)
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+	
 	now := time.Now().Format("2006-01-02 15:04:05")
 	var resolvedAt interface{}
 	if status == "resolved" || status == "closed" {

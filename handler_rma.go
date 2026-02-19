@@ -39,6 +39,11 @@ func handleCreateRMA(w http.ResponseWriter, r *http.Request) {
 	ve := &ValidationErrors{}
 	requireField(ve, "serial_number", rm.SerialNumber)
 	requireField(ve, "reason", rm.Reason)
+	validateMaxLength(ve, "serial_number", rm.SerialNumber, 100)
+	validateMaxLength(ve, "customer", rm.Customer, 255)
+	validateMaxLength(ve, "reason", rm.Reason, 255)
+	validateMaxLength(ve, "defect_description", rm.DefectDescription, 1000)
+	validateMaxLength(ve, "resolution", rm.Resolution, 1000)
 	if rm.Status != "" { validateEnum(ve, "status", rm.Status, validRMAStatuses) }
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
 
@@ -58,6 +63,15 @@ func handleUpdateRMA(w http.ResponseWriter, r *http.Request, id string) {
 	oldSnap, _ := getRMASnapshot(id)
 	var rm RMA
 	if err := decodeBody(r, &rm); err != nil { jsonErr(w, "invalid body", 400); return }
+	
+	ve := &ValidationErrors{}
+	validateMaxLength(ve, "serial_number", rm.SerialNumber, 100)
+	validateMaxLength(ve, "customer", rm.Customer, 255)
+	validateMaxLength(ve, "reason", rm.Reason, 255)
+	validateMaxLength(ve, "defect_description", rm.DefectDescription, 1000)
+	validateMaxLength(ve, "resolution", rm.Resolution, 1000)
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+	
 	now := time.Now().Format("2006-01-02 15:04:05")
 	var receivedAt, resolvedAt interface{}
 	if rm.Status == "received" { receivedAt = now }

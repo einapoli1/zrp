@@ -24,10 +24,19 @@ type Attachment struct {
 }
 
 func handleUploadAttachment(w http.ResponseWriter, r *http.Request) {
-	if err := r.ParseMultipartForm(32 << 20); err != nil { // 32MB max
-		jsonErr(w, "Failed to parse form", 400)
+	// Set max upload size to 100MB (file size limit enforced separately)
+	maxUploadSize := int64(100 << 20) // 100MB
+	r.Body = http.MaxBytesReader(w, r.Body, maxUploadSize+1024) // Extra for form fields
+	
+	if err := r.ParseMultipartForm(maxUploadSize); err != nil {
+		if strings.Contains(err.Error(), "request body too large") {
+			jsonErr(w, "File too large. Maximum size is 100MB.", 413)
+		} else {
+			jsonErr(w, "Failed to parse form", 400)
+		}
 		return
 	}
+	
 	module := r.FormValue("module")
 	recordID := r.FormValue("record_id")
 	if module == "" || recordID == "" {
@@ -42,10 +51,22 @@ func handleUploadAttachment(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// Build filename
+	// Get file size
+	fileSize := header.Size
+	
+	// Validate file upload (size, extension, filename)
+	ve := &ValidationErrors{}
+	validateFileUpload(ve, header.Filename, fileSize, header.Header.Get("Content-Type"))
+	if ve.HasErrors() {
+		jsonErr(w, ve.Error(), 400)
+		return
+	}
+
+	// Sanitize filename to prevent path traversal and malicious chars
+	safeName := sanitizeFilename(header.Filename)
+	
+	// Build unique filename with timestamp
 	ts := time.Now().UnixMilli()
-	safeName := strings.ReplaceAll(header.Filename, "/", "_")
-	safeName = strings.ReplaceAll(safeName, "\\", "_")
 	filename := fmt.Sprintf("%s-%s-%d-%s", module, recordID, ts, safeName)
 
 	// Save file

@@ -106,6 +106,12 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Username and password required", 400)
 		return
 	}
+	
+	ve := &ValidationErrors{}
+	validateMaxLength(ve, "username", req.Username, 100)
+	validateMaxLength(ve, "display_name", req.DisplayName, 255)
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+	
 	validRoles := map[string]bool{"admin": true, "user": true, "readonly": true}
 	if !validRoles[req.Role] {
 		req.Role = "user"

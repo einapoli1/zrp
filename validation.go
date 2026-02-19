@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/mail"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
@@ -84,6 +85,52 @@ func validatePositiveFloat(ve *ValidationErrors, field string, value float64) {
 func validateNonNegativeFloat(ve *ValidationErrors, field string, value float64) {
 	if value < 0 {
 		ve.Add(field, "must be non-negative")
+	}
+}
+
+// validateFloatRange checks a field is within a specified range
+func validateFloatRange(ve *ValidationErrors, field string, value, min, max float64) {
+	if value < min || value > max {
+		ve.Add(field, fmt.Sprintf("must be between %.2f and %.2f", min, max))
+	}
+}
+
+// validateIntRange checks a field is within a specified range
+func validateIntRange(ve *ValidationErrors, field string, value, min, max int) {
+	if value < min || value > max {
+		ve.Add(field, fmt.Sprintf("must be between %d and %d", min, max))
+	}
+}
+
+// Maximum value constants to prevent overflow and ensure reasonable limits
+const (
+	MaxQuantity       = 1000000.0  // Maximum quantity for inventory/orders (1 million)
+	MaxPrice          = 1000000.0  // Maximum unit price ($1M)
+	MaxLeadTimeDays   = 730        // Maximum lead time (2 years)
+	MaxPercentage     = 100.0      // Maximum percentage value
+	MaxWorkOrderQty   = 100000     // Maximum work order quantity
+	MaxStringLength   = 10000      // Maximum string field length
+	MaxTextLength     = 100000     // Maximum text field length
+)
+
+// validateMaxQuantity checks quantity doesn't exceed reasonable maximum
+func validateMaxQuantity(ve *ValidationErrors, field string, value float64) {
+	if value > MaxQuantity {
+		ve.Add(field, fmt.Sprintf("exceeds maximum allowed quantity of %.0f", MaxQuantity))
+	}
+}
+
+// validateMaxPrice checks price doesn't exceed reasonable maximum
+func validateMaxPrice(ve *ValidationErrors, field string, value float64) {
+	if value > MaxPrice {
+		ve.Add(field, fmt.Sprintf("exceeds maximum allowed price of %.2f", MaxPrice))
+	}
+}
+
+// validatePercentage checks a value is a valid percentage (0-100)
+func validatePercentage(ve *ValidationErrors, field string, value float64) {
+	if value < 0 || value > 100 {
+		ve.Add(field, "must be between 0 and 100")
 	}
 }
 
@@ -177,7 +224,7 @@ var (
 	validECOStatuses           = []string{"draft", "review", "approved", "implemented", "rejected", "cancelled"}
 	validECOPriorities         = []string{"low", "normal", "high", "critical"}
 	validPOStatuses            = []string{"draft", "sent", "confirmed", "partial", "received", "cancelled"}
-	validWOStatuses            = []string{"draft", "open", "in_progress", "completed", "cancelled", "on_hold"}
+	validWOStatuses            = []string{"draft", "open", "in_progress", "complete", "cancelled", "on_hold"}
 	validWOPriorities          = []string{"low", "normal", "high", "critical"}
 	validNCRSeverities         = []string{"minor", "major", "critical"}
 	validNCRStatuses           = []string{"open", "investigating", "resolved", "closed"}
@@ -211,4 +258,196 @@ func hasReferences(table, id string, refs []struct{ table, col string }) bool {
 		}
 	}
 	return false
+}
+
+// File upload validation constants
+const (
+	MaxFileSize         = 100 * 1024 * 1024 // 100MB
+	MaxReasonableFile   = 10 * 1024 * 1024  // 10MB for normal uploads
+	MinFileSize         = 1                 // 1 byte minimum
+)
+
+// Dangerous file extensions that should be blocked
+var dangerousExtensions = []string{
+	".exe", ".bat", ".cmd", ".com", ".scr", ".pif", ".app", ".dmg", ".pkg",
+	".sh", ".bash", ".zsh", ".fish", ".csh", ".tcsh",
+	".vbs", ".vbe", ".js", ".jse", ".ws", ".wsf", ".wsh",
+	".msi", ".msp", ".jar", ".war", ".ear",
+	".ps1", ".psm1", ".psd1", ".ps1xml", ".pssc", ".cdxml",
+	".reg", ".dll", ".so", ".dylib",
+	".apk", ".ipa", ".deb", ".rpm",
+}
+
+// Allowed safe file extensions (whitelist approach)
+var allowedExtensions = []string{
+	// Documents
+	".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".csv",
+	".odt", ".ods", ".odp", ".rtf",
+	// Images
+	".jpg", ".jpeg", ".png", ".gif", ".bmp", ".svg", ".webp", ".ico",
+	// Archives
+	".zip", ".tar", ".gz", ".bz2", ".7z", ".rar",
+	// Data
+	".json", ".xml", ".yaml", ".yml", ".toml",
+	// CAD/Engineering
+	".dxf", ".dwg", ".step", ".stp", ".iges", ".igs", ".stl",
+	// Other
+	".log", ".md", ".markdown",
+}
+
+// validateFileUpload validates uploaded file size, type, and name
+func validateFileUpload(ve *ValidationErrors, filename string, size int64, contentType string) {
+	// Check file size
+	if size == 0 {
+		ve.Add("file", "cannot be empty (0 bytes)")
+		return
+	}
+	
+	if size < MinFileSize {
+		ve.Add("file", "is too small")
+		return
+	}
+	
+	if size > MaxFileSize {
+		ve.Add("file", fmt.Sprintf("exceeds maximum size of %d MB (got %d MB)", 
+			MaxFileSize/(1024*1024), size/(1024*1024)))
+		return
+	}
+	
+	// Warn about large files
+	if size > MaxReasonableFile {
+		ve.Add("file", fmt.Sprintf("is very large (%d MB). Consider splitting or compressing.", 
+			size/(1024*1024)))
+	}
+	
+	// Validate filename
+	validateFilename(ve, filename)
+	
+	// Validate extension
+	validateFileExtension(ve, filename)
+}
+
+// validateFilename checks for path traversal and malicious characters
+func validateFilename(ve *ValidationErrors, filename string) {
+	if filename == "" {
+		ve.Add("filename", "is required")
+		return
+	}
+	
+	// Check for path traversal attempts
+	if strings.Contains(filename, "..") {
+		ve.Add("filename", "contains invalid path traversal sequence (..)")
+	}
+	
+	// Check for absolute paths
+	if strings.HasPrefix(filename, "/") || strings.HasPrefix(filename, "\\") {
+		ve.Add("filename", "cannot be an absolute path")
+	}
+	
+	// Check for drive letters (Windows)
+	if len(filename) >= 2 && filename[1] == ':' {
+		ve.Add("filename", "cannot contain drive letters")
+	}
+	
+	// Check for null bytes
+	if strings.Contains(filename, "\x00") {
+		ve.Add("filename", "contains null bytes")
+	}
+	
+	// Check for control characters and dangerous chars
+	dangerousChars := []string{"|", "&", ";", "$", "`", "<", ">", "(", ")", "{", "}", "[", "]", "!", "*", "?"}
+	for _, char := range dangerousChars {
+		if strings.Contains(filename, char) {
+			ve.Add("filename", fmt.Sprintf("contains dangerous character: %s", char))
+		}
+	}
+	
+	// Check for CRLF injection
+	if strings.ContainsAny(filename, "\r\n") {
+		ve.Add("filename", "contains line breaks")
+	}
+}
+
+// validateFileExtension checks if file extension is allowed
+func validateFileExtension(ve *ValidationErrors, filename string) {
+	// Get extension
+	ext := strings.ToLower(filepath.Ext(filename))
+	
+	if ext == "" {
+		ve.Add("filename", "must have a file extension")
+		return
+	}
+	
+	// Check against dangerous extensions first
+	for _, dangerous := range dangerousExtensions {
+		if ext == dangerous {
+			ve.Add("filename", fmt.Sprintf("file type not allowed: %s", ext))
+			return
+		}
+	}
+	
+	// Check against allowed extensions (whitelist)
+	allowed := false
+	for _, safe := range allowedExtensions {
+		if ext == safe {
+			allowed = true
+			break
+		}
+	}
+	
+	if !allowed {
+		ve.Add("filename", fmt.Sprintf("file type not in allowed list: %s (allowed: %s)", 
+			ext, strings.Join(allowedExtensions[:10], ", ")+"..."))
+	}
+}
+
+// sanitizeFilename removes dangerous characters and path components
+func sanitizeFilename(filename string) string {
+	// Remove path components
+	filename = filepath.Base(filename)
+	
+	// Remove null bytes
+	filename = strings.ReplaceAll(filename, "\x00", "")
+	
+	// Remove/replace dangerous characters
+	replacements := map[string]string{
+		"..":  "_",
+		"/":   "_",
+		"\\":  "_",
+		"|":   "_",
+		"&":   "_",
+		";":   "_",
+		"$":   "_",
+		"`":   "_",
+		"<":   "_",
+		">":   "_",
+		"(":   "",
+		")":   "",
+		"{":   "",
+		"}":   "",
+		"[":   "",
+		"]":   "",
+		"!":   "",
+		"*":   "_",
+		"?":   "_",
+		"\r":  "",
+		"\n":  "",
+		"\t":  "_",
+	}
+	
+	for old, new := range replacements {
+		filename = strings.ReplaceAll(filename, old, new)
+	}
+	
+	// Limit length
+	if len(filename) > 255 {
+		ext := filepath.Ext(filename)
+		nameWithoutExt := filename[:len(filename)-len(ext)]
+		if len(nameWithoutExt) > 200 {
+			nameWithoutExt = nameWithoutExt[:200]
+		}
+		filename = nameWithoutExt + ext
+	}
+	
+	return filename
 }

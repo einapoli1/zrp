@@ -88,7 +88,9 @@ func handleCreateECO(w http.ResponseWriter, r *http.Request) {
 	// Validation
 	ve := &ValidationErrors{}
 	requireField(ve, "title", e.Title)
-	validateMaxLength(ve, "title", e.Title, 500)
+	validateMaxLength(ve, "title", e.Title, 255)
+	validateMaxLength(ve, "description", e.Description, 1000)
+	validateMaxLength(ve, "affected_ipns", e.AffectedIPNs, 1000)
 	if e.Status != "" { validateEnum(ve, "status", e.Status, validECOStatuses) }
 	if e.Priority != "" { validateEnum(ve, "priority", e.Priority, validECOPriorities) }
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
@@ -119,6 +121,9 @@ func handleUpdateECO(w http.ResponseWriter, r *http.Request, id string) {
 
 	ve := &ValidationErrors{}
 	requireField(ve, "title", e.Title)
+	validateMaxLength(ve, "title", e.Title, 255)
+	validateMaxLength(ve, "description", e.Description, 1000)
+	validateMaxLength(ve, "affected_ipns", e.AffectedIPNs, 1000)
 	validateEnum(ve, "status", e.Status, validECOStatuses)
 	validateEnum(ve, "priority", e.Priority, validECOPriorities)
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }

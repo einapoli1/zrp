@@ -87,6 +87,11 @@ func handleCreateCAPA(w http.ResponseWriter, r *http.Request) {
 
 	ve := &ValidationErrors{}
 	requireField(ve, "title", c.Title)
+	validateMaxLength(ve, "title", c.Title, 255)
+	validateMaxLength(ve, "root_cause", c.RootCause, 1000)
+	validateMaxLength(ve, "action_plan", c.ActionPlan, 1000)
+	validateMaxLength(ve, "owner", c.Owner, 255)
+	validateMaxLength(ve, "effectiveness_check", c.EffectivenessCheck, 1000)
 	if c.Type != "" { validateEnum(ve, "type", c.Type, validCAPATypes) }
 	if c.Status != "" { validateEnum(ve, "status", c.Status, validCAPAStatuses) }
 	validateDate(ve, "due_date", c.DueDate)
@@ -152,6 +157,15 @@ func handleUpdateCAPA(w http.ResponseWriter, r *http.Request, id string) {
 	// Handle approvals with proper RBAC (Gap 5.4)
 	approvedByQE := getString("approved_by_qe")
 	approvedByMgr := getString("approved_by_mgr")
+	
+	// Validate string lengths
+	ve := &ValidationErrors{}
+	validateMaxLength(ve, "title", title, 255)
+	validateMaxLength(ve, "root_cause", rootCause, 1000)
+	validateMaxLength(ve, "action_plan", actionPlan, 1000)
+	validateMaxLength(ve, "owner", owner, 255)
+	validateMaxLength(ve, "effectiveness_check", effectivenessCheck, 1000)
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
 	
 	now := time.Now().Format("2006-01-02 15:04:05")
 

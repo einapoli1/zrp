@@ -43,6 +43,12 @@ func handleCreateDevice(w http.ResponseWriter, r *http.Request) {
 	ve := &ValidationErrors{}
 	requireField(ve, "serial_number", d.SerialNumber)
 	requireField(ve, "ipn", d.IPN)
+	validateMaxLength(ve, "serial_number", d.SerialNumber, 100)
+	validateMaxLength(ve, "ipn", d.IPN, 100)
+	validateMaxLength(ve, "firmware_version", d.FirmwareVersion, 100)
+	validateMaxLength(ve, "customer", d.Customer, 255)
+	validateMaxLength(ve, "location", d.Location, 255)
+	validateMaxLength(ve, "notes", d.Notes, 10000)
 	if d.Status != "" { validateEnum(ve, "status", d.Status, validDeviceStatuses) }
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
 
@@ -61,6 +67,15 @@ func handleUpdateDevice(w http.ResponseWriter, r *http.Request, serial string) {
 	oldSnap, _ := getDeviceSnapshot(serial)
 	var d Device
 	if err := decodeBody(r, &d); err != nil { jsonErr(w, "invalid body", 400); return }
+	
+	ve := &ValidationErrors{}
+	validateMaxLength(ve, "ipn", d.IPN, 100)
+	validateMaxLength(ve, "firmware_version", d.FirmwareVersion, 100)
+	validateMaxLength(ve, "customer", d.Customer, 255)
+	validateMaxLength(ve, "location", d.Location, 255)
+	validateMaxLength(ve, "notes", d.Notes, 10000)
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+	
 	_, err := db.Exec("UPDATE devices SET ipn=?,firmware_version=?,customer=?,location=?,status=?,install_date=?,notes=? WHERE serial_number=?",
 		d.IPN, d.FirmwareVersion, d.Customer, d.Location, d.Status, d.InstallDate, d.Notes, serial)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
@@ -90,13 +105,31 @@ func handleExportDevices(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleImportDevices(w http.ResponseWriter, r *http.Request) {
-	file, _, err := r.FormFile("file")
+	// Limit CSV import size to 50MB
+	maxCSVSize := int64(50 << 20) // 50MB for CSV imports
+	r.Body = http.MaxBytesReader(w, r.Body, maxCSVSize+1024)
+	
+	file, header, err := r.FormFile("file")
 	if err != nil {
+		if strings.Contains(err.Error(), "request body too large") {
+			jsonErr(w, "CSV file too large. Maximum size is 50MB.", 413)
+			return
+		}
 		jsonErr(w, "file required", 400)
 		return
 	}
 	defer file.Close()
+	
+	// Validate it's a CSV file
+	if !strings.HasSuffix(strings.ToLower(header.Filename), ".csv") {
+		jsonErr(w, "file must be a CSV (.csv extension required)", 400)
+		return
+	}
+	
 	cr := csv.NewReader(file)
+	// Set limits to prevent DOS
+	cr.FieldsPerRecord = -1 // Allow variable fields
+	cr.ReuseRecord = true   // Reduce memory allocation
 	headers, err := cr.Read()
 	if err != nil {
 		jsonErr(w, "invalid CSV", 400)

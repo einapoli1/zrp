@@ -92,6 +92,14 @@ func handleCreateFieldReport(w http.ResponseWriter, r *http.Request) {
 	}
 	ve := &ValidationErrors{}
 	requireField(ve, "title", fr.Title)
+	validateMaxLength(ve, "title", fr.Title, 255)
+	validateMaxLength(ve, "description", fr.Description, 1000)
+	validateMaxLength(ve, "customer_name", fr.CustomerName, 255)
+	validateMaxLength(ve, "site_location", fr.SiteLocation, 255)
+	validateMaxLength(ve, "device_ipn", fr.DeviceIPN, 100)
+	validateMaxLength(ve, "device_serial", fr.DeviceSerial, 100)
+	validateMaxLength(ve, "root_cause", fr.RootCause, 1000)
+	validateMaxLength(ve, "resolution", fr.Resolution, 1000)
 	if fr.ReportType != "" { validateEnum(ve, "report_type", fr.ReportType, validFieldReportTypes) }
 	if fr.Status != "" { validateEnum(ve, "status", fr.Status, validFieldReportStatuses) }
 	if fr.Priority != "" { validateEnum(ve, "priority", fr.Priority, validFieldReportPriorities) }
@@ -150,6 +158,18 @@ func handleUpdateFieldReport(w http.ResponseWriter, r *http.Request, id string) 
 		}
 		return ""
 	}
+
+	// Validate string lengths
+	ve := &ValidationErrors{}
+	validateMaxLength(ve, "title", getString("title"), 255)
+	validateMaxLength(ve, "description", getString("description"), 1000)
+	validateMaxLength(ve, "customer_name", getString("customer_name"), 255)
+	validateMaxLength(ve, "site_location", getString("site_location"), 255)
+	validateMaxLength(ve, "device_ipn", getString("device_ipn"), 100)
+	validateMaxLength(ve, "device_serial", getString("device_serial"), 100)
+	validateMaxLength(ve, "root_cause", getString("root_cause"), 1000)
+	validateMaxLength(ve, "resolution", getString("resolution"), 1000)
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
 
 	sets := []string{}
 	args := []interface{}{}

@@ -43,9 +43,14 @@ func handleCreateVendor(w http.ResponseWriter, r *http.Request) {
 	ve := &ValidationErrors{}
 	requireField(ve, "name", v.Name)
 	validateMaxLength(ve, "name", v.Name, 255)
+	validateMaxLength(ve, "contact_name", v.ContactName, 255)
+	validateMaxLength(ve, "notes", v.Notes, 10000)
+	validateMaxLength(ve, "website", v.Website, 255)
+	validateMaxLength(ve, "contact_phone", v.ContactPhone, 50)
 	validateEmail(ve, "contact_email", v.ContactEmail)
 	if v.Status != "" { validateEnum(ve, "status", v.Status, validVendorStatuses) }
 	if v.LeadTimeDays < 0 { ve.Add("lead_time_days", "must be non-negative") }
+	validateIntRange(ve, "lead_time_days", v.LeadTimeDays, 0, MaxLeadTimeDays)
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
 
 	var maxNum int
@@ -72,6 +77,16 @@ func handleUpdateVendor(w http.ResponseWriter, r *http.Request, id string) {
 		jsonErr(w, "invalid body", 400)
 		return
 	}
+	
+	ve := &ValidationErrors{}
+	validateMaxLength(ve, "name", v.Name, 255)
+	validateMaxLength(ve, "contact_name", v.ContactName, 255)
+	validateMaxLength(ve, "notes", v.Notes, 10000)
+	validateMaxLength(ve, "website", v.Website, 255)
+	validateMaxLength(ve, "contact_phone", v.ContactPhone, 50)
+	validateEmail(ve, "contact_email", v.ContactEmail)
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+	
 	_, err := db.Exec("UPDATE vendors SET name=?,website=?,contact_name=?,contact_email=?,contact_phone=?,notes=?,status=?,lead_time_days=? WHERE id=?",
 		v.Name, v.Website, v.ContactName, v.ContactEmail, v.ContactPhone, v.Notes, v.Status, v.LeadTimeDays, id)
 	if err != nil {

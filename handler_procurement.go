@@ -56,7 +56,9 @@ func handleCreatePO(w http.ResponseWriter, r *http.Request) {
 	validateDate(ve, "expected_date", p.ExpectedDate)
 	for i, l := range p.Lines {
 		if l.QtyOrdered <= 0 { ve.Add(fmt.Sprintf("lines[%d].qty_ordered", i), "must be positive") }
+		validateMaxQuantity(ve, fmt.Sprintf("lines[%d].qty_ordered", i), l.QtyOrdered)
 		if l.UnitPrice < 0 { ve.Add(fmt.Sprintf("lines[%d].unit_price", i), "must be non-negative") }
+		validateMaxPrice(ve, fmt.Sprintf("lines[%d].unit_price", i), l.UnitPrice)
 	}
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
 

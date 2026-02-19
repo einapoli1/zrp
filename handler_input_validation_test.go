@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -23,8 +24,17 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to enable foreign keys: %v", err)
 	}
 
-	// Create minimal schema for testing
+	// Create minimal schema for testing (matching production schema)
 	schemas := []string{
+		`CREATE TABLE audit_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			username TEXT,
+			action TEXT,
+			entity_type TEXT,
+			entity_id TEXT,
+			details TEXT,
+			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+		)`,
 		`CREATE TABLE vendors (
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL,
@@ -46,7 +56,8 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 			status TEXT DEFAULT 'active',
 			install_date TEXT,
 			notes TEXT,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			last_seen TEXT
 		)`,
 		`CREATE TABLE ncrs (
 			id TEXT PRIMARY KEY,
@@ -60,18 +71,21 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 			root_cause TEXT,
 			corrective_action TEXT,
 			created_by TEXT,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			resolved_at TIMESTAMP
 		)`,
 		`CREATE TABLE work_orders (
 			id TEXT PRIMARY KEY,
 			assembly_ipn TEXT NOT NULL,
-			qty INTEGER NOT NULL CHECK(qty > 0),
+			qty INTEGER NOT NULL CHECK(qty >= 0),
 			qty_good INTEGER,
 			qty_scrap INTEGER,
 			status TEXT DEFAULT 'draft',
 			priority TEXT DEFAULT 'normal',
 			notes TEXT,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			started_at TIMESTAMP,
+			completed_at TIMESTAMP
 		)`,
 		`CREATE TABLE inventory (
 			ipn TEXT PRIMARY KEY,
@@ -103,7 +117,11 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 			description TEXT,
 			root_cause TEXT,
 			resolution TEXT,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			ncr_id TEXT,
+			eco_id TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP,
+			resolved_at TIMESTAMP
 		)`,
 		`CREATE TABLE ecos (
 			id TEXT PRIMARY KEY,
@@ -113,19 +131,30 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 			priority TEXT DEFAULT 'normal',
 			affected_ipns TEXT,
 			created_by TEXT,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP,
+			approved_at TIMESTAMP,
+			approved_by TEXT,
+			ncr_id TEXT
 		)`,
 		`CREATE TABLE capas (
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
-			description TEXT,
 			type TEXT NOT NULL,
-			status TEXT DEFAULT 'open',
+			linked_ncr_id TEXT,
+			linked_rma_id TEXT,
 			root_cause TEXT,
-			corrective_action TEXT,
-			preventive_action TEXT,
-			created_by TEXT,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			action_plan TEXT,
+			owner TEXT,
+			due_date TEXT,
+			status TEXT DEFAULT 'open',
+			effectiveness_check TEXT,
+			approved_by_qe TEXT,
+			approved_by_qe_at TIMESTAMP,
+			approved_by_mgr TEXT,
+			approved_by_mgr_at TIMESTAMP,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			updated_at TIMESTAMP
 		)`,
 		`CREATE TABLE rmas (
 			id TEXT PRIMARY KEY,
@@ -135,15 +164,30 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 			status TEXT DEFAULT 'open',
 			defect_description TEXT,
 			resolution TEXT,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			received_at TIMESTAMP,
+			resolved_at TIMESTAMP
 		)`,
 		`CREATE TABLE users (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			username TEXT UNIQUE NOT NULL,
+			display_name TEXT,
 			email TEXT,
 			role TEXT DEFAULT 'user',
 			password_hash TEXT,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			active INTEGER DEFAULT 1,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			last_login TIMESTAMP
+		)`,
+		`CREATE TABLE change_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			username TEXT,
+			entity_type TEXT,
+			entity_id TEXT,
+			change_type TEXT,
+			old_data TEXT,
+			new_data TEXT,
+			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 	}
 
@@ -257,10 +301,12 @@ func TestDeviceNotesLengthValidation(t *testing.T) {
 		{"Over max (10001)", strings.Repeat("N", 10001), true},
 	}
 
+	serialCounter := 0
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			serialCounter++
 			payload := map[string]interface{}{
-				"serial_number": "TEST-001",
+				"serial_number": fmt.Sprintf("TEST-%03d", serialCounter),
 				"ipn":           "TEST-IPN",
 				"notes":         tt.notes,
 			}
@@ -625,6 +671,7 @@ func TestRMADefectDescriptionLengthValidation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			payload := map[string]interface{}{
 				"serial_number":      "SN-001",
+				"reason":             "Defective unit", // Required field
 				"defect_description": tt.defectDescription,
 			}
 			body, _ := json.Marshal(payload)

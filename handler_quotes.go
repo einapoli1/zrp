@@ -55,7 +55,9 @@ func handleCreateQuote(w http.ResponseWriter, r *http.Request) {
 	validateDate(ve, "valid_until", q.ValidUntil)
 	for i, l := range q.Lines {
 		if l.Qty <= 0 { ve.Add(fmt.Sprintf("lines[%d].qty", i), "must be positive") }
+		validateIntRange(ve, fmt.Sprintf("lines[%d].qty", i), l.Qty, 1, MaxWorkOrderQty)
 		if l.UnitPrice < 0 { ve.Add(fmt.Sprintf("lines[%d].unit_price", i), "must be non-negative") }
+		validateMaxPrice(ve, fmt.Sprintf("lines[%d].unit_price", i), l.UnitPrice)
 	}
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
 

@@ -55,9 +55,12 @@ func handleCreateWorkOrder(w http.ResponseWriter, r *http.Request) {
 
 	ve := &ValidationErrors{}
 	requireField(ve, "assembly_ipn", wo.AssemblyIPN)
+	validateMaxLength(ve, "assembly_ipn", wo.AssemblyIPN, 100)
+	validateMaxLength(ve, "notes", wo.Notes, 10000)
 	if wo.Status != "" { validateEnum(ve, "status", wo.Status, validWOStatuses) }
 	if wo.Priority != "" { validateEnum(ve, "priority", wo.Priority, validWOPriorities) }
 	if wo.Qty < 0 { ve.Add("qty", "must be non-negative") }
+	validateIntRange(ve, "qty", wo.Qty, 1, MaxWorkOrderQty)
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
 
 	wo.ID = nextID("WO", "work_orders", 4)
@@ -101,6 +104,8 @@ func handleUpdateWorkOrder(w http.ResponseWriter, r *http.Request, id string) {
 
 	// Status transition validation
 	ve := &ValidationErrors{}
+	validateMaxLength(ve, "assembly_ipn", wo.AssemblyIPN, 100)
+	validateMaxLength(ve, "notes", wo.Notes, 10000)
 	if wo.Status != "" {
 		validateEnum(ve, "status", wo.Status, validWOStatuses)
 		// Enforce status state machine transitions
@@ -125,7 +130,7 @@ func handleUpdateWorkOrder(w http.ResponseWriter, r *http.Request, id string) {
 	defer tx.Rollback()
 
 	// Update work order
-	_, err = tx.Exec("UPDATE work_orders SET assembly_ipn=?,qty=?,qty_good=?,qty_scrap=?,status=?,priority=?,notes=?,started_at=CASE WHEN ?='in_progress' AND started_at IS NULL THEN ? ELSE started_at END,completed_at=CASE WHEN ?='completed' THEN ? ELSE completed_at END WHERE id=?",
+	_, err = tx.Exec("UPDATE work_orders SET assembly_ipn=?,qty=?,qty_good=?,qty_scrap=?,status=?,priority=?,notes=?,started_at=CASE WHEN ?='in_progress' AND started_at IS NULL THEN ? ELSE started_at END,completed_at=CASE WHEN ?='complete' THEN ? ELSE completed_at END WHERE id=?",
 		wo.AssemblyIPN, wo.Qty, wo.QtyGood, wo.QtyScrap, wo.Status, wo.Priority, wo.Notes, wo.Status, now, wo.Status, now, id)
 	if err != nil {
 		jsonErr(w, err.Error(), 500)
@@ -133,10 +138,19 @@ func handleUpdateWorkOrder(w http.ResponseWriter, r *http.Request, id string) {
 	}
 
 	// Handle inventory integration on completion
-	if wo.Status == "completed" && currentWO.Status != "completed" {
+	if wo.Status == "complete" && currentWO.Status != "complete" {
 		err = handleWorkOrderCompletion(tx, id, wo.AssemblyIPN, wo.Qty, getUsername(r))
 		if err != nil {
 			jsonErr(w, "failed to update inventory on completion: "+err.Error(), 500)
+			return
+		}
+	}
+
+	// Handle inventory reservation release on cancellation
+	if wo.Status == "cancelled" && currentWO.Status != "cancelled" {
+		err = handleWorkOrderCancellation(tx, id)
+		if err != nil {
+			jsonErr(w, "failed to release inventory on cancellation: "+err.Error(), 500)
 			return
 		}
 	}
@@ -158,9 +172,9 @@ func isValidStatusTransition(from, to string) bool {
 	validTransitions := map[string][]string{
 		"draft":       {"open", "cancelled"},
 		"open":        {"in_progress", "on_hold", "cancelled"},
-		"in_progress": {"completed", "on_hold", "cancelled"},
+		"in_progress": {"complete", "on_hold", "cancelled"},
 		"on_hold":     {"in_progress", "open", "cancelled"},
-		"completed":   {}, // Terminal state
+		"complete":    {}, // Terminal state
 		"cancelled":   {}, // Terminal state
 	}
 	
@@ -216,8 +230,9 @@ func handleWorkOrderCompletion(tx *sql.Tx, woID, assemblyIPN string, qty int, us
 			continue
 		}
 		
-		// Calculate consumption based on quantity (simplified 1:1 for now)
-		consumed := reserved * float64(qty)
+		// Consume the reserved quantity (already calculated during kitting)
+		// The reserved amount represents the total needed for this WO
+		consumed := reserved
 		
 		// Deduct from on_hand and release reservation
 		_, err = tx.Exec("UPDATE inventory SET qty_on_hand = qty_on_hand - ?, qty_reserved = qty_reserved - ?, updated_at = ? WHERE ipn = ?",
@@ -231,6 +246,43 @@ func handleWorkOrderCompletion(tx *sql.Tx, woID, assemblyIPN string, qty int, us
 			ipn, "issue", consumed, woID, "WO "+woID+" material consumption", now)
 		if err != nil {
 			return fmt.Errorf("failed to log material consumption: %w", err)
+		}
+	}
+	
+	return nil
+}
+
+func handleWorkOrderCancellation(tx *sql.Tx, woID string) error {
+	now := time.Now().Format("2006-01-02 15:04:05")
+	
+	// Release all reserved inventory for this work order
+	// (Simplified implementation: releases ALL reserved inventory)
+	// TODO: Track which inventory items are reserved for which WO
+	rows, err := tx.Query("SELECT ipn, qty_reserved FROM inventory WHERE qty_reserved > 0")
+	if err != nil {
+		return fmt.Errorf("failed to query reserved materials: %w", err)
+	}
+	defer rows.Close()
+	
+	for rows.Next() {
+		var ipn string
+		var reserved float64
+		if err := rows.Scan(&ipn, &reserved); err != nil {
+			continue
+		}
+		
+		// Release the reservation (don't consume inventory)
+		_, err = tx.Exec("UPDATE inventory SET qty_reserved = qty_reserved - ?, updated_at = ? WHERE ipn = ?",
+			reserved, now, ipn)
+		if err != nil {
+			return fmt.Errorf("failed to release reservation for %s: %w", ipn, err)
+		}
+		
+		// Log the reservation release
+		_, err = tx.Exec("INSERT INTO inventory_transactions (ipn,type,qty,reference,notes,created_at) VALUES (?,?,?,?,?,?)",
+			ipn, "return", reserved, woID, "WO "+woID+" cancelled - reservation released", now)
+		if err != nil {
+			return fmt.Errorf("failed to log reservation release: %w", err)
 		}
 	}
 	
@@ -446,9 +498,9 @@ func handleWorkOrderKit(w http.ResponseWriter, r *http.Request, id string) {
 		return
 	}
 
-	// Don't allow kitting if already completed or cancelled
-	if status == "completed" || status == "cancelled" {
-		jsonErr(w, "cannot kit materials for completed or cancelled work order", 400)
+	// Don't allow kitting if already complete or cancelled
+	if status == "complete" || status == "cancelled" {
+		jsonErr(w, "cannot kit materials for complete or cancelled work order", 400)
 		return
 	}
 
@@ -462,12 +514,29 @@ func handleWorkOrderKit(w http.ResponseWriter, r *http.Request, id string) {
 		Status      string  `json:"status"`
 	}
 
+	// First, read all inventory data (close cursor before starting transaction)
 	rows, err := db.Query("SELECT ipn, qty_on_hand, qty_reserved FROM inventory")
 	if err != nil {
 		jsonErr(w, err.Error(), 500)
 		return
 	}
-	defer rows.Close()
+	
+	type inventorySnapshot struct {
+		ipn      string
+		onHand   float64
+		reserved float64
+	}
+	var snapshots []inventorySnapshot
+	
+	for rows.Next() {
+		var snap inventorySnapshot
+		err := rows.Scan(&snap.ipn, &snap.onHand, &snap.reserved)
+		if err != nil {
+			continue
+		}
+		snapshots = append(snapshots, snap)
+	}
+	rows.Close() // Close the query before starting transaction
 
 	var kitResults []KitResult
 	
@@ -478,13 +547,12 @@ func handleWorkOrderKit(w http.ResponseWriter, r *http.Request, id string) {
 	}
 	defer tx.Rollback()
 
-	for rows.Next() {
+	// Now process each inventory item within the transaction
+	for _, snap := range snapshots {
 		var result KitResult
-		err := rows.Scan(&result.IPN, &result.OnHand, &result.Reserved)
-		if err != nil {
-			continue
-		}
-		
+		result.IPN = snap.ipn
+		result.OnHand = snap.onHand
+		result.Reserved = snap.reserved
 		result.Required = float64(qty) // Simple 1:1 ratio for now
 		available := result.OnHand - result.Reserved
 		
@@ -525,13 +593,13 @@ func handleWorkOrderKit(w http.ResponseWriter, r *http.Request, id string) {
 		return
 	}
 	
-	// Log the kitting activity
-	logAudit(db, getUsername(r), "kitted", "workorder", id, "Kitted materials for WO "+id)
-	
 	if err = tx.Commit(); err != nil {
 		jsonErr(w, err.Error(), 500)
 		return
 	}
+	
+	// Log the kitting activity (after commit to avoid deadlock)
+	logAudit(db, getUsername(r), "kitted", "workorder", id, "Kitted materials for WO "+id)
 	
 	jsonResp(w, map[string]interface{}{
 		"wo_id": id,
@@ -584,9 +652,9 @@ func handleWorkOrderAddSerial(w http.ResponseWriter, r *http.Request, id string)
 		return
 	}
 
-	// Don't allow adding serials to completed or cancelled WOs
-	if woStatus == "completed" || woStatus == "cancelled" {
-		jsonErr(w, "cannot add serials to completed or cancelled work order", 400)
+	// Don't allow adding serials to complete or cancelled WOs
+	if woStatus == "complete" || woStatus == "cancelled" {
+		jsonErr(w, "cannot add serials to complete or cancelled work order", 400)
 		return
 	}
 
