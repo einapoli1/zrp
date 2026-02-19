@@ -103,6 +103,7 @@ func runMigrations() error {
 		`CREATE TABLE IF NOT EXISTS vendors (
 			id TEXT PRIMARY KEY, name TEXT NOT NULL, website TEXT,
 			contact_name TEXT, contact_email TEXT, contact_phone TEXT,
+			address TEXT DEFAULT '', payment_terms TEXT DEFAULT '',
 			notes TEXT, status TEXT DEFAULT 'active' CHECK(status IN ('active','preferred','inactive','blocked')),
 			lead_time_days INTEGER DEFAULT 0 CHECK(lead_time_days >= 0),
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -124,7 +125,9 @@ func runMigrations() error {
 		`CREATE TABLE IF NOT EXISTS purchase_orders (
 			id TEXT PRIMARY KEY, vendor_id TEXT NOT NULL,
 			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','sent','confirmed','partial','received','cancelled')),
-			notes TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			notes TEXT, created_by TEXT DEFAULT '',
+			total REAL DEFAULT 0,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			expected_date DATE, received_at DATETIME,
 			FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE RESTRICT
 		)`,
@@ -292,6 +295,8 @@ func runMigrations() error {
 			message TEXT,
 			record_id TEXT,
 			module TEXT,
+			user_id TEXT DEFAULT '',
+			emailed INTEGER DEFAULT 0,
 			read_at DATETIME,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
@@ -321,8 +326,10 @@ func runMigrations() error {
 		`CREATE TABLE IF NOT EXISTS email_log (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			to_address TEXT NOT NULL,
+			recipient TEXT DEFAULT '',
 			subject TEXT NOT NULL,
 			body TEXT,
+			event_type TEXT DEFAULT '',
 			status TEXT NOT NULL DEFAULT 'sent',
 			error TEXT,
 			sent_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -565,12 +572,17 @@ func runMigrations() error {
 		"ALTER TABLE users ADD COLUMN active INTEGER DEFAULT 1",
 		"ALTER TABLE ecos ADD COLUMN ncr_id TEXT DEFAULT ''",
 		"ALTER TABLE notifications ADD COLUMN emailed INTEGER DEFAULT 0",
+		"ALTER TABLE notifications ADD COLUMN user_id TEXT DEFAULT ''",
 		"ALTER TABLE work_orders ADD COLUMN due_date TEXT DEFAULT ''",
 		"ALTER TABLE work_orders ADD COLUMN qty_good INTEGER DEFAULT 0",
 		"ALTER TABLE work_orders ADD COLUMN qty_scrap INTEGER DEFAULT 0",
 		"ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''",
 		"ALTER TABLE email_log ADD COLUMN event_type TEXT DEFAULT ''",
+		"ALTER TABLE email_log ADD COLUMN recipient TEXT DEFAULT ''",
 		"ALTER TABLE purchase_orders ADD COLUMN created_by TEXT DEFAULT ''",
+		"ALTER TABLE purchase_orders ADD COLUMN total REAL DEFAULT 0",
+		"ALTER TABLE vendors ADD COLUMN address TEXT DEFAULT ''",
+		"ALTER TABLE vendors ADD COLUMN payment_terms TEXT DEFAULT ''",
 		"ALTER TABLE shipment_lines ADD COLUMN sales_order_id TEXT DEFAULT ''",
 		// Invoice table migrations for enhanced invoicing
 		"ALTER TABLE invoices ADD COLUMN invoice_number TEXT DEFAULT ''",

@@ -156,7 +156,7 @@ func TestHandlerQueryConsistency(t *testing.T) {
 		},
 		{
 			"List Notifications - with emailed",
-			"SELECT id, user_id, type, message, read, emailed FROM notifications LIMIT 1",
+			"SELECT id, user_id, type, message, read_at, emailed FROM notifications LIMIT 1",
 		},
 		{
 			"List POs - with created_by",
@@ -180,10 +180,20 @@ func TestHandlerQueryConsistency(t *testing.T) {
 		},
 	}
 
+	// Verify migrations actually ran
+	var tableCount int
+	err = testDB.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table'").Scan(&tableCount)
+	if err != nil {
+		t.Fatalf("Failed to count tables: %v", err)
+	}
+	if tableCount < 50 {
+		t.Fatalf("Expected ~50+ tables after migrations, got %d", tableCount)
+	}
+
 	passCount := 0
 	for _, test := range testQueries {
 		// Try to execute the query - if a column doesn't exist, this will fail
-		_, err := testDB.Query(test.query)
+		rows, err := testDB.Query(test.query)
 		if err != nil {
 			if strings.Contains(err.Error(), "no such column") {
 				t.Errorf("[%s] FAILED - references missing column: %v", test.name, err)
@@ -194,6 +204,7 @@ func TestHandlerQueryConsistency(t *testing.T) {
 				passCount++
 			}
 		} else {
+			rows.Close()
 			passCount++
 		}
 	}
