@@ -141,12 +141,10 @@ describe("Devices", () => {
 
   it("calls exportDevices on Export CSV click", async () => {
     // Mock URL methods
-    const mockCreateObjectURL = vi.fn().mockReturnValue("blob:test");
-    const mockRevokeObjectURL = vi.fn();
-    Object.defineProperty(window, "URL", {
-      value: { createObjectURL: mockCreateObjectURL, revokeObjectURL: mockRevokeObjectURL },
-      writable: true,
-    });
+    const origCreateObjectURL = URL.createObjectURL;
+    const origRevokeObjectURL = URL.revokeObjectURL;
+    URL.createObjectURL = vi.fn().mockReturnValue("blob:test");
+    URL.revokeObjectURL = vi.fn();
 
     render(<Devices />);
     await waitFor(() => {
@@ -156,6 +154,9 @@ describe("Devices", () => {
     await waitFor(() => {
       expect(mockExportDevices).toHaveBeenCalled();
     });
+
+    URL.createObjectURL = origCreateObjectURL;
+    URL.revokeObjectURL = origRevokeObjectURL;
   });
 
   // Import CSV
@@ -240,6 +241,71 @@ describe("Devices", () => {
     });
     // Refreshes list after create
     expect(mockGetDevices).toHaveBeenCalledTimes(2);
+  });
+
+  it("opens Import CSV dialog, selects file, clicks Import, verifies API called", async () => {
+    const user = userEvent.setup();
+    render(<Devices />);
+    await waitFor(() => expect(screen.getByText("SN-100")).toBeInTheDocument());
+    
+    // Open import dialog by clicking the trigger button 
+    const buttons = screen.getAllByRole("button");
+    const importCsvButton = buttons.find(b => b.textContent?.includes("Import CSV"));
+    expect(importCsvButton).toBeTruthy();
+    await user.click(importCsvButton!);
+    await waitFor(() => expect(screen.getByLabelText("CSV File")).toBeInTheDocument());
+
+    const file = new File(["serial_number,ipn\nSN-200,IPN-005"], "devices.csv", { type: "text/csv" });
+    const input = screen.getByLabelText("CSV File");
+    fireEvent.change(input, { target: { files: [file] } });
+
+    // Find Import button inside dialog
+    const dialog = screen.getByRole("dialog");
+    const importBtn = Array.from(dialog.querySelectorAll("button")).find(b => b.textContent === "Import");
+    await user.click(importBtn!);
+
+    await waitFor(() => {
+      expect(mockImportDevices).toHaveBeenCalledWith(expect.any(File));
+    });
+  });
+
+  it("displays import results — success count and errors", async () => {
+    mockImportDevices.mockResolvedValueOnce({ success: 3, errors: ["Row 4: missing serial_number", "Row 7: duplicate"] });
+    const user = userEvent.setup();
+    render(<Devices />);
+    await waitFor(() => expect(screen.getByText("SN-100")).toBeInTheDocument());
+    
+    const buttons = screen.getAllByRole("button");
+    const importCsvButton = buttons.find(b => b.textContent?.includes("Import CSV"));
+    await user.click(importCsvButton!);
+    await waitFor(() => expect(screen.getByLabelText("CSV File")).toBeInTheDocument());
+
+    const file = new File(["data"], "devices.csv", { type: "text/csv" });
+    fireEvent.change(screen.getByLabelText("CSV File"), { target: { files: [file] } });
+    
+    const dialog = screen.getByRole("dialog");
+    const importBtn = Array.from(dialog.querySelectorAll("button")).find(b => b.textContent === "Import");
+    await user.click(importBtn!);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Successfully imported: 3 devices/)).toBeInTheDocument();
+      expect(screen.getByText("Errors (2):")).toBeInTheDocument();
+      expect(screen.getByText("Row 4: missing serial_number")).toBeInTheDocument();
+      expect(screen.getByText("Row 7: duplicate")).toBeInTheDocument();
+    });
+  });
+
+  it("Import button is disabled when no file selected", async () => {
+    const user = userEvent.setup();
+    render(<Devices />);
+    await waitFor(() => expect(screen.getByText("SN-100")).toBeInTheDocument());
+    
+    const buttons = screen.getAllByRole("button");
+    const importCsvButton = buttons.find(b => b.textContent?.includes("Import CSV"));
+    await user.click(importCsvButton!);
+    await waitFor(() => expect(screen.getByLabelText("CSV File")).toBeInTheDocument());
+
+    expect(screen.getByRole("button", { name: "Import" })).toBeDisabled();
   });
 
   it("handles fetch error gracefully", async () => {

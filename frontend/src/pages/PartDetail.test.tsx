@@ -192,6 +192,43 @@ describe("PartDetail", () => {
   });
 });
 
+describe("PartDetail - ASY prefix triggers BOM fetch", () => {
+  beforeEach(() => {
+    mockIPN = "ASY-200";
+    mockGetPart.mockResolvedValue({
+      ipn: "ASY-200",
+      fields: { _category: "Assemblies", description: "Assembly Unit", status: "active" },
+    });
+    mockGetPartBOM.mockResolvedValue(mockBOM);
+    mockGetPartCost.mockResolvedValue({ ipn: "ASY-200", bom_cost: 10.0 });
+  });
+
+  it("fetches BOM for ASY- prefixed IPN", async () => {
+    render(<PartDetail />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("ASY-200"));
+    expect(mockGetPartBOM).toHaveBeenCalledWith("ASY-200");
+    await waitFor(() => expect(screen.getByText("Bill of Materials")).toBeInTheDocument());
+  });
+});
+
+describe("PartDetail - non-assembly does NOT show BOM", () => {
+  beforeEach(() => {
+    mockIPN = "RES-100";
+    mockGetPart.mockResolvedValue({
+      ipn: "RES-100",
+      fields: { _category: "Resistors", description: "1k Resistor", status: "active" },
+    });
+    mockGetPartCost.mockResolvedValue({ ipn: "RES-100" });
+  });
+
+  it("does not show BOM section for non-assembly IPN", async () => {
+    render(<PartDetail />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("RES-100"));
+    expect(screen.queryByText("Bill of Materials")).not.toBeInTheDocument();
+    expect(mockGetPartBOM).not.toHaveBeenCalled();
+  });
+});
+
 describe("PartDetail - BOM (assembly IPN)", () => {
   beforeEach(() => {
     mockIPN = "PCA-100";
@@ -238,6 +275,15 @@ describe("PartDetail - BOM (assembly IPN)", () => {
       expect(screen.getByText("R1-R4")).toBeInTheDocument();
       expect(screen.getByText("C1-C2")).toBeInTheDocument();
     });
+  });
+
+  it("clicking BOM part navigates to that part", async () => {
+    render(<PartDetail />);
+    await waitForAssembly();
+    await waitFor(() => expect(screen.getByText("IPN-001")).toBeInTheDocument());
+    // Click on IPN-001 in the BOM tree
+    fireEvent.click(screen.getByText("IPN-001"));
+    expect(mockNavigate).toHaveBeenCalledWith("/parts/IPN-001");
   });
 
   it("shows no BOM data message when BOM fetch fails", async () => {

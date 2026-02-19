@@ -255,4 +255,114 @@ describe("NCRDetail", () => {
       expect(screen.getAllByText("Not specified").length).toBe(3);
     });
   });
+
+  it("handles getNCR API rejection gracefully", async () => {
+    mockGetNCR.mockRejectedValueOnce(new Error("Network error"));
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("NCR Not Found")).toBeInTheDocument();
+    });
+  });
+
+  it("handles handleSave API rejection gracefully", async () => {
+    mockUpdateNCR.mockRejectedValueOnce(new Error("Save failed"));
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit NCR")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit NCR"));
+    fireEvent.click(screen.getByText("Save Changes"));
+    await waitFor(() => {
+      expect(mockUpdateNCR).toHaveBeenCalled();
+    });
+    // Should not crash
+    expect(screen.getByText("NCR-001")).toBeInTheDocument();
+  });
+
+  it("shows create_eco checkbox when editing with corrective_action and resolved status", async () => {
+    mockGetNCR.mockResolvedValue({
+      ...mockNCRResolved,
+      corrective_action: "New packaging",
+      status: "resolved",
+    });
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit NCR")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit NCR"));
+    await waitFor(() => {
+      expect(screen.getByText("Create ECO from corrective action")).toBeInTheDocument();
+    });
+  });
+
+  it("shows create_eco checkbox when status is closed with corrective_action", async () => {
+    mockGetNCR.mockResolvedValue({
+      ...mockNCRResolved,
+      corrective_action: "New packaging",
+      status: "closed",
+    });
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit NCR")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit NCR"));
+    await waitFor(() => {
+      expect(screen.getByText("Create ECO from corrective action")).toBeInTheDocument();
+    });
+  });
+
+  it("does not show create_eco checkbox when status is open", async () => {
+    mockGetNCR.mockResolvedValue({
+      ...mockNCROpen,
+      corrective_action: "Some action",
+      status: "open",
+    });
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit NCR")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit NCR"));
+    expect(screen.queryByText("Create ECO from corrective action")).not.toBeInTheDocument();
+  });
+
+  it("does not show create_eco checkbox when no corrective_action", async () => {
+    mockGetNCR.mockResolvedValue({
+      ...mockNCRResolved,
+      corrective_action: "",
+      status: "resolved",
+    });
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit NCR")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit NCR"));
+    expect(screen.queryByText("Create ECO from corrective action")).not.toBeInTheDocument();
+  });
+
+  it("includes create_eco: true in API payload when checkbox checked and saved", async () => {
+    mockGetNCR.mockResolvedValue({
+      ...mockNCRResolved,
+      corrective_action: "New packaging",
+      status: "resolved",
+    });
+    mockUpdateNCR.mockResolvedValue({ ...mockNCRResolved, status: "resolved" });
+    render(<NCRDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit NCR")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit NCR"));
+    await waitFor(() => {
+      expect(screen.getByText("Create ECO from corrective action")).toBeInTheDocument();
+    });
+    // Click the checkbox
+    fireEvent.click(screen.getByRole("checkbox", { name: /Create ECO from corrective action/i }));
+    // Save
+    fireEvent.click(screen.getByText("Save Changes"));
+    await waitFor(() => {
+      expect(mockUpdateNCR).toHaveBeenCalledWith(
+        "NCR-001",
+        expect.objectContaining({ create_eco: true })
+      );
+    });
+  });
 });

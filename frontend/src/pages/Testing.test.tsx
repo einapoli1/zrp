@@ -166,4 +166,84 @@ describe("Testing", () => {
       expect(mockGetTestRecords).toHaveBeenCalledTimes(1);
     });
   });
+
+  it("fills create test record form end-to-end and submits", async () => {
+    const user = userEvent.setup();
+    render(<Testing />);
+    await waitFor(() => expect(screen.getByText("Create Test Record")).toBeInTheDocument());
+
+    await user.click(screen.getByText("Create Test Record"));
+    await waitFor(() => expect(screen.getByPlaceholderText("Serial number")).toBeInTheDocument());
+
+    await user.type(screen.getByPlaceholderText("Serial number"), "SN-999");
+    await user.type(screen.getByPlaceholderText("Internal part number"), "IPN-010");
+    await user.type(screen.getByPlaceholderText("e.g., v1.2.3"), "2.0.0");
+    await user.type(screen.getByPlaceholderText("Technician name"), "tech_new");
+    await user.type(screen.getByPlaceholderText("Test measurements and data"), "All good");
+    await user.type(screen.getByPlaceholderText("Additional notes or observations"), "No issues");
+
+    // Submit the form
+    const dialog = screen.getByRole("dialog");
+    const submitBtn = Array.from(dialog.querySelectorAll("button")).find(b => b.textContent === "Create Test Record");
+    await user.click(submitBtn!);
+
+    await waitFor(() => {
+      expect(mockCreateTestRecord).toHaveBeenCalledTimes(1);
+      expect(mockCreateTestRecord).toHaveBeenCalledWith(
+        expect.objectContaining({
+          serial_number: "SN-999",
+          ipn: "IPN-010",
+          firmware_version: "2.0.0",
+          tested_by: "tech_new",
+        })
+      );
+    });
+  });
+
+  it("validates required fields — form uses native required validation", async () => {
+    const user = userEvent.setup();
+    render(<Testing />);
+    await waitFor(() => expect(screen.getByText("Create Test Record")).toBeInTheDocument());
+
+    await user.click(screen.getByText("Create Test Record"));
+    await waitFor(() => expect(screen.getByPlaceholderText("Serial number")).toBeInTheDocument());
+
+    // The serial_number and ipn inputs have `required` attribute
+    const serialInput = screen.getByPlaceholderText("Serial number");
+    expect(serialInput).toBeRequired();
+    const ipnInput = screen.getByPlaceholderText("Internal part number");
+    expect(ipnInput).toBeRequired();
+  });
+
+  it("handles getTestRecords API rejection gracefully", async () => {
+    mockGetTestRecords.mockRejectedValueOnce(new Error("Network error"));
+    render(<Testing />);
+    await waitFor(() => {
+      expect(screen.queryByText("Loading test records...")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText(/no test records found/i)).toBeInTheDocument();
+  });
+
+  it("handles createTestRecord API rejection gracefully", async () => {
+    const user = userEvent.setup();
+    mockCreateTestRecord.mockRejectedValueOnce(new Error("Create failed"));
+    render(<Testing />);
+    await waitFor(() => {
+      expect(screen.getByText("SN-100")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("Create Test Record"));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Serial number")).toBeInTheDocument();
+    });
+    await user.type(screen.getByPlaceholderText("Serial number"), "SN-999");
+    await user.type(screen.getByPlaceholderText("Internal part number"), "IPN-X");
+    const dialog = screen.getByRole("dialog");
+    const submitBtn = Array.from(dialog.querySelectorAll("button")).find(b => b.textContent === "Create Test Record");
+    await user.click(submitBtn!);
+    await waitFor(() => {
+      expect(mockCreateTestRecord).toHaveBeenCalled();
+    });
+    // Should not crash — original records still visible
+    expect(screen.getByText("SN-100")).toBeInTheDocument();
+  });
 });

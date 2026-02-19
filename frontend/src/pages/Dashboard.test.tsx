@@ -147,4 +147,55 @@ describe("Dashboard", () => {
       expect(screen.queryByText("Loading dashboard...")).not.toBeInTheDocument();
     });
   });
+
+  it("sets up 30-second auto-refresh interval", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    render(<Dashboard />);
+    // Wait for initial load
+    await vi.waitFor(() => expect(mockGetDashboard).toHaveBeenCalledTimes(1));
+    mockGetDashboard.mockClear();
+    mockGetDashboardCharts.mockClear();
+    // Advance 30 seconds
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(mockGetDashboard).toHaveBeenCalledTimes(1);
+    expect(mockGetDashboardCharts).toHaveBeenCalledTimes(1);
+    vi.useRealTimers();
+  });
+
+  it("cleans up interval on unmount", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { unmount } = render(<Dashboard />);
+    await vi.waitFor(() => expect(mockGetDashboard).toHaveBeenCalledTimes(1));
+    unmount();
+    mockGetDashboard.mockClear();
+    await vi.advanceTimersByTimeAsync(30000);
+    expect(mockGetDashboard).not.toHaveBeenCalled();
+    vi.useRealTimers();
+  });
+
+  it("shows 'No recent activity' when activities array is empty", async () => {
+    mockGetDashboard.mockRejectedValue(new Error("fail"));
+    mockGetDashboardCharts.mockRejectedValue(new Error("fail"));
+    render(<Dashboard />);
+    await waitFor(() => expect(screen.queryByText("Loading dashboard...")).not.toBeInTheDocument());
+    expect(screen.getByText("No recent activity")).toBeInTheDocument();
+  });
+
+  it("handles both APIs rejecting simultaneously", async () => {
+    // Reject both first calls AND subsequent interval calls
+    mockGetDashboard.mockRejectedValue(new Error("Dashboard fail"));
+    mockGetDashboardCharts.mockRejectedValue(new Error("Charts fail"));
+    const { unmount } = render(<Dashboard />);
+    // Should not crash — loading finishes, no stats rendered but page doesn't blow up
+    await waitFor(() => {
+      expect(screen.queryByText("Loading dashboard...")).not.toBeInTheDocument();
+    });
+    // Page still renders — stats null means KPI values fall back to 0
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Total Parts")).toBeInTheDocument();
+    unmount();
+    // Restore default mocks for other tests
+    mockGetDashboard.mockResolvedValue(mockDashboardStats);
+    mockGetDashboardCharts.mockResolvedValue({ eco_counts: [1, 2, 3] });
+  });
 });

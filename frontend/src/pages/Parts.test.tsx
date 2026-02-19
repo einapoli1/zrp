@@ -226,6 +226,64 @@ describe("Parts", () => {
     expect(screen.getByText("Parts")).toBeInTheDocument();
   });
 
+  it("navigates to part detail on row click", async () => {
+    const mockNavigate = vi.fn();
+    const { useNavigate } = await import("react-router-dom");
+    // We can test by checking that clicking a row triggers navigation
+    render(<Parts />);
+    await waitForLoad();
+    // Click on the row containing IPN-001
+    const row = screen.getByText("IPN-001").closest("tr");
+    fireEvent.click(row!);
+    // The component calls navigate(`/parts/${encodeURIComponent(ipn)}`)
+    // Since we're using BrowserRouter, check window.location
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/parts/IPN-001");
+    });
+  });
+
+  it("navigates to correct part on different row click", async () => {
+    render(<Parts />);
+    await waitForLoad();
+    const row = screen.getByText("IPN-002").closest("tr");
+    fireEvent.click(row!);
+    await waitFor(() => {
+      expect(window.location.pathname).toBe("/parts/IPN-002");
+    });
+    // Reset
+    window.history.pushState({}, "", "/");
+  });
+
+  it("clicking Next changes page and triggers API call", async () => {
+    mockGetParts.mockResolvedValue({ data: mockParts, meta: { total: 100, page: 1, limit: 50 } });
+    render(<Parts />);
+    await waitForLoad();
+    mockGetParts.mockClear();
+    fireEvent.click(screen.getByText("Next"));
+    await waitFor(() => {
+      expect(mockGetParts).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 2 })
+      );
+    });
+  });
+
+  it("clicking Previous after Next goes back to page 1", async () => {
+    mockGetParts.mockResolvedValue({ data: mockParts, meta: { total: 150, page: 1, limit: 50 } });
+    render(<Parts />);
+    await waitForLoad();
+    // Go to page 2
+    fireEvent.click(screen.getByText("Next"));
+    await waitFor(() => {
+      expect(mockGetParts).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    });
+    mockGetParts.mockClear();
+    // Go back to page 1
+    fireEvent.click(screen.getByText("Previous"));
+    await waitFor(() => {
+      expect(mockGetParts).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }));
+    });
+  });
+
   it("search calls getParts with query param", async () => {
     render(<Parts />);
     await waitForLoad();

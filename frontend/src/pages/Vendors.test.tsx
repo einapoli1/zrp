@@ -210,6 +210,45 @@ describe("Vendors", () => {
     (window.confirm as any).mockRestore();
   });
 
+  it("opens edit dialog with pre-populated vendor data", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    render(<Vendors />);
+    await waitFor(() => expect(screen.getByText("Acme Corp")).toBeInTheDocument());
+    // Find the row for Acme Corp and click the dropdown trigger (last button in the row)
+    const acmeRow = screen.getByText("Acme Corp").closest("tr")!;
+    const triggerBtn = acmeRow.querySelector("button")!;
+    await user.click(triggerBtn);
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: /edit/i })).toBeInTheDocument());
+    await user.click(screen.getByRole("menuitem", { name: /edit/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Edit Vendor")).toBeInTheDocument();
+    });
+    // Verify form is pre-populated with existing vendor data
+    expect((screen.getByLabelText("Company Name *") as HTMLInputElement).value).toBe("Acme Corp");
+    expect((screen.getByLabelText("Contact Name") as HTMLInputElement).value).toBe("John");
+    expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("john@acme.com");
+  });
+
+  it("submits edit vendor form and calls updateVendor", async () => {
+    const user = (await import("@testing-library/user-event")).default.setup();
+    render(<Vendors />);
+    await waitFor(() => expect(screen.getByText("Acme Corp")).toBeInTheDocument());
+    const acmeRow = screen.getByText("Acme Corp").closest("tr")!;
+    const triggerBtn = acmeRow.querySelector("button")!;
+    await user.click(triggerBtn);
+    await waitFor(() => expect(screen.getByRole("menuitem", { name: /edit/i })).toBeInTheDocument());
+    await user.click(screen.getByRole("menuitem", { name: /edit/i }));
+    await waitFor(() => expect(screen.getByText("Edit Vendor")).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText("Company Name *"), { target: { value: "Acme Corp Updated" } });
+    fireEvent.click(screen.getByText("Update Vendor"));
+    await waitFor(() => {
+      expect(mockUpdateVendor).toHaveBeenCalledWith(
+        "V-001",
+        expect.objectContaining({ name: "Acme Corp Updated" })
+      );
+    });
+  });
+
   it("handles API error on fetch gracefully", async () => {
     mockGetVendors.mockRejectedValueOnce(new Error("Network error"));
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});

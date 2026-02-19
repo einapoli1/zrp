@@ -184,4 +184,35 @@ describe("RMAs", () => {
     fireEvent.change(screen.getByLabelText("Defect Description"), { target: { value: "Screen broken" } });
     expect(screen.getByLabelText("Defect Description")).toHaveValue("Screen broken");
   });
+
+  it("handles getRMAs API rejection gracefully", async () => {
+    mockGetRMAs.mockRejectedValueOnce(new Error("Network error"));
+    render(<RMAs />);
+    await waitFor(() => {
+      expect(screen.queryByText("Loading RMAs...")).not.toBeInTheDocument();
+    });
+    expect(screen.getByText(/No RMAs found/)).toBeInTheDocument();
+  });
+
+  it("handles createRMA API rejection gracefully", async () => {
+    mockCreateRMA.mockRejectedValueOnce(new Error("Create failed"));
+    render(<RMAs />);
+    await waitFor(() => {
+      expect(screen.getByText("RMA-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Create RMA"));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Device Serial Number *")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText("Device Serial Number *"), { target: { value: "SN-999" } });
+    fireEvent.change(screen.getByLabelText("Customer *"), { target: { value: "Fail Corp" } });
+    fireEvent.change(screen.getByLabelText("Reason for Return *"), { target: { value: "Broken" } });
+    const submitButtons = screen.getAllByText("Create RMA");
+    fireEvent.click(submitButtons[submitButtons.length - 1]);
+    await waitFor(() => {
+      expect(mockCreateRMA).toHaveBeenCalled();
+    });
+    // Should not crash — original list still visible
+    expect(screen.getByText("RMA-001")).toBeInTheDocument();
+  });
 });

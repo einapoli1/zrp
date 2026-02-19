@@ -272,4 +272,30 @@ describe("RMADetail", () => {
       expect(screen.getByText("Resolution")).toBeInTheDocument();
     });
   });
+
+  it("handles getRMA API rejection gracefully", async () => {
+    mockGetRMA.mockRejectedValueOnce(new Error("Network error"));
+    render(<RMADetail />);
+    await waitFor(() => {
+      expect(screen.getByText("RMA Not Found")).toBeInTheDocument();
+    });
+  });
+
+  it("handles handleSave API rejection gracefully", async () => {
+    mockUpdateRMA.mockRejectedValueOnce(new Error("Save failed"));
+    render(<RMADetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit RMA")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit RMA"));
+    await waitFor(() => {
+      expect(screen.getByText("Save Changes")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Save Changes"));
+    await waitFor(() => {
+      expect(mockUpdateRMA).toHaveBeenCalled();
+    });
+    // Should not crash
+    expect(screen.getByText("RMA-001")).toBeInTheDocument();
+  });
 });

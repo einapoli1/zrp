@@ -172,6 +172,126 @@ describe("Inventory", () => {
     expect(screen.getByText("Inventory Items")).toBeInTheDocument();
   });
 
+  it("checkbox select and deselect individual items", async () => {
+    render(<Inventory />);
+    await waitForLoad();
+
+    // Verify nothing selected initially
+    expect(screen.getByText("Select items for bulk actions")).toBeInTheDocument();
+
+    // Find checkboxes - first two are select-all (summary card + table header), rest are per-row
+    const checkboxes = screen.getAllByRole("checkbox");
+    const rowCheckbox = checkboxes[2]; // first row checkbox
+
+    fireEvent.click(rowCheckbox);
+    // After selecting one item, "Delete Selected" should appear
+    await waitFor(() => {
+      expect(screen.getByText("Delete Selected")).toBeInTheDocument();
+    });
+
+    // Deselect
+    fireEvent.click(rowCheckbox);
+    await waitFor(() => {
+      expect(screen.getByText("Select items for bulk actions")).toBeInTheDocument();
+    });
+  });
+
+  it("select-all selects all items and shows Delete Selected", async () => {
+    render(<Inventory />);
+    await waitForLoad();
+
+    // Click header select-all checkbox (second checkbox, the one in table header)
+    const checkboxes = screen.getAllByRole("checkbox");
+    const selectAllCheckbox = checkboxes[1]; // table header checkbox
+    fireEvent.click(selectAllCheckbox);
+
+    await waitFor(() => {
+      expect(screen.getByText("Delete Selected")).toBeInTheDocument();
+    });
+  });
+
+  it("bulk delete with confirm dialog calls API", async () => {
+    // Mock window.confirm
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+
+    render(<Inventory />);
+    await waitForLoad();
+
+    // Select all
+    const checkboxes = screen.getAllByRole("checkbox");
+    fireEvent.click(checkboxes[1]); // table header select-all
+
+    await waitFor(() => expect(screen.getByText("Delete Selected")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText("Delete Selected"));
+
+    await waitFor(() => {
+      expect(confirmSpy).toHaveBeenCalledWith("Delete 3 inventory items?");
+      expect(mockBulkDeleteInventory).toHaveBeenCalledWith(["IPN-001", "IPN-002", "IPN-003"]);
+    });
+
+    confirmSpy.mockRestore();
+  });
+
+  it("bulk delete cancelled when confirm is dismissed", async () => {
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    render(<Inventory />);
+    await waitForLoad();
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    fireEvent.click(checkboxes[1]);
+    await waitFor(() => expect(screen.getByText("Delete Selected")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByText("Delete Selected"));
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(mockBulkDeleteInventory).not.toHaveBeenCalled();
+
+    confirmSpy.mockRestore();
+  });
+
+  it("highlights low stock items with bg-red-50 class", async () => {
+    // IPN-002: qty_on_hand=20, reorder_point=50 → low stock
+    render(<Inventory />);
+    await waitForLoad();
+    const ipn002Row = screen.getByText("IPN-002").closest("tr");
+    expect(ipn002Row).toHaveClass("bg-red-50");
+  });
+
+  it("does not highlight items above reorder point", async () => {
+    // IPN-001: qty_on_hand=500, reorder_point=100 → not low stock
+    render(<Inventory />);
+    await waitForLoad();
+    const ipn001Row = screen.getByText("IPN-001").closest("tr");
+    expect(ipn001Row).not.toHaveClass("bg-red-50");
+  });
+
+  it("quick receive autocomplete shows matching parts", async () => {
+    render(<Inventory />);
+    await waitForLoad();
+    fireEvent.click(screen.getByText("Quick Receive"));
+    await waitFor(() => expect(screen.getByLabelText("IPN")).toBeInTheDocument());
+    fireEvent.change(screen.getByLabelText("IPN"), { target: { value: "IPN" } });
+    // Should show autocomplete suggestions inside the dialog
+    const dialog = screen.getByRole("dialog");
+    await waitFor(() => {
+      // Autocomplete creates divs with class "font-medium" containing IPN text
+      const suggestions = dialog.querySelectorAll(".hover\\:bg-muted");
+      expect(suggestions.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("quick receive button disabled when IPN and qty empty", async () => {
+    render(<Inventory />);
+    await waitForLoad();
+    fireEvent.click(screen.getByText("Quick Receive"));
+    await waitFor(() => expect(screen.getByRole("dialog")).toBeInTheDocument());
+    const dialog = screen.getByRole("dialog");
+    const receiveBtn = Array.from(dialog.querySelectorAll("button")).find(b => b.textContent === "Receive");
+    expect(receiveBtn).toBeDisabled();
+  });
+
   it("submits quick receive form", async () => {
     render(<Inventory />);
     await waitForLoad();

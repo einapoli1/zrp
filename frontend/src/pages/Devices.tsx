@@ -111,7 +111,11 @@ function Devices() {
     }
   };
 
-  const resetImportDialog = () => {
+  const resetImportDialog = (open?: boolean) => {
+    if (open) {
+      setImportDialogOpen(true);
+      return;
+    }
     setImportDialogOpen(false);
     setImportFile(null);
     setImportResult(null);

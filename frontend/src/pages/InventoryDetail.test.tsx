@@ -239,6 +239,63 @@ describe("InventoryDetail", () => {
     expect(screen.queryByText("LOW")).not.toBeInTheDocument();
   });
 
+  it("can select issue transaction type and submit", async () => {
+    render(<InventoryDetail />);
+    await waitForLoad();
+    fireEvent.click(screen.getByText("New Transaction"));
+    await waitFor(() => expect(screen.getByText("Create Inventory Transaction")).toBeInTheDocument());
+    // Open transaction type select
+    const typeLabel = screen.getByText("Transaction Type");
+    const selectTrigger = typeLabel.parentElement?.querySelector("[role='combobox']") as HTMLElement;
+    fireEvent.click(selectTrigger);
+    await waitFor(() => expect(screen.getByText("Issue")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Issue"));
+    fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "10" } });
+    fireEvent.click(screen.getByText("Create Transaction"));
+    await waitFor(() => {
+      expect(mockCreateInventoryTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "issue", qty: 10 })
+      );
+    });
+  });
+
+  it("can select adjust transaction type", async () => {
+    render(<InventoryDetail />);
+    await waitForLoad();
+    fireEvent.click(screen.getByText("New Transaction"));
+    await waitFor(() => expect(screen.getByText("Create Inventory Transaction")).toBeInTheDocument());
+    const selectTrigger = screen.getByText("Transaction Type").parentElement?.querySelector("[role='combobox']") as HTMLElement;
+    fireEvent.click(selectTrigger);
+    await waitFor(() => expect(screen.getByText("Adjust")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Adjust"));
+    // Should show adjustment help text
+    fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "100" } });
+    fireEvent.click(screen.getByText("Create Transaction"));
+    await waitFor(() => {
+      expect(mockCreateInventoryTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "adjust", qty: 100 })
+      );
+    });
+  });
+
+  it("can select return transaction type", async () => {
+    render(<InventoryDetail />);
+    await waitForLoad();
+    fireEvent.click(screen.getByText("New Transaction"));
+    await waitFor(() => expect(screen.getByText("Create Inventory Transaction")).toBeInTheDocument());
+    const selectTrigger = screen.getByText("Transaction Type").parentElement?.querySelector("[role='combobox']") as HTMLElement;
+    fireEvent.click(selectTrigger);
+    await waitFor(() => expect(screen.getByText("Return")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Return"));
+    fireEvent.change(screen.getByLabelText("Quantity"), { target: { value: "5" } });
+    fireEvent.click(screen.getByText("Create Transaction"));
+    await waitFor(() => {
+      expect(mockCreateInventoryTransaction).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "return", qty: 5 })
+      );
+    });
+  });
+
   it("shows LOW badge when stock is at or below reorder point", async () => {
     mockGetInventoryItem.mockResolvedValue({
       ...mockItem,

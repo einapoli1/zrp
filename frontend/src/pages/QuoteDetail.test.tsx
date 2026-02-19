@@ -339,4 +339,44 @@ describe("QuoteDetail", () => {
       expect(screen.getByText("—")).toBeInTheDocument();
     });
   });
+
+  it("handles getQuote API rejection gracefully", async () => {
+    mockGetQuote.mockRejectedValueOnce(new Error("Network error"));
+    render(<QuoteDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Quote Not Found")).toBeInTheDocument();
+    });
+  });
+
+  it("handles handleSave API rejection gracefully", async () => {
+    mockUpdateQuote.mockRejectedValueOnce(new Error("Save failed"));
+    render(<QuoteDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit Quote")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit Quote"));
+    await waitFor(() => {
+      expect(screen.getByText("Save Changes")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Save Changes"));
+    await waitFor(() => {
+      expect(mockUpdateQuote).toHaveBeenCalled();
+    });
+    // Should not crash — still in edit mode or page intact
+    expect(screen.getByText("Q-001")).toBeInTheDocument();
+  });
+
+  it("handles handleExportPDF API rejection gracefully", async () => {
+    mockExportQuotePDF.mockRejectedValueOnce(new Error("PDF export failed"));
+    render(<QuoteDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Export PDF")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Export PDF"));
+    await waitFor(() => {
+      expect(mockExportQuotePDF).toHaveBeenCalledWith("Q-001");
+    });
+    // Should not crash
+    expect(screen.getByText("Q-001")).toBeInTheDocument();
+  });
 });

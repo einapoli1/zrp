@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "../test/test-utils";
+import { render, screen, waitFor, fireEvent } from "../test/test-utils";
+import userEvent from "@testing-library/user-event";
 import { mockVendors, mockPOs } from "../test/mocks";
 
 const mockVendor = {
@@ -210,6 +211,24 @@ describe("VendorDetail", () => {
     await waitFor(() => {
       expect(mockGetVendor).toHaveBeenCalledWith("V-001");
     });
+  });
+
+  it("clicking Purchase Orders tab shows PO table with content", async () => {
+    const user = userEvent.setup();
+    render(<VendorDetail />);
+    await waitFor(() => expect(screen.getAllByText("Acme Corp").length).toBeGreaterThan(0));
+    // Click the Purchase Orders tab
+    const poTabTrigger = screen.getByRole("tab", { name: /purchase orders/i });
+    await user.click(poTabTrigger);
+    await waitFor(() => {
+      expect(screen.getByText("Purchase Order History")).toBeInTheDocument();
+    });
+    // Verify PO table content
+    expect(screen.getByText("PO-001")).toBeInTheDocument();
+    expect(screen.getByText("PO-002")).toBeInTheDocument();
+    // Verify status badges
+    expect(screen.getByText("SUBMITTED")).toBeInTheDocument();
+    expect(screen.getByText("PARTIAL")).toBeInTheDocument();
   });
 
   it("calls getPurchaseOrders on mount", async () => {

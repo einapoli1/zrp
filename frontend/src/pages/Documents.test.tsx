@@ -180,4 +180,128 @@ describe("Documents", () => {
     // The component uses Skeleton components during loading
     expect(screen.getByText("Document Library")).toBeInTheDocument();
   });
+
+  it("fills create document form and submits, verifies API called", async () => {
+    render(<Documents />);
+    await waitFor(() => screen.getByText("Create Document"));
+    fireEvent.click(screen.getByText("Create Document"));
+    await waitFor(() => expect(screen.getByText("Create New Document")).toBeInTheDocument());
+
+    // Fill title
+    fireEvent.change(screen.getByPlaceholderText("Enter document title..."), { target: { value: "New Spec" } });
+    // Fill content
+    fireEvent.change(screen.getByPlaceholderText("Enter document content..."), { target: { value: "Spec content here" } });
+
+    // Select category via the select trigger
+    const categoryTrigger = screen.getByText("Select category");
+    fireEvent.click(categoryTrigger);
+    await waitFor(() => expect(screen.getAllByText("Design").length).toBeGreaterThan(0));
+    // Click the SelectItem option (not the native option)
+    const designOptions = screen.getAllByText("Design");
+    fireEvent.click(designOptions[designOptions.length - 1]);
+
+    // Submit
+    const submitBtn = screen.getByRole("button", { name: "Create Document" });
+    fireEvent.click(submitBtn);
+
+    await waitFor(() => {
+      expect(mockCreateDocument).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "New Spec",
+          category: "design",
+          content: "Spec content here",
+          status: "draft",
+          revision: "A",
+        })
+      );
+    });
+  });
+
+  it("validates required fields — title, category, content", async () => {
+    render(<Documents />);
+    await waitFor(() => screen.getByText("Create Document"));
+    fireEvent.click(screen.getByText("Create Document"));
+    await waitFor(() => expect(screen.getByText("Create New Document")).toBeInTheDocument());
+
+    // Try to submit empty form
+    const submitBtn = screen.getByRole("button", { name: "Create Document" });
+    fireEvent.click(submitBtn);
+
+    // react-hook-form validation messages should appear
+    await waitFor(() => {
+      expect(screen.getByText("Title is required")).toBeInTheDocument();
+    });
+  });
+
+  it("handles file upload via file input (handleFileInput)", async () => {
+    render(<Documents />);
+    await waitFor(() => screen.getByText("Upload Files"));
+    fireEvent.click(screen.getByText("Upload Files"));
+    await waitFor(() => expect(screen.getByText("Drop files here or click to browse")).toBeInTheDocument());
+
+    const file = new File(["hello"], "test.pdf", { type: "application/pdf" });
+    const input = document.getElementById("file-upload") as HTMLInputElement;
+    expect(input).toBeTruthy();
+
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => {
+      expect(screen.getByText("test.pdf")).toBeInTheDocument();
+      expect(screen.getByText("Selected Files (1)")).toBeInTheDocument();
+    });
+  });
+
+  it("handles file upload via drag-and-drop (handleDrop)", async () => {
+    render(<Documents />);
+    await waitFor(() => screen.getByText("Upload Files"));
+    fireEvent.click(screen.getByText("Upload Files"));
+    await waitFor(() => expect(screen.getByText("Drop files here or click to browse")).toBeInTheDocument());
+
+    const dropZone = screen.getByText("Drop files here or click to browse").closest("div[class*='border-dashed']") ||
+                     screen.getByText("Drop files here or click to browse").parentElement!.parentElement!;
+
+    const file = new File(["content"], "dropped.docx", { type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+
+    fireEvent.dragEnter(dropZone);
+    fireEvent.dragOver(dropZone);
+    fireEvent.drop(dropZone, {
+      dataTransfer: { files: [file] },
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("dropped.docx")).toBeInTheDocument();
+    });
+  });
+
+  it("uploads files via handleFileUpload — calls createDocument and uploadAttachment", async () => {
+    mockCreateDocument.mockResolvedValue({ ...mockDocuments[0], id: "DOC-NEW" });
+    render(<Documents />);
+    await waitFor(() => screen.getByText("Upload Files"));
+    fireEvent.click(screen.getByText("Upload Files"));
+    await waitFor(() => expect(screen.getByText("Drop files here or click to browse")).toBeInTheDocument());
+
+    const file = new File(["data"], "upload.pdf", { type: "application/pdf" });
+    const input = document.getElementById("file-upload") as HTMLInputElement;
+    fireEvent.change(input, { target: { files: [file] } });
+
+    await waitFor(() => expect(screen.getByText("upload.pdf")).toBeInTheDocument());
+
+    // Click Upload button
+    const uploadBtn = screen.getByText("Upload 1 Files");
+    fireEvent.click(uploadBtn);
+
+    await waitFor(() => {
+      expect(mockCreateDocument).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: "upload.pdf",
+          category: "other",
+        })
+      );
+      expect(mockUploadAttachment).toHaveBeenCalledWith(
+        expect.any(File),
+        "document",
+        expect.any(String)
+      );
+    });
+  });
 });

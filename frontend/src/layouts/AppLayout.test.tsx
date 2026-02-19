@@ -109,6 +109,44 @@ describe("AppLayout", () => {
     });
   });
 
+  it("highlights active nav link for current route", () => {
+    // Default route is "/" which maps to Dashboard
+    render(<AppLayout />);
+    // Find the Dashboard link - it should have data-active="true" on its parent SidebarMenuButton
+    const dashboardLink = screen.getByText("Dashboard").closest("a");
+    const menuButton = dashboardLink?.parentElement;
+    // The SidebarMenuButton sets data-active on itself when isActive=true
+    expect(dashboardLink?.getAttribute("data-active") || menuButton?.getAttribute("data-active")).toBe("true");
+  });
+
+  it("does not highlight non-active nav links", () => {
+    render(<AppLayout />);
+    const partsLink = screen.getByText("Parts").closest("a");
+    const partsButton = partsLink?.parentElement;
+    // Parts should not be active at "/"
+    const activeAttr = partsLink?.getAttribute("data-active") || partsButton?.getAttribute("data-active");
+    expect(activeAttr).not.toBe("true");
+  });
+
+  it("nav links have correct href attributes", () => {
+    render(<AppLayout />);
+    const partsLink = screen.getByText("Parts").closest("a");
+    expect(partsLink).toHaveAttribute("href", "/parts");
+    const vendorsLink = screen.getByText("Vendors").closest("a");
+    expect(vendorsLink).toHaveAttribute("href", "/vendors");
+    const inventoryLink = screen.getByText("Inventory").closest("a");
+    expect(inventoryLink).toHaveAttribute("href", "/inventory");
+  });
+
+  it("clicking nav link navigates (changes location)", () => {
+    render(<AppLayout />);
+    const partsLink = screen.getByText("Parts").closest("a");
+    fireEvent.click(partsLink!);
+    expect(window.location.pathname).toBe("/parts");
+    // Reset
+    window.history.pushState({}, "", "/");
+  });
+
   it("toggles dark mode on button click", () => {
     render(<AppLayout />);
     // Find the dark mode toggle button near v1.0.0

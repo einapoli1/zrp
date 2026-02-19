@@ -227,4 +227,35 @@ describe("Quotes", () => {
       expect(screen.getByText("$30")).toBeInTheDocument();
     });
   });
+
+  it("handles getQuotes API rejection gracefully", async () => {
+    mockGetQuotes.mockRejectedValueOnce(new Error("Network error"));
+    render(<Quotes />);
+    await waitFor(() => {
+      expect(screen.queryByText("Loading quotes...")).not.toBeInTheDocument();
+    });
+    // Page renders with empty list
+    expect(screen.getByText(/No quotes found/)).toBeInTheDocument();
+  });
+
+  it("handles createQuote API rejection gracefully", async () => {
+    mockGetQuotes.mockResolvedValueOnce(quotesWithLines);
+    mockCreateQuote.mockRejectedValueOnce(new Error("Create failed"));
+    render(<Quotes />);
+    await waitFor(() => {
+      expect(screen.getByText("Q-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Create Quote"));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Customer *")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText("Customer *"), { target: { value: "Fail Corp" } });
+    const submitButtons = screen.getAllByText("Create Quote");
+    fireEvent.click(submitButtons[submitButtons.length - 1]);
+    await waitFor(() => {
+      expect(mockCreateQuote).toHaveBeenCalled();
+    });
+    // Should not crash — dialog stays open, original quotes still visible
+    expect(screen.getByText("Q-001")).toBeInTheDocument();
+  });
 });
