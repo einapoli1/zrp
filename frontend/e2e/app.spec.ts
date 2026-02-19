@@ -72,6 +72,10 @@ test.describe('Parts CRUD', () => {
 });
 
 test.describe('ECOs', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
   test('shows ECOs list page', async ({ page }) => {
     await page.goto('/ecos');
     await expect(page.getByRole('heading', { name: 'Engineering Change Orders' })).toBeVisible({ timeout: 10000 });
@@ -79,6 +83,10 @@ test.describe('ECOs', () => {
 });
 
 test.describe('Work Orders', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
   test('shows work orders list', async ({ page }) => {
     await page.goto('/work-orders');
     await expect(page.getByRole('heading', { name: 'Work Orders' })).toBeVisible({ timeout: 10000 });
@@ -86,6 +94,10 @@ test.describe('Work Orders', () => {
 });
 
 test.describe('Inventory', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
   test('shows inventory list', async ({ page }) => {
     await page.goto('/inventory');
     await expect(page.getByRole('heading', { name: 'Inventory' })).toBeVisible({ timeout: 10000 });
@@ -93,6 +105,10 @@ test.describe('Inventory', () => {
 });
 
 test.describe('Dark Mode Toggle', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
   test('toggles dark class on html element', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
@@ -110,6 +126,10 @@ test.describe('Dark Mode Toggle', () => {
 });
 
 test.describe('Global Search', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
+
   test('opens command dialog on search click', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
