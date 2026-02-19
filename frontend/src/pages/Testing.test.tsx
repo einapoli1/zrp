@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "../test/test-utils";
+import userEvent from "@testing-library/user-event";
 import { mockTestRecords } from "../test/mocks";
 
 const mockGetTestRecords = vi.fn().mockResolvedValue(mockTestRecords);
@@ -22,6 +23,14 @@ describe("Testing", () => {
     expect(screen.getByText("Loading test records...")).toBeInTheDocument();
   });
 
+  it("renders page title and description", async () => {
+    render(<Testing />);
+    await waitFor(() => {
+      expect(screen.getByText("Testing")).toBeInTheDocument();
+      expect(screen.getByText("Track device testing results and quality metrics")).toBeInTheDocument();
+    });
+  });
+
   it("renders test records after loading", async () => {
     render(<Testing />);
     await waitFor(() => {
@@ -30,18 +39,18 @@ describe("Testing", () => {
     expect(screen.getByText("SN-101")).toBeInTheDocument();
   });
 
-  it("shows test results", async () => {
+  it("shows test results with badges", async () => {
     render(<Testing />);
     await waitFor(() => {
-      // Internal mock data uses "pass" results 
       expect(screen.getByText("Pass")).toBeInTheDocument();
+      expect(screen.getByText("Fail")).toBeInTheDocument();
     });
   });
 
-  it("has create test record button", async () => {
+  it("has Create Test Record button", async () => {
     render(<Testing />);
     await waitFor(() => {
-      expect(screen.getByText(/new test|create test|record test/i)).toBeInTheDocument();
+      expect(screen.getByText("Create Test Record")).toBeInTheDocument();
     });
   });
 
@@ -50,6 +59,111 @@ describe("Testing", () => {
     render(<Testing />);
     await waitFor(() => {
       expect(screen.getByText(/no test records found/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows Test Records card title", async () => {
+    render(<Testing />);
+    await waitFor(() => {
+      expect(screen.getByText("Test Records")).toBeInTheDocument();
+    });
+  });
+
+  it("shows table headers", async () => {
+    render(<Testing />);
+    await waitFor(() => {
+      expect(screen.getByText("Test ID")).toBeInTheDocument();
+      expect(screen.getByText("Device S/N")).toBeInTheDocument();
+      expect(screen.getByText("IPN")).toBeInTheDocument();
+      expect(screen.getByText("Test Type")).toBeInTheDocument();
+      expect(screen.getByText("Result")).toBeInTheDocument();
+      expect(screen.getByText("Tested By")).toBeInTheDocument();
+      expect(screen.getByText("Date")).toBeInTheDocument();
+    });
+  });
+
+  it("shows statistics cards", async () => {
+    render(<Testing />);
+    await waitFor(() => {
+      expect(screen.getByText("Total Tests")).toBeInTheDocument();
+      expect(screen.getByText("Passed")).toBeInTheDocument();
+      expect(screen.getByText("Failed")).toBeInTheDocument();
+      expect(screen.getByText("Pass Rate")).toBeInTheDocument();
+    });
+  });
+
+  it("shows correct statistics counts", async () => {
+    render(<Testing />);
+    await waitFor(() => {
+      expect(screen.getByText("2")).toBeInTheDocument(); // total
+      expect(screen.getByText("50%")).toBeInTheDocument(); // pass rate (1/2)
+    });
+  });
+
+  it("shows test type values", async () => {
+    render(<Testing />);
+    await waitFor(() => {
+      expect(screen.getByText("functional")).toBeInTheDocument();
+      expect(screen.getByText("burn-in")).toBeInTheDocument();
+    });
+  });
+
+  it("shows tested_by values", async () => {
+    render(<Testing />);
+    await waitFor(() => {
+      expect(screen.getByText("tech1")).toBeInTheDocument();
+      expect(screen.getByText("tech2")).toBeInTheDocument();
+    });
+  });
+
+  it("shows test IDs formatted as TEST-XXXX", async () => {
+    render(<Testing />);
+    await waitFor(() => {
+      expect(screen.getByText("TEST-0001")).toBeInTheDocument();
+      expect(screen.getByText("TEST-0002")).toBeInTheDocument();
+    });
+  });
+
+  it("opens create dialog when button clicked", async () => {
+    const user = userEvent.setup();
+    render(<Testing />);
+    await waitFor(() => {
+      expect(screen.getByText("Create Test Record")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("Create Test Record"));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Serial number")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Internal part number")).toBeInTheDocument();
+    });
+  });
+
+  it("shows form fields in create dialog", async () => {
+    const user = userEvent.setup();
+    render(<Testing />);
+    await waitFor(() => {
+      expect(screen.getByText("Create Test Record")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("Create Test Record"));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Serial number")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Internal part number")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("e.g., v1.2.3")).toBeInTheDocument();
+      expect(screen.getByPlaceholderText("Technician name")).toBeInTheDocument();
+    });
+  });
+
+  it("shows IPN values in table", async () => {
+    render(<Testing />);
+    await waitFor(() => {
+      const ipnCells = screen.getAllByText("IPN-003");
+      expect(ipnCells.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("calls getTestRecords on mount", async () => {
+    render(<Testing />);
+    await waitFor(() => {
+      expect(mockGetTestRecords).toHaveBeenCalledTimes(1);
     });
   });
 });
