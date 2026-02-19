@@ -1424,6 +1424,7 @@ export interface MarketPricingResponse {
   results: MarketPricingResult[];
   cached: boolean;
   error?: string;
+  not_configured?: boolean;
   unconfigured?: string[];
   errors?: string[];
 }

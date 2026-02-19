@@ -428,6 +428,14 @@ func getDistributorClients() ([]DistributorClient, []string) {
 	return clients, unconfigured
 }
 
+// hasDistributorKeys returns true if at least one distributor API is configured
+func hasDistributorKeys() bool {
+	dkID := getAppSetting("digikey_client_id")
+	dkSecret := getAppSetting("digikey_client_secret")
+	mouserKey := getAppSetting("mouser_api_key")
+	return (dkID != "" && dkSecret != "") || mouserKey != ""
+}
+
 func getAppSetting(key string) string {
 	var val string
 	db.QueryRow("SELECT value FROM app_settings WHERE key = ?", key).Scan(&val)
@@ -466,10 +474,11 @@ func handleGetMarketPricing(w http.ResponseWriter, r *http.Request, partIPN stri
 
 	if len(clients) == 0 {
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"results":      []MarketPricingResult{},
-			"cached":       false,
-			"error":        "No distributor API keys configured",
-			"unconfigured": unconfigured,
+			"results":        []MarketPricingResult{},
+			"cached":         false,
+			"not_configured": true,
+			"error":          "No distributor API keys configured. Go to Settings > Distributor API Settings to add your Digikey and/or Mouser API credentials.",
+			"unconfigured":   unconfigured,
 		})
 		return
 	}

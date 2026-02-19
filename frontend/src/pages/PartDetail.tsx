@@ -257,15 +257,27 @@ function PartDetail() {
     }
   };
 
+  const [marketNotConfigured, setMarketNotConfigured] = useState(false);
+
   const fetchMarketPricing = async (refresh: boolean) => {
     if (!ipn) return;
     setMarketPricingLoading(true);
     try {
       const data = await api.getMarketPricing(decodeURIComponent(ipn), refresh);
-      setMarketPricing(data.results || []);
-      setMarketPricingCached(data.cached || false);
-      setMarketPricingError(data.error || "");
-      setMarketPricingUnconfigured(data.unconfigured || []);
+      if (data.not_configured) {
+        setMarketNotConfigured(true);
+        setMarketPricing([]);
+        setMarketPricingError(data.error || "");
+      } else {
+        setMarketNotConfigured(false);
+        setMarketPricing(data.results || []);
+        setMarketPricingCached(data.cached || false);
+        setMarketPricingError(data.error || "");
+        setMarketPricingUnconfigured(data.unconfigured || []);
+      }
+      if (data.errors && data.errors.length > 0) {
+        setMarketPricingError(prev => prev ? prev + "; " + data.errors!.join("; ") : data.errors!.join("; "));
+      }
     } catch (error) {
       console.error("Failed to fetch market pricing:", error);
     } finally {
@@ -540,7 +552,15 @@ function PartDetail() {
             </div>
           </CardHeader>
           <CardContent>
-            {marketPricingLoading ? (
+            {marketNotConfigured ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <Store className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="font-medium">No distributor API keys configured</p>
+                <p className="text-sm mt-1">
+                  Go to <a href="/settings/distributors" className="underline text-primary">Settings → Distributor API Settings</a> to add your Digikey and/or Mouser API credentials.
+                </p>
+              </div>
+            ) : marketPricingLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 2 }).map((_, i) => (
                   <Skeleton key={i} className="h-24 w-full" />

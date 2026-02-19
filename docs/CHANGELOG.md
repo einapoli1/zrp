@@ -5,7 +5,7 @@ All notable changes to ZRP are documented here. Format follows [Keep a Changelog
 ## [0.3.3] - 2026-02-18
 
 ### Added
-- Digikey and Mouser market pricing integration (mock API clients, interface-based for easy swap to real APIs)
+- Digikey (v4 Product Search, OAuth2) and Mouser (v2 Search API) real API integration for live pricing
 - Market Pricing section on Part Detail page showing price breaks, stock levels, lead times per distributor
 - 24-hour caching of market pricing results in `market_pricing` DB table
 - Refresh button to re-fetch live pricing on demand

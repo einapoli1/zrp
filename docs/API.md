@@ -1895,7 +1895,9 @@ Returns:
 ### Update Digikey Settings
 `POST /api/v1/settings/digikey`
 
-Body: `{"api_key": "...", "client_id": "..."}`
+Body: `{"client_id": "...", "client_secret": "..."}`
+
+Uses OAuth2 Client Credentials flow with Digikey Product Search v4 API.
 
 ### Update Mouser Settings
 `POST /api/v1/settings/mouser`
@@ -1906,3 +1908,5 @@ Body: `{"api_key": "..."}`
 `GET /api/v1/settings/distributors`
 
 Returns masked API keys for display. Keys are stored in the `app_settings` DB table, not environment variables.
+
+If no distributor keys are configured, market pricing endpoints return an error with `unconfigured` field listing which distributors need setup. Rate limiting and API errors are handled gracefully with per-distributor error reporting.
