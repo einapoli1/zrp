@@ -13,7 +13,7 @@ export default defineConfig({
   reporter: 'html',
   timeout: 60000,
   use: {
-    baseURL: 'http://localhost:9001',
+    baseURL: 'http://localhost:9000',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },
@@ -26,10 +26,11 @@ export default defineConfig({
   
   globalSetup: './e2e/global-setup.ts',
   
-  webServer: {
-    command: `cd .. && go run . -db ${testDbPath} -pmDir ${testPartsDir} -port 9001`,
-    url: 'http://localhost:9001',
-    reuseExistingServer: !process.env.CI,
-    timeout: 30000,
-  },
+  // Note: Commented out for integration tests - using existing server on localhost:9000
+  // webServer: {
+  //   command: `cd .. && go run . -db ${testDbPath} -pmDir ${testPartsDir} -port 9001`,
+  //   url: 'http://localhost:9001',
+  //   reuseExistingServer: !process.env.CI,
+  //   timeout: 30000,
+  // },
 });

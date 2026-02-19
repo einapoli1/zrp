@@ -20,6 +20,21 @@ services:
       retries: 3
       start_period: 40s
 
+  playwright:
+    image: mcr.microsoft.com/playwright:v1.40.0-jammy
+    container_name: zrp-playwright
+    ports:
+      - "9323:9323"
+    environment:
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    command: ["npx", "playwright", "run-server", "--port", "9323", "--host", "0.0.0.0"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "--quiet", "http://localhost:9323/"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
 volumes:
   zrp-data:
     driver: local
