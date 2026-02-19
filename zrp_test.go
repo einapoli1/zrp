@@ -1264,3 +1264,641 @@ func TestEmailTestWithTestEmailField(t *testing.T) {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 }
+
+// --- Additional User Tests ---
+
+func TestListUsers(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	req := authedRequest("GET", "/api/v1/users", "", cookie)
+	w := httptest.NewRecorder()
+	handleListUsers(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	// Response may be wrapped in "data" or direct array
+	var raw map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &raw); err == nil {
+		if data, ok := raw["data"]; ok {
+			arr, _ := json.Marshal(data)
+			var users []UserFull
+			json.Unmarshal(arr, &users)
+			if len(users) < 3 {
+				t.Errorf("expected at least 3 seeded users, got %d", len(users))
+			}
+			return
+		}
+	}
+	var users []UserFull
+	json.Unmarshal(w.Body.Bytes(), &users)
+	if len(users) < 3 {
+		t.Errorf("expected at least 3 seeded users, got %d (body: %s)", len(users), w.Body.String())
+	}
+}
+
+func TestListUsersNonAdmin(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	req := authedRequest("GET", "/api/v1/users", "", nil)
+	w := httptest.NewRecorder()
+	handleListUsers(w, req)
+	if w.Code != 401 {
+		t.Errorf("expected 401, got %d", w.Code)
+	}
+}
+
+func TestCreateUserMissingFields(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"username":"","password":""}`
+	req := authedRequest("POST", "/api/v1/users", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateUser(w, req)
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestCreateUserInvalidRole(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"username":"roletest","password":"pass123","role":"superadmin"}`
+	req := authedRequest("POST", "/api/v1/users", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateUser(w, req)
+	if w.Code != 201 {
+		t.Fatalf("expected 201, got %d", w.Code)
+	}
+	var role string
+	db.QueryRow("SELECT role FROM users WHERE username='roletest'").Scan(&role)
+	if role != "user" {
+		t.Errorf("expected role 'user', got '%s'", role)
+	}
+}
+
+func TestCreateUserInvalidBody(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	req := authedRequest("POST", "/api/v1/users", "not json", cookie)
+	w := httptest.NewRecorder()
+	handleCreateUser(w, req)
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestUpdateUserInvalidID(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"display_name":"Test","role":"user"}`
+	req := authedRequest("PUT", "/api/v1/users/abc", body, cookie)
+	w := httptest.NewRecorder()
+	handleUpdateUser(w, req, "abc")
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestUpdateUserInvalidBody(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	req := authedRequest("PUT", "/api/v1/users/2", "bad json", cookie)
+	w := httptest.NewRecorder()
+	handleUpdateUser(w, req, "2")
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestDeactivateSelf(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"display_name":"Admin","role":"admin","active":0}`
+	req := authedRequest("PUT", "/api/v1/users/1", body, cookie)
+	w := httptest.NewRecorder()
+	handleUpdateUser(w, req, "1")
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestDeleteUserNotFound(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	req := authedRequest("DELETE", "/api/v1/users/9999", "", cookie)
+	w := httptest.NewRecorder()
+	handleDeleteUser(w, req, "9999")
+	if w.Code != 404 {
+		t.Errorf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestDeleteUserInvalidID(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	req := authedRequest("DELETE", "/api/v1/users/abc", "", cookie)
+	w := httptest.NewRecorder()
+	handleDeleteUser(w, req, "abc")
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestResetPassword(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	var engineerID int
+	db.QueryRow("SELECT id FROM users WHERE username='engineer'").Scan(&engineerID)
+
+	body := `{"password":"newpassword123"}`
+	req := authedRequest("POST", fmt.Sprintf("/api/v1/users/%d/reset-password", engineerID), body, cookie)
+	w := httptest.NewRecorder()
+	handleResetPassword(w, req, fmt.Sprintf("%d", engineerID))
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+
+	resetLoginRateLimit()
+	loginBody := `{"username":"engineer","password":"newpassword123"}`
+	req2 := httptest.NewRequest("POST", "/auth/login", strings.NewReader(loginBody))
+	req2.Header.Set("Content-Type", "application/json")
+	w2 := httptest.NewRecorder()
+	handleLogin(w2, req2)
+	if w2.Code != 200 {
+		t.Errorf("expected login with new password to succeed, got %d", w2.Code)
+	}
+}
+
+func TestResetPasswordEmpty(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"password":""}`
+	req := authedRequest("POST", "/api/v1/users/2/reset-password", body, cookie)
+	w := httptest.NewRecorder()
+	handleResetPassword(w, req, "2")
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestResetPasswordInvalidID(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"password":"test123"}`
+	req := authedRequest("POST", "/api/v1/users/abc/reset-password", body, cookie)
+	w := httptest.NewRecorder()
+	handleResetPassword(w, req, "abc")
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestResetPasswordInvalidBody(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	req := authedRequest("POST", "/api/v1/users/2/reset-password", "bad json", cookie)
+	w := httptest.NewRecorder()
+	handleResetPassword(w, req, "2")
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+// --- Additional API Key Tests ---
+
+func TestListAPIKeys(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"name":"List Test Key"}`
+	req := authedRequest("POST", "/api/v1/apikeys", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateAPIKey(w, req)
+
+	req2 := authedRequest("GET", "/api/v1/apikeys", "", cookie)
+	w2 := httptest.NewRecorder()
+	handleListAPIKeys(w2, req2)
+	if w2.Code != 200 {
+		t.Fatalf("expected 200, got %d", w2.Code)
+	}
+	// Response may be wrapped in "data" or direct
+	var rawResp map[string]interface{}
+	if err := json.Unmarshal(w2.Body.Bytes(), &rawResp); err == nil {
+		if data, ok := rawResp["data"]; ok {
+			arr := data.([]interface{})
+			if len(arr) < 1 {
+				t.Errorf("expected at least 1 key, got %d", len(arr))
+			}
+			return
+		}
+	}
+	var keys []APIKey
+	json.Unmarshal(w2.Body.Bytes(), &keys)
+	if len(keys) < 1 {
+		t.Errorf("expected at least 1 key, got %d (body: %s)", len(keys), w2.Body.String())
+	}
+}
+
+func TestCreateAPIKeyMissingName(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"name":""}`
+	req := authedRequest("POST", "/api/v1/apikeys", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateAPIKey(w, req)
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestCreateAPIKeyInvalidBody(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	req := authedRequest("POST", "/api/v1/apikeys", "not json", cookie)
+	w := httptest.NewRecorder()
+	handleCreateAPIKey(w, req)
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestDeleteAPIKeyNotFound(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	req := authedRequest("DELETE", "/api/v1/apikeys/9999", "", nil)
+	w := httptest.NewRecorder()
+	handleDeleteAPIKey(w, req, "9999")
+	if w.Code != 404 {
+		t.Errorf("expected 404, got %d", w.Code)
+	}
+}
+
+func TestToggleAPIKeyInvalidBody(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"name":"Toggle Test"}`
+	req := authedRequest("POST", "/api/v1/apikeys", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateAPIKey(w, req)
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	id := fmt.Sprintf("%.0f", resp["id"].(float64))
+
+	req2 := authedRequest("PUT", "/api/v1/apikeys/"+id, "bad json", cookie)
+	w2 := httptest.NewRecorder()
+	handleToggleAPIKey(w2, req2, id)
+	if w2.Code != 400 {
+		t.Errorf("expected 400, got %d", w2.Code)
+	}
+}
+
+func TestCreateAPIKeyWithExpiry(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"name":"Expiry Key","expires_at":"2099-12-31"}`
+	req := authedRequest("POST", "/api/v1/apikeys", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateAPIKey(w, req)
+	if w.Code != 201 {
+		t.Fatalf("expected 201, got %d", w.Code)
+	}
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	key := resp["key"].(string)
+	if !validateBearerToken(key) {
+		t.Error("key with future expiry should be valid")
+	}
+}
+
+func TestExpiredKeyRejected(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	body := `{"name":"Expired Key","expires_at":"2020-01-01"}`
+	req := authedRequest("POST", "/api/v1/apikeys", body, cookie)
+	w := httptest.NewRecorder()
+	handleCreateAPIKey(w, req)
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	key := resp["key"].(string)
+	if validateBearerToken(key) {
+		t.Error("expired key should not authenticate")
+	}
+}
+
+func TestInvalidBearerToken(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	if validateBearerToken("not_a_valid_token") {
+		t.Error("invalid token should not validate")
+	}
+	if validateBearerToken("zrp_nonexistent1234567890") {
+		t.Error("nonexistent zrp_ token should not validate")
+	}
+}
+
+// --- Additional Email Tests ---
+
+func TestEmailTestSuccess(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	db.Exec(`INSERT OR REPLACE INTO email_config (id, smtp_host, smtp_port, smtp_user, smtp_password, from_address, from_name, enabled) VALUES (1, 'smtp.test.com', 587, 'user', 'pass', 'from@test.com', 'ZRP', 1)`)
+
+	SMTPSendFunc = func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+		return nil
+	}
+	defer func() { SMTPSendFunc = smtp.SendMail }()
+
+	cookie := loginAdmin(t)
+	body := `{"to":"test@example.com"}`
+	req := authedRequest("POST", "/api/v1/email/test", body, cookie)
+	w := httptest.NewRecorder()
+	handleTestEmail(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestEmailTestSendFailure(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	db.Exec(`INSERT OR REPLACE INTO email_config (id, smtp_host, smtp_port, smtp_user, smtp_password, from_address, from_name, enabled) VALUES (1, 'smtp.test.com', 587, 'user', 'pass', 'from@test.com', 'ZRP', 1)`)
+
+	SMTPSendFunc = func(addr string, a smtp.Auth, from string, to []string, msg []byte) error {
+		return fmt.Errorf("connection refused")
+	}
+	defer func() { SMTPSendFunc = smtp.SendMail }()
+
+	cookie := loginAdmin(t)
+	body := `{"to":"test@example.com"}`
+	req := authedRequest("POST", "/api/v1/email/test", body, cookie)
+	w := httptest.NewRecorder()
+	handleTestEmail(w, req)
+	if w.Code != 500 {
+		t.Errorf("expected 500, got %d", w.Code)
+	}
+}
+
+func TestEmailTestInvalidBody(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	cookie := loginAdmin(t)
+	req := authedRequest("POST", "/api/v1/email/test", "not json", cookie)
+	w := httptest.NewRecorder()
+	handleTestEmail(w, req)
+	if w.Code != 400 {
+		t.Errorf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestListEmailLogNoAuth(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	db.Exec("INSERT INTO email_log (to_address, subject, body, status, error, sent_at) VALUES ('test@x.com', 'Subj', 'Body', 'sent', '', '2026-01-01 00:00:00')")
+
+	req := httptest.NewRequest("GET", "/api/v1/email-log", nil)
+	w := httptest.NewRecorder()
+	handleListEmailLog(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+}
+
+func TestEmailConfigPasswordMasked(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	db.Exec(`INSERT OR REPLACE INTO email_config (id, smtp_host, smtp_port, smtp_user, smtp_password, from_address, from_name, enabled) VALUES (1, 'smtp.test.com', 587, 'user', 'secret', 'from@test.com', 'ZRP', 1)`)
+
+	req := httptest.NewRequest("GET", "/api/v1/email/config", nil)
+	w := httptest.NewRecorder()
+	handleGetEmailConfig(w, req)
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	// Response may be wrapped in "data"
+	var rawEC map[string]json.RawMessage
+	json.Unmarshal(w.Body.Bytes(), &rawEC)
+	configBytes := w.Body.Bytes()
+	if data, ok := rawEC["data"]; ok {
+		configBytes = data
+	}
+	var config EmailConfig
+	json.Unmarshal(configBytes, &config)
+	if config.SMTPPassword != "****" {
+		t.Errorf("expected password masked, got '%s' (body: %s)", config.SMTPPassword, w.Body.String())
+	}
+}
+
+// --- Additional Audit Log Tests ---
+
+func TestAuditLogUserFilter(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	logAudit(db, "admin", "created", "parts", "IPN-001", "Admin action")
+	logAudit(db, "engineer", "updated", "parts", "IPN-002", "Engineer action")
+
+	req := httptest.NewRequest("GET", "/api/v1/audit?user=engineer", nil)
+	w := httptest.NewRecorder()
+	handleAuditLog(w, req)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	entries := resp["entries"].([]interface{})
+	if len(entries) != 1 {
+		t.Errorf("expected 1 entry for user=engineer, got %d", len(entries))
+	}
+}
+
+func TestAuditLogPage2(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	for i := 0; i < 5; i++ {
+		logAudit(db, "admin", "test", "mod", fmt.Sprintf("r%d", i), fmt.Sprintf("Entry %d", i))
+	}
+
+	req := httptest.NewRequest("GET", "/api/v1/audit?limit=2&page=2", nil)
+	w := httptest.NewRecorder()
+	handleAuditLog(w, req)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	entries := resp["entries"].([]interface{})
+	if len(entries) != 2 {
+		t.Errorf("expected 2 entries on page 2, got %d", len(entries))
+	}
+	total := int(resp["total"].(float64))
+	if total != 5 {
+		t.Errorf("expected total 5, got %d", total)
+	}
+}
+
+func TestAuditLogDateFilter(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	logAudit(db, "admin", "test", "parts", "1", "Test entry")
+
+	req := httptest.NewRequest("GET", "/api/v1/audit?from=2020-01-01&to=2099-12-31", nil)
+	w := httptest.NewRecorder()
+	handleAuditLog(w, req)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	entries := resp["entries"].([]interface{})
+	if len(entries) < 1 {
+		t.Errorf("expected at least 1 entry with date filter, got %d", len(entries))
+	}
+}
+
+func TestAuditLogModuleParam(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	logAudit(db, "admin", "created", "ecos", "ECO-001", "Created ECO")
+	logAudit(db, "admin", "created", "parts", "IPN-001", "Created part")
+
+	req := httptest.NewRequest("GET", "/api/v1/audit?module=ecos", nil)
+	w := httptest.NewRecorder()
+	handleAuditLog(w, req)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	entries := resp["entries"].([]interface{})
+	if len(entries) != 1 {
+		t.Errorf("expected 1 entry for module=ecos, got %d", len(entries))
+	}
+}
+
+func TestAuditLogEmpty(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+
+	req := httptest.NewRequest("GET", "/api/v1/audit?user=nonexistent", nil)
+	w := httptest.NewRecorder()
+	handleAuditLog(w, req)
+
+	var resp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &resp)
+	entries := resp["entries"].([]interface{})
+	if len(entries) != 0 {
+		t.Errorf("expected 0 entries, got %d", len(entries))
+	}
+}
+
+// --- Additional RBAC Tests ---
+
+func TestRBACReadonlyAudit(t *testing.T) {
+	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	})
+	rbac := requireRBAC(okHandler)
+
+	req := makeRequest("GET", "/api/v1/audit", "readonly")
+	w := httptest.NewRecorder()
+	rbac.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Errorf("readonly GET audit: expected 200, got %d", w.Code)
+	}
+}
+
+func TestRBACUserAudit(t *testing.T) {
+	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	})
+	rbac := requireRBAC(okHandler)
+
+	req := makeRequest("GET", "/api/v1/audit", "user")
+	w := httptest.NewRecorder()
+	rbac.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Errorf("user GET audit: expected 200, got %d", w.Code)
+	}
+}
+
+func TestRBACAdminDeleteUsers(t *testing.T) {
+	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	})
+	rbac := requireRBAC(okHandler)
+
+	req := makeRequest("DELETE", "/api/v1/users/1", "admin")
+	w := httptest.NewRecorder()
+	rbac.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Errorf("admin DELETE users: expected 200, got %d", w.Code)
+	}
+}
+
+func TestRBACUserDeleteUsersDenied(t *testing.T) {
+	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	})
+	rbac := requireRBAC(okHandler)
+
+	req := makeRequest("DELETE", "/api/v1/users/1", "user")
+	w := httptest.NewRecorder()
+	rbac.ServeHTTP(w, req)
+	if w.Code != 403 {
+		t.Errorf("user DELETE users: expected 403, got %d", w.Code)
+	}
+}
+
+func TestRBACReadonlyDeletePartsDenied(t *testing.T) {
+	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(200)
+	})
+	rbac := requireRBAC(okHandler)
+
+	req := makeRequest("DELETE", "/api/v1/parts/1", "readonly")
+	w := httptest.NewRecorder()
+	rbac.ServeHTTP(w, req)
+	if w.Code != 403 {
+		t.Errorf("readonly DELETE parts: expected 403, got %d", w.Code)
+	}
+}
