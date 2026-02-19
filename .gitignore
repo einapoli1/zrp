@@ -30,3 +30,7 @@ demo/
 test-results/
 playwright-report/
 zrp.log
+
+# Test database files
+test_*.db-shm
+test_*.db-wal
