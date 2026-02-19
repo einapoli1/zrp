@@ -169,8 +169,16 @@ func TestHandleListInventory_LowStock(t *testing.T) {
 
 	handleListInventory(w, req)
 
+	var resp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	dataBytes, _ := json.Marshal(resp.Data)
 	var result []InventoryItem
-	json.NewDecoder(w.Body).Decode(&result)
+	if err := json.Unmarshal(dataBytes, &result); err != nil {
+		t.Fatalf("Failed to decode data: %v", err)
+	}
 
 	if len(result) != 2 {
 		t.Errorf("Expected 2 low stock items, got %d", len(result))
@@ -205,9 +213,15 @@ func TestHandleGetInventory_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var result InventoryItem
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var resp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	dataBytes, _ := json.Marshal(resp.Data)
+	var result InventoryItem
+	if err := json.Unmarshal(dataBytes, &result); err != nil {
+		t.Fatalf("Failed to decode data: %v", err)
 	}
 
 	if result.IPN != "IPN-001" {
@@ -462,8 +476,16 @@ func TestHandleInventoryHistory_Empty(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
+	var resp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	dataBytes, _ := json.Marshal(resp.Data)
 	var result []InventoryTransaction
-	json.NewDecoder(w.Body).Decode(&result)
+	if err := json.Unmarshal(dataBytes, &result); err != nil {
+		t.Fatalf("Failed to decode data: %v", err)
+	}
 
 	if len(result) != 0 {
 		t.Errorf("Expected empty history, got %d items", len(result))
@@ -478,10 +500,10 @@ func TestHandleInventoryHistory_WithData(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO inventory (ipn) VALUES ('IPN-001')`); err != nil {
 		t.Fatalf("Failed to insert inventory: %v", err)
 	}
-	if _, err := db.Exec(`INSERT INTO inventory_transactions (ipn, type, qty, reference) VALUES 
-		('IPN-001', 'receive', 100, 'PO-123'),
-		('IPN-001', 'issue', 20, 'WO-456'),
-		('IPN-001', 'receive', 50, 'PO-789')
+	if _, err := db.Exec(`INSERT INTO inventory_transactions (ipn, type, qty, reference, created_at) VALUES 
+		('IPN-001', 'receive', 100, 'PO-123', '2024-01-01 10:00:00'),
+		('IPN-001', 'issue', 20, 'WO-456', '2024-01-02 10:00:00'),
+		('IPN-001', 'receive', 50, 'PO-789', '2024-01-03 10:00:00')
 	`); err != nil {
 		t.Fatalf("Failed to insert transactions: %v", err)
 	}
@@ -491,9 +513,15 @@ func TestHandleInventoryHistory_WithData(t *testing.T) {
 
 	handleInventoryHistory(w, req, "IPN-001")
 
-	var result []InventoryTransaction
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var resp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	dataBytes, _ := json.Marshal(resp.Data)
+	var result []InventoryTransaction
+	if err := json.Unmarshal(dataBytes, &result); err != nil {
+		t.Fatalf("Failed to decode data: %v", err)
 	}
 
 	if len(result) != 3 {
@@ -525,8 +553,16 @@ func TestHandleBulkDeleteInventory_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
+	var resp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	dataBytes, _ := json.Marshal(resp.Data)
 	var result map[string]int
-	json.NewDecoder(w.Body).Decode(&result)
+	if err := json.Unmarshal(dataBytes, &result); err != nil {
+		t.Fatalf("Failed to decode data: %v", err)
+	}
 
 	if result["deleted"] != 2 {
 		t.Errorf("Expected 2 deleted, got %d", result["deleted"])

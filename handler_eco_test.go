@@ -132,10 +132,10 @@ func TestHandleListECOs_WithData(t *testing.T) {
 	db = setupECOTestDB(t)
 	defer func() { db.Close(); db = oldDB }()
 
-	// Insert test ECOs
-	_, err := db.Exec(`INSERT INTO ecos (id, title, description, status, priority, created_by) VALUES 
-		('ECO-001', 'Test ECO 1', 'Description 1', 'draft', 'normal', 'engineer'),
-		('ECO-002', 'Test ECO 2', 'Description 2', 'approved', 'high', 'manager')
+	// Insert test ECOs with explicit timestamps for ordering
+	_, err := db.Exec(`INSERT INTO ecos (id, title, description, status, priority, created_by, created_at) VALUES 
+		('ECO-001', 'Test ECO 1', 'Description 1', 'draft', 'normal', 'engineer', '2024-01-01 10:00:00'),
+		('ECO-002', 'Test ECO 2', 'Description 2', 'approved', 'high', 'manager', '2024-01-02 10:00:00')
 	`)
 	if err != nil {
 		t.Fatalf("Failed to insert test data: %v", err)
@@ -185,10 +185,16 @@ func TestHandleListECOs_FilterByStatus(t *testing.T) {
 
 	handleListECOs(w, req)
 
+	if w.Code != 200 {
+		t.Errorf("Expected status 200, got %d", w.Code)
+	}
+
 	var response struct {
 		Data []ECO `json:"data"`
 	}
-	json.NewDecoder(w.Body).Decode(&response)
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v. Body: %s", err, w.Body.String())
+	}
 
 	if len(response.Data) != 2 {
 		t.Errorf("Expected 2 draft ECOs, got %d", len(response.Data))
@@ -196,7 +202,7 @@ func TestHandleListECOs_FilterByStatus(t *testing.T) {
 
 	for _, eco := range response.Data {
 		if eco.Status != "draft" {
-			t.Errorf("Expected all ECOs to have draft status, got %s", eco.Status)
+			t.Errorf("Expected all ECOs to have draft status, got '%s' (ID: %s)", eco.Status, eco.ID)
 		}
 	}
 }

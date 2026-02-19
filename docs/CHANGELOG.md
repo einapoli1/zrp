@@ -7,7 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Device handler test coverage** — comprehensive test suite for handler_devices.go (16 test functions, ~683 LOC)
+  - List, get, create, update devices with validation
+  - CSV import/export with duplicate handling and error reporting
+  - Device history endpoint (test records + firmware campaigns)
+  - Edge cases: missing fields, invalid data, file operations
+  - All tests passing with proper API response envelope handling
+  
+- **Vendor handler test coverage** — comprehensive test suite for handler_vendors.go (16 test functions, ~616 LOC)
+  - CRUD operations: list, get, create, update, delete
+  - Auto-incrementing vendor IDs (V-001, V-002, etc.)
+  - Input validation: email format, negative lead times, required fields
+  - Referential integrity: prevent deletion when POs or RFQs reference vendor
+  - Default status handling and enum validation
+  - All tests passing with conflict detection (409) for deletions
+
 ### Fixed
+- **Backend Tests — API Envelope Consistency**: Fixed 10+ failing tests that expected raw data instead of documented `{data, meta}` envelope
+  - **Inventory tests** (7 tests fixed): `TestHandleListInventory_*`, `TestHandleGetInventory_*`, `TestHandleInventoryHistory_*`, `TestHandleBulkDeleteInventory_*`
+    - All inventory tests now properly decode API response envelope
+    - Fixed timestamp ordering issue in history tests by using explicit timestamps
+  - Added `test_helpers.go` with `decodeEnvelope()` helper to standardize envelope extraction across all tests
+  - Tests now match the documented API contract from README: `{"data": {...}, "meta": {...}}`
+  - Remaining work: ECO, NCR, Procurement, and Parts tests still need envelope fixes
 - **Accessibility**: Added missing `DialogDescription` components to 50+ dialogs for screen reader support
   - Affects: WorkOrders, Inventory, Procurement, PODetail, WorkOrderDetail, Users, Devices, Testing, Firmware, InventoryDetail, Vendors, Quotes, NCRs, APIKeys, RMAs, FieldReports, Pricing, Shipments, RFQs, CAPAs, Receiving, and more
   - Reduced accessibility warnings from 90+ to near-zero in test output
