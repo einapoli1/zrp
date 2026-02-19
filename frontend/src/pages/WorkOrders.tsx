@@ -7,7 +7,8 @@ import {
   Play,
   CheckCircle,
   AlertTriangle,
-  Calendar
+  Calendar,
+  Download
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -32,6 +33,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 import { api, type WorkOrder, type Part } from "../lib/api";
 import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTable";
 import { Checkbox } from "../components/ui/checkbox";
@@ -91,6 +98,13 @@ function WorkOrders() {
     } catch (error) {
       toast.error("Failed to create work order"); console.error("Failed to create work order:", error);
     }
+  };
+
+  const handleExport = (format: 'csv' | 'xlsx') => {
+    const params = new URLSearchParams();
+    params.set('format', format);
+    window.location.href = `/api/v1/workorders/export?${params.toString()}`;
+    toast.success(`Exporting work orders as ${format.toUpperCase()}`);
   };
 
   const resetForm = () => {
@@ -350,13 +364,30 @@ function WorkOrders() {
             Manage production work orders and assembly tracking.
           </p>
         </div>
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Work Order
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport('csv')}>
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('xlsx')}>
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Work Order
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Work Order</DialogTitle>
@@ -440,6 +471,7 @@ function WorkOrders() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Summary Cards */}

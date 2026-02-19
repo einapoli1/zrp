@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -21,6 +21,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
 // Table components used by ConfigurableTable internally
 import { Skeleton } from "../components/ui/skeleton";
 import { 
@@ -30,11 +36,13 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
-  Plus
+  Plus,
+  Download
 } from "lucide-react";
 import { api, type Part, type Category, type ApiResponse } from "../lib/api";
 import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTable";
-import { BarcodeScanner } from "../components/BarcodeScanner";
+// Lazy load BarcodeScanner to reduce initial bundle size (329KB chunk)
+const BarcodeScanner = lazy(() => import("../components/BarcodeScanner").then(m => ({ default: m.BarcodeScanner })));
 import { useGitPLM } from "../hooks/useGitPLM";
 import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
@@ -145,6 +153,19 @@ function Parts() {
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value);
     setCurrentPage(1); // Reset to first page on filter change
+  };
+
+  const handleExport = (format: 'csv' | 'xlsx') => {
+    const params = new URLSearchParams();
+    params.set('format', format);
+    if (searchQuery.trim()) {
+      params.set('search', searchQuery.trim());
+    }
+    if (selectedCategory !== 'all') {
+      params.set('category', selectedCategory);
+    }
+    window.location.href = `/api/v1/parts/export?${params.toString()}`;
+    toast.success(`Exporting parts as ${format.toUpperCase()}`);
   };
 
   const handleReset = () => {
@@ -308,14 +329,31 @@ function Parts() {
             Manage your parts inventory and specifications
           </p>
         </div>
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Part
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport('csv')}>
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('xlsx')}>
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Part
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px]">
             <DialogHeader>
               <DialogTitle>Add New Part</DialogTitle>
               <DialogDescription>
@@ -445,6 +483,7 @@ function Parts() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Filters Card */}
@@ -455,12 +494,14 @@ function Parts() {
         <CardContent>
           {showScanner && (
             <div className="mb-4">
-              <BarcodeScanner
-                onScan={(code) => {
-                  handleSearch(code);
-                  setShowScanner(false);
-                }}
-              />
+              <Suspense fallback={<Skeleton className="h-64 w-full" />}>
+                <BarcodeScanner
+                  onScan={(code) => {
+                    handleSearch(code);
+                    setShowScanner(false);
+                  }}
+                />
+              </Suspense>
             </div>
           )}
           <div className="flex flex-col sm:flex-row gap-4">

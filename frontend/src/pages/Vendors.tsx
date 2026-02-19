@@ -8,7 +8,8 @@ import {
   Globe,
   MoreHorizontal,
   Edit,
-  Trash2
+  Trash2,
+  Download
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -82,6 +83,13 @@ function Vendors() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExport = (format: 'csv' | 'xlsx') => {
+    const params = new URLSearchParams();
+    params.set('format', format);
+    window.location.href = `/api/v1/vendors/export?${params.toString()}`;
+    toast.success(`Exporting vendors as ${format.toUpperCase()}`);
   };
 
   const handleCreateVendor = async () => {
@@ -193,13 +201,30 @@ function Vendors() {
             Manage your supplier relationships and contact information.
           </p>
         </div>
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Vendor
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport('csv')}>
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('xlsx')}>
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Vendor
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Vendor</DialogTitle>
@@ -309,6 +334,7 @@ function Vendors() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       {/* Summary Cards */}

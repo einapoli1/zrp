@@ -16,6 +16,12 @@ import {
   DialogTrigger,
 } from "../components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../components/ui/dropdown-menu";
+import {
   Form,
   FormControl,
   FormField,
@@ -32,7 +38,7 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { Skeleton } from "../components/ui/skeleton";
-import { FileText, Plus, Calendar, User } from "lucide-react";
+import { FileText, Plus, Calendar, User, Download } from "lucide-react";
 import { api, type ECO } from "../lib/api";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -84,6 +90,16 @@ function ECOs() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExport = (format: 'csv' | 'xlsx') => {
+    const params = new URLSearchParams();
+    params.set('format', format);
+    if (activeTab !== 'all') {
+      params.set('status', activeTab);
+    }
+    window.location.href = `/api/v1/ecos/export?${params.toString()}`;
+    toast.success(`Exporting ECOs as ${format.toUpperCase()}`);
   };
 
   const handleRowClick = (id: string) => {
@@ -148,13 +164,30 @@ function ECOs() {
             Manage design changes and product modifications
           </p>
         </div>
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Create ECO
-            </Button>
-          </DialogTrigger>
+        <div className="flex gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport('csv')}>
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('xlsx')}>
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Create ECO
+              </Button>
+            </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
             <Form {...form}>
               <form onSubmit={form.handleSubmit(handleCreateECO)} className="space-y-6">
@@ -254,6 +287,7 @@ function ECOs() {
             </Form>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Card>

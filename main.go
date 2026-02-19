@@ -146,6 +146,8 @@ func main() {
 			}
 
 		// Parts
+		case parts[0] == "parts" && len(parts) == 2 && parts[1] == "export" && r.Method == "GET":
+			handleExportParts(w, r)
 		case parts[0] == "parts" && len(parts) == 1 && r.Method == "GET":
 			handleListParts(w, r)
 		case parts[0] == "parts" && len(parts) == 1 && r.Method == "POST":
@@ -194,6 +196,8 @@ func main() {
 			handleCalendar(w, r)
 
 		// ECOs
+		case parts[0] == "ecos" && len(parts) == 2 && parts[1] == "export" && r.Method == "GET":
+			handleExportECOs(w, r)
 		case parts[0] == "ecos" && len(parts) == 2 && parts[1] == "bulk" && r.Method == "POST":
 			handleBulkECOs(w, r)
 		case parts[0] == "ecos" && len(parts) == 1 && r.Method == "GET":
@@ -244,6 +248,8 @@ func main() {
 			handleSyncDocFromGit(w, r, parts[1])
 
 		// Vendors
+		case parts[0] == "vendors" && len(parts) == 2 && parts[1] == "export" && r.Method == "GET":
+			handleExportVendors(w, r)
 		case parts[0] == "vendors" && len(parts) == 1 && r.Method == "GET":
 			handleListVendors(w, r)
 		case parts[0] == "vendors" && len(parts) == 1 && r.Method == "POST":
@@ -256,6 +262,8 @@ func main() {
 			handleDeleteVendor(w, r, parts[1])
 
 		// Inventory
+		case parts[0] == "inventory" && len(parts) == 2 && parts[1] == "export" && r.Method == "GET":
+			handleExportInventory(w, r)
 		case parts[0] == "inventory" && len(parts) == 2 && parts[1] == "bulk" && r.Method == "POST":
 			handleBulkInventory(w, r)
 		case parts[0] == "inventory" && len(parts) == 2 && parts[1] == "bulk-delete" && r.Method == "DELETE":
@@ -292,6 +300,8 @@ func main() {
 			handleInspectReceiving(w, r, parts[1])
 
 		// Work Orders
+		case parts[0] == "workorders" && len(parts) == 2 && parts[1] == "export" && r.Method == "GET":
+			handleExportWorkOrders(w, r)
 		case parts[0] == "workorders" && len(parts) == 2 && parts[1] == "bulk" && r.Method == "POST":
 			handleBulkWorkOrders(w, r)
 		case parts[0] == "workorders" && len(parts) == 2 && parts[1] == "bulk-update" && r.Method == "POST":
@@ -734,11 +744,22 @@ func main() {
 		if path != "/" {
 			// Check if file exists in frontend/dist
 			if f, err := fs.Stat(os.DirFS(frontendDir), strings.TrimPrefix(path, "/")); err == nil && !f.IsDir() {
+				// Add cache headers for static assets
+				// Hashed files (Vite's output) can be cached forever
+				if strings.Contains(path, "/assets/") && (strings.Contains(path, "-") || strings.Contains(path, ".")) {
+					// Immutable cache for hashed assets (1 year)
+					w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+				} else {
+					// Short cache for other files (index.html, etc.)
+					w.Header().Set("Cache-Control", "public, max-age=3600")
+				}
 				fileServer.ServeHTTP(w, r)
 				return
 			}
 		}
 		// SPA fallback: serve index.html for all unmatched routes
+		// No cache for SPA fallback (always fresh)
+		w.Header().Set("Cache-Control", "no-cache, must-revalidate")
 		http.ServeFile(w, r, frontendDir+"/index.html")
 	})
 
@@ -748,7 +769,8 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"ok"}`))
 	})
-	root.Handle("/", logging(requireAuth(requireRBAC(mux))))
+	// Middleware chain: gzip -> logging -> auth -> rbac -> routes
+	root.Handle("/", gzipMiddleware(logging(requireAuth(requireRBAC(mux)))))
 
 	addr := fmt.Sprintf(":%d", *port)
 	log.Printf("ZRP server starting on http://localhost%s", addr)

@@ -416,6 +416,111 @@ curl -X POST http://localhost:9000/api/v1/prices \
   }'
 ```
 
+### Workflow 5: Export Data to CSV or Excel
+
+ZRP supports exporting data from major list views to CSV or Excel formats for analysis, reporting, and integration with other tools.
+
+**Supported Export Endpoints:**
+
+- Parts: `/api/v1/parts/export`
+- Inventory: `/api/v1/inventory/export`
+- Work Orders: `/api/v1/workorders/export`
+- ECOs: `/api/v1/ecos/export`
+- Vendors: `/api/v1/vendors/export`
+
+**Export Format Options:**
+
+- `format=csv` - Comma-separated values (text)
+- `format=xlsx` - Microsoft Excel format
+
+**Example 1: Export all parts to CSV**
+
+```bash
+curl "http://localhost:9000/api/v1/parts/export?format=csv" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -o parts.csv
+```
+
+**Example 2: Export filtered parts to Excel**
+
+```bash
+curl "http://localhost:9000/api/v1/parts/export?format=xlsx&category=Assemblies&search=widget" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -o assemblies.xlsx
+```
+
+**Example 3: Export low stock inventory**
+
+```bash
+curl "http://localhost:9000/api/v1/inventory/export?format=csv&low_stock=true" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -o low_stock.csv
+```
+
+**Example 4: Export ECOs by status**
+
+```bash
+curl "http://localhost:9000/api/v1/ecos/export?format=xlsx&status=approved" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -o approved_ecos.xlsx
+```
+
+**Export Parameters:**
+
+Each export endpoint respects the same filters as its corresponding list endpoint:
+
+| Endpoint | Supported Filters |
+|----------|-------------------|
+| Parts | `search`, `category` |
+| Inventory | `low_stock` |
+| Work Orders | `status` |
+| ECOs | `status` |
+| Vendors | `status` |
+
+**Response:**
+
+Exports return the file directly with appropriate headers:
+
+- **Content-Type:** `text/csv` or `application/vnd.openxmlformats-officedocument.spreadsheetml.sheet`
+- **Content-Disposition:** `attachment; filename="<entity>.csv|xlsx"`
+
+**CSV Format:**
+
+- First row contains column headers
+- Data rows follow standard CSV format
+- UTF-8 encoding
+- Proper escaping of quotes and commas
+
+**Excel Format:**
+
+- Single worksheet per export
+- Bold header row with gray background
+- Auto-fit column widths
+- All data properly formatted
+
+**Using Exports in Scripts:**
+
+```bash
+#!/bin/bash
+# Daily inventory report script
+
+DATE=$(date +%Y-%m-%d)
+API_KEY="your-api-key"
+BASE_URL="http://localhost:9000/api/v1"
+
+# Export low stock items
+curl "${BASE_URL}/inventory/export?format=xlsx&low_stock=true" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -o "reports/low_stock_${DATE}.xlsx"
+
+# Export pending work orders
+curl "${BASE_URL}/workorders/export?format=csv&status=open" \
+  -H "Authorization: Bearer ${API_KEY}" \
+  -o "reports/open_workorders_${DATE}.csv"
+
+echo "Reports generated for ${DATE}"
+```
+
 ## Error Handling
 
 ### Common HTTP Status Codes

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { Link } from "react-router-dom";
 import { 
   Package, 
@@ -7,7 +7,8 @@ import {
   MoreHorizontal,
   Trash2,
   ScanLine,
-  Pencil
+  Pencil,
+  Download
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -35,7 +36,8 @@ import { toast } from "sonner";
 import { api, type InventoryItem } from "../lib/api";
 import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTable";
 import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog";
-import { BarcodeScanner } from "../components/BarcodeScanner";
+// Lazy load BarcodeScanner to reduce initial bundle size (329KB chunk)
+const BarcodeScanner = lazy(() => import("../components/BarcodeScanner").then(m => ({ default: m.BarcodeScanner })));
 import { ConfirmDialog } from "../components/ConfirmDialog";
 
 function Inventory() {
@@ -135,6 +137,16 @@ function Inventory() {
     } catch (error: any) {
       toast.error(error.message || "Failed to update items");
     }
+  };
+
+  const handleExport = (format: 'csv' | 'xlsx') => {
+    const params = new URLSearchParams();
+    params.set('format', format);
+    if (showLowStock) {
+      params.set('low_stock', 'true');
+    }
+    window.location.href = `/api/v1/inventory/export?${params.toString()}`;
+    toast.success(`Exporting inventory as ${format.toUpperCase()}`);
   };
 
   const toggleSelectAll = () => {
@@ -288,6 +300,22 @@ function Inventory() {
             <AlertTriangle className="h-4 w-4 mr-2" />
             {showLowStock ? "Show All" : "Low Stock"}
           </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport('csv')}>
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('xlsx')}>
+                Export as Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Dialog open={receiveDialogOpen} onOpenChange={setReceiveDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -319,12 +347,14 @@ function Inventory() {
                   </div>
                   {showScanner && (
                     <div className="mb-2">
-                      <BarcodeScanner
-                        onScan={(code) => {
-                          setReceiveForm(prev => ({ ...prev, ipn: code }));
-                          setShowScanner(false);
-                        }}
-                      />
+                      <Suspense fallback={<div className="h-64 bg-muted animate-pulse rounded" />}>
+                        <BarcodeScanner
+                          onScan={(code) => {
+                            setReceiveForm(prev => ({ ...prev, ipn: code }));
+                            setShowScanner(false);
+                          }}
+                        />
+                      </Suspense>
                     </div>
                   )}
                   <Input
