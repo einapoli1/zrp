@@ -366,6 +366,104 @@ describe("QuoteDetail", () => {
     expect(screen.getByText("Q-001")).toBeInTheDocument();
   });
 
+  it("adds line item in edit mode", async () => {
+    render(<QuoteDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit Quote")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit Quote"));
+    await waitFor(() => {
+      expect(screen.getByText("Add Item")).toBeInTheDocument();
+    });
+    // Currently 2 lines in edit mode
+    const ipnInputsBefore = screen.getAllByDisplayValue(/IPN-00/);
+    expect(ipnInputsBefore.length).toBe(2);
+    fireEvent.click(screen.getByText("Add Item"));
+    // Should now have 3 rows with IPN inputs (2 existing + 1 empty)
+    const allIpnInputs = screen.getAllByRole("textbox").filter(
+      (input: HTMLElement) => (input as HTMLInputElement).className.includes("w-28")
+    );
+    expect(allIpnInputs.length).toBe(3);
+  });
+
+  it("removes line item in edit mode", async () => {
+    render(<QuoteDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit Quote")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit Quote"));
+    await waitFor(() => {
+      expect(screen.getByText("Save Changes")).toBeInTheDocument();
+    });
+    // Find remove buttons (in table cells with Trash2 icon)
+    const removeButtons = screen.getAllByRole("button").filter(b => {
+      const svg = b.querySelector("svg");
+      return svg && b.closest("td") !== null;
+    });
+    expect(removeButtons.length).toBe(2); // both lines have remove since length > 1
+    fireEvent.click(removeButtons[0]);
+    // Should now have 1 line
+    const remainingRemoveButtons = screen.getAllByRole("button").filter(b => {
+      const svg = b.querySelector("svg");
+      return svg && b.closest("td") !== null;
+    });
+    // With only 1 line, remove button is hidden
+    expect(remainingRemoveButtons.length).toBe(0);
+  });
+
+  it("updates line item fields in edit mode", async () => {
+    render(<QuoteDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit Quote")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit Quote"));
+    await waitFor(() => {
+      expect(screen.getByText("Save Changes")).toBeInTheDocument();
+    });
+    // Update description of first line
+    const descInputs = screen.getAllByDisplayValue("10k Resistor");
+    fireEvent.change(descInputs[0], { target: { value: "Updated Resistor" } });
+    expect(screen.getByDisplayValue("Updated Resistor")).toBeInTheDocument();
+  });
+
+  it("shows 0% margin for zero-price line without division error", async () => {
+    const zeroLine: QuoteLine = { id: 3, quote_id: "Q-001", ipn: "IPN-001", description: "Free item", qty: 10, unit_price: 0, notes: "" };
+    mockGetQuote.mockResolvedValueOnce({ ...mockQuoteWithLines, lines: [zeroLine] });
+    render(<QuoteDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Free item")).toBeInTheDocument();
+    });
+    // Line total is $0.00, margin % should be 0.0% not NaN or Infinity
+    expect(screen.getByText("(0.0%)")).toBeInTheDocument();
+    // No NaN anywhere
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
+  });
+
+  it("shows negative margin in red when selling below cost", async () => {
+    // IPN-003 cost is 5.00, selling at 2.00 → negative margin
+    const lossLine: QuoteLine = { id: 4, quote_id: "Q-001", ipn: "IPN-003", description: "MCU below cost", qty: 1, unit_price: 2.00, notes: "" };
+    mockGetQuote.mockResolvedValueOnce({ ...mockQuoteWithLines, lines: [lossLine] });
+    render(<QuoteDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("MCU below cost")).toBeInTheDocument();
+    });
+    // Line margin: $2.00 - $5.00 = -$3.00
+    const negativeMarginEl = screen.getByText("-$3.00");
+    expect(negativeMarginEl).toBeInTheDocument();
+    expect(negativeMarginEl.closest("div")).toHaveClass("text-red-600");
+  });
+
+  it("getPartCost returns 0 for unknown IPN", async () => {
+    const unknownLine: QuoteLine = { id: 5, quote_id: "Q-001", ipn: "UNKNOWN-999", description: "Unknown part", qty: 5, unit_price: 10.00, notes: "" };
+    mockGetQuote.mockResolvedValueOnce({ ...mockQuoteWithLines, lines: [unknownLine] });
+    render(<QuoteDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Unknown part")).toBeInTheDocument();
+    });
+    // Unit cost should be $0.00 for unknown IPN
+    expect(screen.getByText("$0.00")).toBeInTheDocument();
+  });
+
   it("handles handleExportPDF API rejection gracefully", async () => {
     mockExportQuotePDF.mockRejectedValueOnce(new Error("PDF export failed"));
     render(<QuoteDetail />);

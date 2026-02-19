@@ -181,6 +181,29 @@ describe("Dashboard", () => {
     expect(screen.getByText("No recent activity")).toBeInTheDocument();
   });
 
+  it("shows KPI cards with 0 values when stats is null", async () => {
+    mockGetDashboard.mockRejectedValue(new Error("fail"));
+    mockGetDashboardCharts.mockRejectedValue(new Error("fail"));
+    render(<Dashboard />);
+    await waitFor(() => expect(screen.queryByText("Loading dashboard...")).not.toBeInTheDocument());
+    // When stats is null, `stats?.[key] || 0` yields 0 for each card
+    const zeros = screen.getAllByText("0");
+    expect(zeros.length).toBeGreaterThanOrEqual(8);
+    mockGetDashboard.mockResolvedValue(mockDashboardStats);
+    mockGetDashboardCharts.mockResolvedValue({ eco_counts: [1, 2, 3] });
+  });
+
+  it("formats large numbers with toLocaleString", async () => {
+    mockGetDashboard.mockResolvedValue({
+      ...mockDashboardStats,
+      total_parts: 1500000,
+    });
+    render(<Dashboard />);
+    await waitFor(() => expect(screen.getByText("Total Parts")).toBeInTheDocument());
+    // 1500000.toLocaleString() → "1,500,000"
+    expect(screen.getByText("1,500,000")).toBeInTheDocument();
+  });
+
   it("handles both APIs rejecting simultaneously", async () => {
     // Reject both first calls AND subsequent interval calls
     mockGetDashboard.mockRejectedValue(new Error("Dashboard fail"));

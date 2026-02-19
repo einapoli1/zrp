@@ -192,6 +192,95 @@ describe("PartDetail", () => {
   });
 });
 
+describe("PartDetail - BOM tree expand/collapse", () => {
+  beforeEach(() => {
+    mockIPN = "PCA-100";
+    mockGetPart.mockResolvedValue({
+      ipn: "PCA-100",
+      fields: { _category: "Assemblies", description: "Main Board", status: "active" },
+    });
+    mockGetPartBOM.mockResolvedValue({
+      ipn: "PCA-100",
+      description: "Main Board",
+      qty: 1,
+      children: [
+        {
+          ipn: "SUB-001",
+          description: "Sub Assembly",
+          qty: 1,
+          children: [
+            { ipn: "IPN-DEEP", description: "Deep Part", qty: 3, children: [] },
+          ],
+        },
+      ],
+    });
+    mockGetPartCost.mockResolvedValue({ ipn: "PCA-100", bom_cost: 25.0 });
+  });
+
+  it("collapses and expands BOM children on toggle click", async () => {
+    render(<PartDetail />);
+    await waitFor(() => expect(screen.getByText("SUB-001")).toBeInTheDocument());
+    // Level 0 and 1 auto-expand (level < 2), so IPN-DEEP should be visible
+    expect(screen.getByText("IPN-DEEP")).toBeInTheDocument();
+
+    // Click the SUB-001 row to collapse it
+    fireEvent.click(screen.getByText("Sub Assembly"));
+    expect(screen.queryByText("IPN-DEEP")).not.toBeInTheDocument();
+
+    // Click again to expand
+    fireEvent.click(screen.getByText("Sub Assembly"));
+    expect(screen.getByText("IPN-DEEP")).toBeInTheDocument();
+  });
+});
+
+describe("PartDetail - cost fetch error", () => {
+  it("handles cost API rejection gracefully without crashing", async () => {
+    mockGetPart.mockResolvedValue({ ipn: "IPN-003", fields: { description: "Test" } });
+    mockGetPartCost.mockRejectedValue(new Error("cost fail"));
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    render(<PartDetail />);
+    await waitFor(() => expect(screen.getByText("Cost Information")).toBeInTheDocument());
+    // No cost data from part fields or API → shows fallback
+    expect(screen.getByText("No cost information available")).toBeInTheDocument();
+    consoleSpy.mockRestore();
+  });
+});
+
+describe("PartDetail - IPN URL decoding with special characters", () => {
+  it("decodes special characters in IPN", async () => {
+    mockIPN = "IPN%2F003%20%26%20004";
+    mockGetPart.mockResolvedValue({
+      ipn: "IPN/003 & 004",
+      fields: { description: "Special part", status: "active" },
+    });
+    mockGetPartCost.mockResolvedValue({ ipn: "IPN/003 & 004" });
+    render(<PartDetail />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("IPN/003 & 004"));
+    expect(mockGetPart).toHaveBeenCalledWith("IPN/003 & 004");
+  });
+});
+
+describe("PartDetail - bom_cost=0 hides BOM Cost Rollup", () => {
+  it("does not show BOM Cost Rollup when bom_cost is 0", async () => {
+    mockGetPartCost.mockResolvedValue({ ipn: "IPN-003", last_unit_price: 4.50, bom_cost: 0 });
+    render(<PartDetail />);
+    await waitForLoad();
+    expect(screen.queryByText("BOM Cost Rollup")).not.toBeInTheDocument();
+  });
+});
+
+describe("PartDetail - no description", () => {
+  it("shows 'No description available' when part has no description", async () => {
+    mockGetPart.mockResolvedValue({
+      ipn: "IPN-003",
+      fields: { _category: "ICs", status: "active" },
+    });
+    render(<PartDetail />);
+    await waitFor(() => expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("IPN-003"));
+    expect(screen.getByText("No description available")).toBeInTheDocument();
+  });
+});
+
 describe("PartDetail - ASY prefix triggers BOM fetch", () => {
   beforeEach(() => {
     mockIPN = "ASY-200";

@@ -19,11 +19,13 @@ vi.mock("../lib/api", () => ({
   },
 }));
 
+const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
     useParams: () => ({ id: "RMA-001" }),
+    useNavigate: () => mockNavigate,
   };
 });
 
@@ -271,6 +273,65 @@ describe("RMADetail", () => {
       expect(screen.getByText("Defect Description")).toBeInTheDocument();
       expect(screen.getByText("Resolution")).toBeInTheDocument();
     });
+  });
+
+  it("navigates to device details on View Device Details click", async () => {
+    render(<RMADetail />);
+    await waitFor(() => {
+      expect(screen.getByText("View Device Details")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("View Device Details"));
+    expect(mockNavigate).toHaveBeenCalledWith("/devices/SN-500");
+  });
+
+  it("changes status via Select in edit mode", async () => {
+    render(<RMADetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Edit RMA")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Edit RMA"));
+    await waitFor(() => {
+      expect(screen.getByText("Save Changes")).toBeInTheDocument();
+    });
+    // The Select trigger should show current status
+    const trigger = screen.getByRole("combobox");
+    expect(trigger).toBeInTheDocument();
+    // Click to open
+    fireEvent.click(trigger);
+    // Select "Investigating"
+    await waitFor(() => {
+      const option = screen.getAllByText("Investigating");
+      // Click the option in the dropdown (last one is the select item)
+      fireEvent.click(option[option.length - 1]);
+    });
+  });
+
+  it("shows active styling for current workflow step", async () => {
+    render(<RMADetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Status Workflow")).toBeInTheDocument();
+    });
+    // "received" is active status - its container should have bg-primary/10 class
+    const receivedLabel = screen.getAllByText("Received").find(el => {
+      // Find the one inside the workflow (has description sibling)
+      return el.closest(".space-y-3") !== null;
+    });
+    const activeStep = receivedLabel?.closest(".flex.items-center");
+    expect(activeStep?.className).toContain("bg-primary/10");
+
+    // "Open" is before "received" so it should be completed (green dot)
+    const openLabel = screen.getByText("Open");
+    const openStep = openLabel.closest(".flex.items-center");
+    const openDot = openStep?.querySelector(".rounded-full");
+    expect(openDot?.className).toContain("bg-green-500");
+
+    // "Investigating" is after "received" so it should be inactive (muted dot)
+    const investigatingLabel = screen.getAllByText("Investigating").find(el =>
+      el.closest(".space-y-3") !== null
+    );
+    const invStep = investigatingLabel?.closest(".flex.items-center");
+    const invDot = invStep?.querySelector(".rounded-full");
+    expect(invDot?.className).toContain("bg-muted");
   });
 
   it("handles getRMA API rejection gracefully", async () => {

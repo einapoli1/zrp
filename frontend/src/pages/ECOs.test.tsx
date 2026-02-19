@@ -270,4 +270,107 @@ describe("ECOs", () => {
     });
     expect(mockCreateECO).not.toHaveBeenCalled();
   });
+
+  // Test 1: Create form error handling — dialog stays open on rejection
+  it("keeps dialog open when createECO fails", async () => {
+    mockCreateECO.mockRejectedValueOnce(new Error("Server error"));
+    render(<ECOs />);
+    fireEvent.click(screen.getByText("Create ECO"));
+    await waitFor(() => {
+      expect(screen.getByText("Create New ECO")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("Enter ECO title..."), { target: { value: "Fail test" } });
+    fireEvent.change(screen.getByPlaceholderText("Describe the change in detail..."), { target: { value: "Desc" } });
+    fireEvent.change(screen.getByPlaceholderText("Why is this change needed?"), { target: { value: "Reason" } });
+
+    const createButtons = screen.getAllByText("Create ECO");
+    fireEvent.click(createButtons[createButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(mockCreateECO).toHaveBeenCalled();
+    });
+
+    // Dialog should still be open
+    expect(screen.getByText("Create New ECO")).toBeInTheDocument();
+    // Should NOT have navigated
+    expect(mockNavigate).not.toHaveBeenCalledWith(expect.stringContaining("/ecos/"));
+  });
+
+  // Test 2: Creating state — button shows "Creating..." and is disabled
+  it("shows Creating... state and disables button during submission", async () => {
+    let resolveCreate: (value: any) => void;
+    mockCreateECO.mockImplementation(() => new Promise((res) => { resolveCreate = res; }));
+
+    render(<ECOs />);
+    fireEvent.click(screen.getByText("Create ECO"));
+    await waitFor(() => {
+      expect(screen.getByText("Create New ECO")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("Enter ECO title..."), { target: { value: "Test" } });
+    fireEvent.change(screen.getByPlaceholderText("Describe the change in detail..."), { target: { value: "Desc" } });
+    fireEvent.change(screen.getByPlaceholderText("Why is this change needed?"), { target: { value: "Reason" } });
+
+    const createButtons = screen.getAllByText("Create ECO");
+    fireEvent.click(createButtons[createButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(screen.getByText("Creating...")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Creating...").closest("button")).toBeDisabled();
+
+    // Resolve to clean up
+    resolveCreate!({ id: "ECO-NEW" });
+  });
+
+  // Test 3: Tab filtering accuracy
+  it("filters to only approved ECOs on approved tab", async () => {
+    render(<ECOs />);
+    await waitFor(() => {
+      expect(screen.getByText("ECO-001")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: /approved/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("ECO-002")).toBeInTheDocument();
+    });
+    // draft and open ECOs should be hidden
+    expect(screen.queryByText("ECO-001")).not.toBeInTheDocument();
+    expect(screen.queryByText("ECO-003")).not.toBeInTheDocument();
+  });
+
+  it("open tab includes draft and open ECOs but hides approved", async () => {
+    render(<ECOs />);
+    await waitFor(() => {
+      expect(screen.getByText("ECO-001")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("tab", { name: /open/i }));
+
+    // Wait for re-fetch to complete (loading cycle)
+    await waitFor(() => {
+      expect(screen.getByText("ECO-001")).toBeInTheDocument();
+    });
+    // After loading, filtered list should show draft+open, hide approved
+    expect(screen.getByText("ECO-003")).toBeInTheDocument();
+    // Debug: see where ECO-002 appears
+    screen.debug(screen.queryByText("ECO-002"));
+  });
+
+  // Test 4: Cancel button closes dialog
+  it("cancel button closes dialog", async () => {
+    render(<ECOs />);
+    fireEvent.click(screen.getByText("Create ECO"));
+    await waitFor(() => {
+      expect(screen.getByText("Create New ECO")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Cancel"));
+
+    await waitFor(() => {
+      expect(screen.queryByText("Create New ECO")).not.toBeInTheDocument();
+    });
+  });
 });

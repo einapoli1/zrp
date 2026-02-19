@@ -12,6 +12,12 @@ vi.mock("../lib/api", () => ({
   },
 }));
 
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 import RMAs from "./RMAs";
 
 beforeEach(() => vi.clearAllMocks());
@@ -183,6 +189,51 @@ describe("RMAs", () => {
     });
     fireEvent.change(screen.getByLabelText("Defect Description"), { target: { value: "Screen broken" } });
     expect(screen.getByLabelText("Defect Description")).toHaveValue("Screen broken");
+  });
+
+  it("navigates to RMA detail on row click", async () => {
+    render(<RMAs />);
+    await waitFor(() => {
+      expect(screen.getByText("RMA-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("RMA-001"));
+    expect(mockNavigate).toHaveBeenCalledWith("/rmas/RMA-001");
+  });
+
+  it("navigates via View Details button", async () => {
+    render(<RMAs />);
+    await waitFor(() => {
+      expect(screen.getByText("RMA-001")).toBeInTheDocument();
+    });
+    const viewButtons = screen.getAllByText("View Details");
+    fireEvent.click(viewButtons[0]);
+    expect(mockNavigate).toHaveBeenCalledWith("/rmas/RMA-001");
+  });
+
+  it("resets form after successful create", async () => {
+    render(<RMAs />);
+    await waitFor(() => {
+      expect(screen.getByText("RMA-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Create RMA"));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Device Serial Number *")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByLabelText("Device Serial Number *"), { target: { value: "SN-999" } });
+    fireEvent.change(screen.getByLabelText("Customer *"), { target: { value: "New Corp" } });
+    fireEvent.change(screen.getByLabelText("Reason for Return *"), { target: { value: "Broken" } });
+    const submitButtons = screen.getAllByText("Create RMA");
+    fireEvent.click(submitButtons[submitButtons.length - 1]);
+    await waitFor(() => {
+      expect(mockCreateRMA).toHaveBeenCalled();
+    });
+    // Dialog closes; re-open to check form is reset
+    fireEvent.click(screen.getByText("Create RMA"));
+    await waitFor(() => {
+      expect(screen.getByLabelText("Device Serial Number *")).toHaveValue("");
+      expect(screen.getByLabelText("Customer *")).toHaveValue("");
+      expect(screen.getByLabelText("Reason for Return *")).toHaveValue("");
+    });
   });
 
   it("handles getRMAs API rejection gracefully", async () => {

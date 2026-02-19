@@ -183,6 +183,80 @@ describe("Calendar", () => {
     expect(screen.getByText("Quote")).toBeInTheDocument();
   });
 
+  it("highlights today's date with border-primary", async () => {
+    render(<Calendar />);
+    await waitFor(() => screen.getByText("15"));
+    const todayDay = now.getDate();
+    const todayButton = screen.getByText(String(todayDay)).closest("button");
+    expect(todayButton?.className).toContain("border-primary");
+  });
+
+  it("highlights selected date with bg-primary", async () => {
+    render(<Calendar />);
+    await waitFor(() => screen.getByText("10"));
+    fireEvent.click(screen.getByText("10"));
+    const selectedButton = screen.getByText("10").closest("button");
+    expect(selectedButton?.className).toContain("bg-primary");
+  });
+
+  it("shows +N overflow indicator for more than 2 events on a day", async () => {
+    mockGetCalendarEvents.mockResolvedValueOnce([
+      { date: dateStr, type: "workorder", id: "WO-001", title: "Event 1" },
+      { date: dateStr, type: "po", id: "PO-001", title: "Event 2" },
+      { date: dateStr, type: "quote", id: "Q-001", title: "Event 3" },
+      { date: dateStr, type: "workorder", id: "WO-002", title: "Event 4" },
+    ]);
+    render(<Calendar />);
+    await waitFor(() => screen.getByText("15"));
+    expect(screen.getByText("+2")).toBeInTheDocument();
+  });
+
+  it("renders unknown event type with gray fallback", async () => {
+    mockGetCalendarEvents.mockResolvedValueOnce([
+      { date: dateStr, type: "unknown_type", id: "X-001", title: "Mystery Event" },
+    ]);
+    render(<Calendar />);
+    await waitFor(() => screen.getByText("15"));
+    fireEvent.click(screen.getByText("15"));
+    await waitFor(() => {
+      expect(screen.getByText("Mystery Event")).toBeInTheDocument();
+    });
+    // The event badge should use gray fallback - check the container bg
+    const eventContainer = screen.getByText("Mystery Event").closest("[class*='bg-gray']");
+    expect(eventContainer).not.toBeNull();
+  });
+
+  it("handles December to January year rollover", async () => {
+    // Mock current date to December 2025
+    const realDate = globalThis.Date;
+    const mockNow = new Date(2025, 11, 15); // December 15, 2025
+    vi.spyOn(globalThis, "Date").mockImplementation((...args: any[]) => {
+      if (args.length === 0) return mockNow;
+      // @ts-ignore
+      return new realDate(...args);
+    });
+    // Also mock Date.now
+    vi.spyOn(Date, "now").mockReturnValue(mockNow.getTime());
+
+    mockGetCalendarEvents.mockResolvedValue([]);
+    render(<Calendar />);
+    await waitFor(() => {
+      expect(screen.getByText((c) => c.includes("December") && c.includes("2025"))).toBeInTheDocument();
+    });
+
+    // Click next month
+    const buttons = screen.getAllByRole("button");
+    const smallButtons = buttons.filter(b => b.className.includes("outline") && b.className.includes("sm"));
+    fireEvent.click(smallButtons[1]); // next
+
+    await waitFor(() => {
+      expect(mockGetCalendarEvents).toHaveBeenCalledWith(2026, 1);
+    });
+    expect(screen.getByText((c) => c.includes("January") && c.includes("2026"))).toBeInTheDocument();
+
+    vi.restoreAllMocks();
+  });
+
   it("handles API error gracefully", async () => {
     mockGetCalendarEvents.mockRejectedValueOnce(new Error("fail"));
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});

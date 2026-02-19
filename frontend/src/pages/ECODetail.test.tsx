@@ -298,4 +298,89 @@ describe("ECODetail", () => {
     });
     expect(screen.queryByText(/Affected Parts/)).not.toBeInTheDocument();
   });
+
+  // Test 5: Action button loading states
+  it("shows Approving... and disables button during approve", async () => {
+    let resolveApprove: (value: any) => void;
+    mockApproveECO.mockImplementation(() => new Promise((res) => { resolveApprove = res; }));
+    mockGetECO.mockResolvedValue(mockECOOpen);
+    render(<ECODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Approve ECO")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Approve ECO"));
+    await waitFor(() => {
+      expect(screen.getByText("Approving...")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Approving...").closest("button")).toBeDisabled();
+    resolveApprove!({});
+  });
+
+  it("shows Implementing... and disables button during implement", async () => {
+    let resolveImpl: (value: any) => void;
+    mockImplementECO.mockImplementation(() => new Promise((res) => { resolveImpl = res; }));
+    mockGetECO.mockResolvedValue(mockECOApproved);
+    render(<ECODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Implement ECO")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Implement ECO"));
+    await waitFor(() => {
+      expect(screen.getByText("Implementing...")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Implementing...").closest("button")).toBeDisabled();
+    resolveImpl!({});
+  });
+
+  it("shows Rejecting... and disables button during reject", async () => {
+    let resolveReject: (value: any) => void;
+    mockRejectECO.mockImplementation(() => new Promise((res) => { resolveReject = res; }));
+    mockGetECO.mockResolvedValue(mockECOOpen);
+    render(<ECODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Reject ECO")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Reject ECO"));
+    await waitFor(() => {
+      expect(screen.getByText("Rejecting...")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Rejecting...").closest("button")).toBeDisabled();
+    resolveReject!({});
+  });
+
+  // Test 6: Action error handling
+  it("logs error when status action fails", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockApproveECO.mockRejectedValueOnce(new Error("Approve failed"));
+    mockGetECO.mockResolvedValue(mockECOOpen);
+    render(<ECODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Approve ECO")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Approve ECO"));
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to approve ECO:", expect.any(Error));
+    });
+    consoleSpy.mockRestore();
+  });
+
+  // Test 7: Clicking errored part does NOT navigate
+  it("does not navigate when clicking an errored part", async () => {
+    render(<ECODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("IPN-999")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("IPN-999"));
+    expect(mockNavigate).not.toHaveBeenCalledWith(expect.stringContaining("/parts/IPN-999"));
+  });
+
+  // Test 8: Priority badge not shown when priority is falsy
+  it("does not show priority badge when priority is falsy", async () => {
+    mockGetECO.mockResolvedValue({ ...mockECODraft, priority: "" });
+    render(<ECODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("ECO-001")).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/Priority/i)).not.toBeInTheDocument();
+  });
 });

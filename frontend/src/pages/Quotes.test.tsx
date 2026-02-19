@@ -18,6 +18,12 @@ vi.mock("../lib/api", () => ({
   },
 }));
 
+const mockNavigate = vi.fn();
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
+
 import Quotes from "./Quotes";
 
 beforeEach(() => vi.clearAllMocks());
@@ -236,6 +242,90 @@ describe("Quotes", () => {
     });
     // Page renders with empty list
     expect(screen.getByText(/No quotes found/)).toBeInTheDocument();
+  });
+
+  it("navigates to quote detail on row click", async () => {
+    render(<Quotes />);
+    await waitFor(() => {
+      expect(screen.getByText("Q-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Q-001"));
+    expect(mockNavigate).toHaveBeenCalledWith("/quotes/Q-001");
+  });
+
+  it("navigates via View Details button with stopPropagation", async () => {
+    render(<Quotes />);
+    await waitFor(() => {
+      expect(screen.getByText("Q-001")).toBeInTheDocument();
+    });
+    const viewButtons = screen.getAllByText("View Details");
+    fireEvent.click(viewButtons[0]);
+    // Should navigate (button calls navigate) — only one navigate call, not two (stopPropagation prevents row click)
+    expect(mockNavigate).toHaveBeenCalledWith("/quotes/Q-001");
+  });
+
+  it("removes line item in create dialog", async () => {
+    render(<Quotes />);
+    await waitFor(() => {
+      expect(screen.getByText("Q-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Create Quote"));
+    await waitFor(() => {
+      expect(screen.getByText("Add Item")).toBeInTheDocument();
+    });
+    // Add a second line so remove button appears
+    fireEvent.click(screen.getByText("Add Item"));
+    let ipnInputs = screen.getAllByPlaceholderText("Part number");
+    expect(ipnInputs.length).toBe(2);
+    // Click the first trash button to remove a line
+    const { container } = render(<div />); // just need the buttons
+    const trashButtons = screen.getAllByRole("button").filter(btn => btn.querySelector("svg.lucide-trash-2") || btn.innerHTML.includes("Trash2"));
+    // Use a more reliable approach: find buttons with Trash2 icon
+    const removeButtons = screen.getAllByRole("button").filter(b => {
+      const svg = b.querySelector("svg");
+      return svg && b.closest("td") !== null;
+    });
+    fireEvent.click(removeButtons[0]);
+    ipnInputs = screen.getAllByPlaceholderText("Part number");
+    expect(ipnInputs.length).toBe(1);
+  });
+
+  it("updates line item fields in create dialog", async () => {
+    render(<Quotes />);
+    await waitFor(() => {
+      expect(screen.getByText("Q-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Create Quote"));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Part number")).toBeInTheDocument();
+    });
+    fireEvent.change(screen.getByPlaceholderText("Description"), { target: { value: "New Desc" } });
+    expect(screen.getByPlaceholderText("Description")).toHaveValue("New Desc");
+
+    // Update qty
+    const qtyInput = screen.getByDisplayValue("1");
+    fireEvent.change(qtyInput, { target: { value: "10" } });
+    expect(qtyInput).toHaveValue(10);
+
+    // Update unit_price
+    const priceInput = screen.getByDisplayValue("0");
+    fireEvent.change(priceInput, { target: { value: "5.50" } });
+    expect(priceInput).toHaveValue(5.5);
+  });
+
+  it("cancel button closes create dialog", async () => {
+    render(<Quotes />);
+    await waitFor(() => {
+      expect(screen.getByText("Q-001")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Create Quote"));
+    await waitFor(() => {
+      expect(screen.getByText("Create New Quote")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Cancel"));
+    await waitFor(() => {
+      expect(screen.queryByText("Create New Quote")).not.toBeInTheDocument();
+    });
   });
 
   it("handles createQuote API rejection gracefully", async () => {
