@@ -117,7 +117,7 @@ export function ConfigurableTable<T>({
     saveColumnState(tableName, columnOrder);
   }, [tableName, columnOrder]);
 
-  const colMap = new Map(columns.map((c) => [c.id, c]));
+  const colMap = useMemo(() => new Map(columns.map((c) => [c.id, c])), [columns]);
 
   const visibleColumns = columnOrder
     .filter((cs) => cs.visible && colMap.has(cs.id))
@@ -172,6 +172,12 @@ export function ConfigurableTable<T>({
     return [...data].sort((a, b) => {
       const va = getValue(a);
       const vb = getValue(b);
+      // Null/undefined/empty values sort to end regardless of direction
+      const aEmpty = va == null || va === "";
+      const bEmpty = vb == null || vb === "";
+      if (aEmpty && bEmpty) return 0;
+      if (aEmpty) return 1;
+      if (bEmpty) return -1;
       if (typeof va === "number" && typeof vb === "number") return (va - vb) * mult;
       return String(va).localeCompare(String(vb)) * mult;
     });
