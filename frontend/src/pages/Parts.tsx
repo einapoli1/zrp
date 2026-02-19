@@ -22,14 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "../components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../components/ui/table";
+// Table components used by ConfigurableTable internally
 import { Skeleton } from "../components/ui/skeleton";
 import { 
   Search, 

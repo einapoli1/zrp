@@ -36,6 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
 import { api, type InventoryItem } from "../lib/api";
+import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTable";
 
 function Inventory() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -318,93 +319,29 @@ function Inventory() {
           <CardTitle>Inventory Items</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">
-                  <Checkbox
-                    checked={selectedItems.size === inventory.length && inventory.length > 0}
-                    onCheckedChange={toggleSelectAll}
-                  />
-                </TableHead>
-                <TableHead>IPN</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead className="text-right">On Hand</TableHead>
-                <TableHead className="text-right">Reserved</TableHead>
-                <TableHead className="text-right">Available</TableHead>
-                <TableHead>Location</TableHead>
-                <TableHead className="text-right">Reorder Point</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {inventory.map((item) => (
-                <TableRow 
-                  key={item.ipn}
-                  className={isLowStock(item) ? "bg-red-50" : ""}
-                >
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedItems.has(item.ipn)}
-                      onCheckedChange={() => toggleSelectItem(item.ipn)}
-                    />
-                  </TableCell>
-                  <TableCell>
-                    <Link 
-                      to={`/inventory/${item.ipn}`}
-                      className="font-medium text-blue-600 hover:underline"
-                    >
-                      {item.ipn}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{item.description || "—"}</TableCell>
-                  <TableCell className="text-right font-mono">{item.qty_on_hand}</TableCell>
-                  <TableCell className="text-right font-mono">{item.qty_reserved}</TableCell>
-                  <TableCell className="text-right font-mono">{getAvailableQty(item)}</TableCell>
-                  <TableCell>{item.location || "—"}</TableCell>
-                  <TableCell className="text-right font-mono">
-                    <div className="flex items-center justify-end gap-2">
-                      {item.reorder_point}
-                      {isLowStock(item) && (
-                        <Badge variant="destructive" className="text-xs">
-                          <AlertTriangle className="h-3 w-3" />
-                        </Badge>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link to={`/inventory/${item.ipn}`}>View Details</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            setReceiveForm(prev => ({ ...prev, ipn: item.ipn }));
-                            setReceiveDialogOpen(true);
-                          }}
-                        >
-                          Quick Receive
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {inventory.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                    {showLowStock ? "No low stock items found" : "No inventory items found"}
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <ConfigurableTable<InventoryItem>
+            tableName="inventory"
+            columns={inventoryColumns}
+            data={inventory}
+            rowKey={(item) => item.ipn}
+            rowClassName={(item) => isLowStock(item) ? "bg-red-50" : ""}
+            emptyMessage={showLowStock ? "No low stock items found" : "No inventory items found"}
+            leadingColumn={{
+              header: (
+                <Checkbox
+                  checked={selectedItems.size === inventory.length && inventory.length > 0}
+                  onCheckedChange={toggleSelectAll}
+                />
+              ),
+              cell: (item) => (
+                <Checkbox
+                  checked={selectedItems.has(item.ipn)}
+                  onCheckedChange={() => toggleSelectItem(item.ipn)}
+                />
+              ),
+              className: "w-12",
+            }}
+          />
         </CardContent>
       </Card>
     </div>

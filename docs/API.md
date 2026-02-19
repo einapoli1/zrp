@@ -189,6 +189,24 @@ curl -X PUT http://localhost:9000/api/v1/users/5 \
   -b cookies.txt
 ```
 
+### DELETE /api/v1/users/:id
+
+Delete a user. Requires admin role. Admin cannot delete themselves. Also cleans up associated sessions.
+
+```bash
+curl -X DELETE http://localhost:9000/api/v1/users/5 -b cookies.txt
+```
+
+**Response:**
+
+```json
+{ "data": { "status": "deleted" } }
+```
+
+**Errors:**
+- `400` — Cannot delete yourself / Invalid user ID
+- `404` — User not found
+
 ### PUT /api/v1/users/:id/password
 
 Reset a user's password. Requires admin role.
@@ -212,7 +230,7 @@ curl -X PUT http://localhost:9000/api/v1/users/5/password \
 
 Manage API keys for programmatic (Bearer token) access. Authenticated users can manage keys.
 
-### GET /api/v1/apikeys
+### GET /api/v1/apikeys (also /api/v1/api-keys)
 
 List all API keys. Keys show only the prefix (first 12 chars), never the full key.
 
@@ -264,6 +282,14 @@ Revoke (permanently delete) an API key.
 
 ```bash
 curl -X DELETE http://localhost:9000/api/v1/apikeys/1 -b cookies.txt
+```
+
+### POST /api/v1/api-keys/:id/revoke
+
+Alternative revoke endpoint (same as DELETE above). Used by the frontend.
+
+```bash
+curl -X POST http://localhost:9000/api/v1/api-keys/1/revoke -b cookies.txt
 ```
 
 ### PUT /api/v1/apikeys/:id
@@ -407,23 +433,29 @@ Query the audit log. All create/update/delete/bulk operations are logged.
 | Param | Type | Description |
 |-------|------|-------------|
 | `module` | string | Filter by module (e.g., `eco`, `workorder`, `po`) |
+| `entity_type` | string | Alias for `module` (frontend compatibility) |
 | `user` | string | Filter by username |
+| `search` | string | Full-text search across summary, action, module, record_id |
 | `from` | string | Start date (YYYY-MM-DD) |
 | `to` | string | End date (YYYY-MM-DD) |
-| `limit` | int | Max results (default: 50) |
+| `page` | int | Page number (default: 1) |
+| `limit` | int | Results per page (default: 50) |
 
 **Response:**
 
 ```json
 {
-  "data": [
+  "entries": [
     { "id": 1, "username": "admin", "action": "created", "module": "eco", "record_id": "ECO-2026-001", "summary": "Created ECO ECO-2026-001", "created_at": "2026-02-17 21:00:00" }
-  ]
+  ],
+  "total": 42
 }
 ```
 
+Note: The audit log response uses `entries`/`total` format (not the standard `{data}` envelope) for frontend compatibility.
+
 ```bash
-curl "http://localhost:9000/api/v1/audit?module=eco&limit=10" -b cookies.txt
+curl "http://localhost:9000/api/v1/audit?entity_type=eco&search=created&page=1&limit=10" -b cookies.txt
 ```
 
 ---

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useWS } from "../contexts/WebSocketContext";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   BarChart3,
@@ -117,6 +118,7 @@ export function AppLayout() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const { status: wsStatus } = useWS();
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -195,6 +197,21 @@ export function AppLayout() {
             </div>
 
             <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-1.5" title={`WebSocket: ${wsStatus}`}>
+                <span
+                  className={`inline-block h-2 w-2 rounded-full ${
+                    wsStatus === "connected"
+                      ? "bg-green-500"
+                      : wsStatus === "connecting"
+                      ? "bg-yellow-500 animate-pulse"
+                      : "bg-red-500"
+                  }`}
+                />
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  {wsStatus === "connected" ? "Live" : wsStatus === "connecting" ? "Connecting" : "Offline"}
+                </span>
+              </div>
+
               <Button variant="ghost" size="icon">
                 <Bell className="h-4 w-4" />
                 <Badge variant="destructive" className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 text-xs">
