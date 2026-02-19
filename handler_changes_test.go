@@ -108,6 +108,9 @@ func TestUndoChangeUpdate(t *testing.T) {
 	defer cleanup()
 	cookie := loginAdmin(t)
 
+	// Delete POs that reference V-001 to avoid FK constraint issues during restore
+	db.Exec("DELETE FROM purchase_orders WHERE vendor_id='V-001'")
+
 	// Get original vendor name
 	var origName string
 	db.QueryRow("SELECT name FROM vendors WHERE id='V-001'").Scan(&origName)
@@ -155,6 +158,9 @@ func TestUndoChangeDelete(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
 	cookie := loginAdmin(t)
+
+	// Delete POs that reference V-001 first (required by FK constraint)
+	db.Exec("DELETE FROM purchase_orders WHERE vendor_id='V-001'")
 
 	// Delete vendor
 	req := authedRequest("DELETE", "/api/v1/vendors/V-001", "", cookie)

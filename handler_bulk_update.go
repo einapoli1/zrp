@@ -109,16 +109,16 @@ func handleBulkUpdateWorkOrders(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Validate status values
+	// Validate status values (must match work_orders table CHECK constraint)
 	if s, ok := req.Updates["status"]; ok {
-		validStatuses := map[string]bool{"open": true, "in_progress": true, "completed": true, "cancelled": true}
+		validStatuses := map[string]bool{"open": true, "in_progress": true, "complete": true, "cancelled": true, "on_hold": true}
 		if !validStatuses[s] {
 			jsonErr(w, "invalid status: "+s, 400)
 			return
 		}
 	}
 	if p, ok := req.Updates["priority"]; ok {
-		validPriorities := map[string]bool{"low": true, "normal": true, "high": true, "urgent": true}
+		validPriorities := map[string]bool{"low": true, "normal": true, "high": true, "critical": true}
 		if !validPriorities[p] {
 			jsonErr(w, "invalid priority: "+p, 400)
 			return

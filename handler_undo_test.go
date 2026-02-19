@@ -12,6 +12,9 @@ func TestUndoDeleteVendor(t *testing.T) {
 	defer cleanup()
 	cookie := loginAdmin(t)
 
+	// Delete POs that reference V-001 first (required by FK constraint)
+	db.Exec("DELETE FROM purchase_orders WHERE vendor_id='V-001'")
+
 	// Verify vendor V-001 exists (seeded)
 	req := authedRequest("GET", "/api/v1/vendors/V-001", "", cookie)
 	w := httptest.NewRecorder()

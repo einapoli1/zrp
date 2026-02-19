@@ -81,10 +81,9 @@ func setupWorkOrderTestDB(t *testing.T) *sql.DB {
 }
 
 func TestWorkOrderKit(t *testing.T) {
-	// Setup
-	testDB := setupWorkOrderTestDB(t)
-	defer testDB.Close()
-	db = testDB // Set global db for handlers
+	// Setup using standard test DB
+	cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Insert test data
 	_, err := db.Exec(`INSERT INTO work_orders (id, assembly_ipn, qty, status, created_at) VALUES ('WO001', 'ASY-001', 5, 'open', '2026-01-01 00:00:00')`)
@@ -138,10 +137,9 @@ func TestWorkOrderKit(t *testing.T) {
 }
 
 func TestWorkOrderSerials(t *testing.T) {
-	// Setup
-	testDB := setupWorkOrderTestDB(t)
-	defer testDB.Close()
-	db = testDB
+	// Setup using standard test DB
+	cleanup := setupTestDB(t)
+	defer cleanup()
 
 	// Insert test data
 	_, err := db.Exec(`INSERT INTO work_orders (id, assembly_ipn, qty, status, created_at) VALUES ('WO002', 'ASY-002', 2, 'in_progress', '2026-01-01 00:00:00')`)
@@ -152,7 +150,7 @@ func TestWorkOrderSerials(t *testing.T) {
 	// Test adding a serial number
 	serial := WOSerial{
 		SerialNumber: "TEST001",
-		Status:       "assigned",
+		Status:       "building", // Must match wo_serials schema CHECK constraint
 		Notes:        "Test serial",
 	}
 
@@ -170,13 +168,17 @@ func TestWorkOrderSerials(t *testing.T) {
 	handleWorkOrderAddSerial(rr, req, "WO002")
 
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		t.Errorf("handler returned wrong status code: got %v want %v, body: %s", status, http.StatusOK, rr.Body.String())
 	}
 
-	var result WOSerial
-	if err := json.Unmarshal(rr.Body.Bytes(), &result); err != nil {
+	// Extract data field from API response
+	var apiResp struct {
+		Data WOSerial `json:"data"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &apiResp); err != nil {
 		t.Fatal(err)
 	}
+	result := apiResp.Data
 
 	if result.SerialNumber != "TEST001" {
 		t.Errorf("Expected serial TEST001, got %s", result.SerialNumber)
@@ -199,10 +201,14 @@ func TestWorkOrderSerials(t *testing.T) {
 		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
 	}
 
-	var serials []WOSerial
-	if err := json.Unmarshal(rr2.Body.Bytes(), &serials); err != nil {
+	// Extract data field from API response
+	var apiResp2 struct {
+		Data []WOSerial `json:"data"`
+	}
+	if err := json.Unmarshal(rr2.Body.Bytes(), &apiResp2); err != nil {
 		t.Fatal(err)
 	}
+	serials := apiResp2.Data
 
 	if len(serials) != 1 {
 		t.Errorf("Expected 1 serial, got %d", len(serials))

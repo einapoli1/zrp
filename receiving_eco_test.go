@@ -23,10 +23,34 @@ func extractData(body []byte) json.RawMessage {
 
 func insertReceivingInspection(t *testing.T, poID, ipn string, qtyReceived float64) int {
 	t.Helper()
-	// Ensure PO exists
-	db.Exec(`INSERT OR IGNORE INTO purchase_orders (id, vendor_id, status, created_at, updated_at) VALUES (?, 'V-001', 'open', datetime('now'), datetime('now'))`, poID)
+	// Ensure vendor exists first (required by FK constraint)
+	result, err := db.Exec(`INSERT OR IGNORE INTO vendors (id, name, status) VALUES ('V-001', 'Test Vendor', 'active')`)
+	if err != nil {
+		t.Fatalf("Failed to create vendor: %v", err)
+	}
+	
+	// Verify vendor exists
+	var vendorCount int
+	db.QueryRow(`SELECT COUNT(*) FROM vendors WHERE id = 'V-001'`).Scan(&vendorCount)
+	if vendorCount == 0 {
+		t.Fatal("Vendor was not created")
+	}
+	
+	// Ensure PO exists (status must be one of: draft, sent, confirmed, partial, received, cancelled)
+	result, err = db.Exec(`INSERT OR IGNORE INTO purchase_orders (id, vendor_id, status, created_at) VALUES (?, 'V-001', 'confirmed', datetime('now'))`, poID)
+	if err != nil {
+		t.Fatalf("Failed to create PO: %v", err)
+	}
+	
+	// Verify PO exists
+	var poCount int
+	db.QueryRow(`SELECT COUNT(*) FROM purchase_orders WHERE id = ?`, poID).Scan(&poCount)
+	if poCount == 0 {
+		t.Fatalf("PO was not created: %s", poID)
+	}
+	
 	// Create PO line (let it auto-generate the ID)
-	result, err := db.Exec(`INSERT INTO po_lines (po_id, ipn, qty_ordered, unit_price) VALUES (?, ?, ?, 1.00)`, poID, ipn, qtyReceived)
+	result, err = db.Exec(`INSERT INTO po_lines (po_id, ipn, qty_ordered, unit_price) VALUES (?, ?, ?, 1.00)`, poID, ipn, qtyReceived)
 	if err != nil {
 		t.Fatal("Failed to create PO line:", err)
 	}

@@ -110,7 +110,7 @@ func TestBulkUpdateWorkOrdersStatus(t *testing.T) {
 	cookie := loginAdmin(t)
 
 	year := fmt.Sprintf("%d", time.Now().Year())
-	body := fmt.Sprintf(`{"ids":["WO-%s-0001","WO-%s-0002"],"updates":{"status":"completed"}}`, year, year)
+	body := fmt.Sprintf(`{"ids":["WO-%s-0001","WO-%s-0002"],"updates":{"status":"complete"}}`, year, year)
 	req := authedRequest("POST", "/api/v1/workorders/bulk-update", body, cookie)
 	w := httptest.NewRecorder()
 	handleBulkUpdateWorkOrders(w, req)
@@ -127,8 +127,8 @@ func TestBulkUpdateWorkOrdersStatus(t *testing.T) {
 
 	var status string
 	db.QueryRow("SELECT status FROM work_orders WHERE id=?", fmt.Sprintf("WO-%s-0001", year)).Scan(&status)
-	if status != "completed" {
-		t.Errorf("expected completed, got %s", status)
+	if status != "complete" {
+		t.Errorf("expected complete, got %s", status)
 	}
 }
 
@@ -138,7 +138,7 @@ func TestBulkUpdateWorkOrdersPriority(t *testing.T) {
 	cookie := loginAdmin(t)
 
 	year := fmt.Sprintf("%d", time.Now().Year())
-	body := fmt.Sprintf(`{"ids":["WO-%s-0001"],"updates":{"priority":"urgent"}}`, year)
+	body := fmt.Sprintf(`{"ids":["WO-%s-0001"],"updates":{"priority":"critical"}}`, year)
 	req := authedRequest("POST", "/api/v1/workorders/bulk-update", body, cookie)
 	w := httptest.NewRecorder()
 	handleBulkUpdateWorkOrders(w, req)
@@ -148,8 +148,8 @@ func TestBulkUpdateWorkOrdersPriority(t *testing.T) {
 
 	var prio string
 	db.QueryRow("SELECT priority FROM work_orders WHERE id=?", fmt.Sprintf("WO-%s-0001", year)).Scan(&prio)
-	if prio != "urgent" {
-		t.Errorf("expected urgent, got %s", prio)
+	if prio != "critical" {
+		t.Errorf("expected critical, got %s", prio)
 	}
 }
 
