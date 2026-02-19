@@ -61,7 +61,7 @@ func setupProcurementTestDB(t *testing.T) *sql.DB {
 		CREATE TABLE purchase_orders (
 			id TEXT PRIMARY KEY,
 			vendor_id TEXT,
-			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','ordered','received','cancelled')),
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','sent','confirmed','partial','received','cancelled')),
 			notes TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			expected_date TEXT,
@@ -110,7 +110,11 @@ func setupProcurementTestDB(t *testing.T) *sql.DB {
 	_, err = testDB.Exec(`
 		CREATE TABLE inventory (
 			ipn TEXT PRIMARY KEY,
-			qty_on_hand REAL DEFAULT 0
+			qty_on_hand REAL DEFAULT 0,
+			qty_reserved REAL DEFAULT 0,
+			location TEXT,
+			description TEXT,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
@@ -160,6 +164,43 @@ func setupProcurementTestDB(t *testing.T) *sql.DB {
 	`)
 	if err != nil {
 		t.Fatalf("Failed to create id_sequences table: %v", err)
+	}
+
+	// Create inventory_transactions table
+	_, err = testDB.Exec(`
+		CREATE TABLE inventory_transactions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			ipn TEXT NOT NULL,
+			type TEXT NOT NULL,
+			qty REAL NOT NULL,
+			reference TEXT,
+			notes TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create inventory_transactions table: %v", err)
+	}
+
+	// Create receiving_inspections table
+	_, err = testDB.Exec(`
+		CREATE TABLE receiving_inspections (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			po_id TEXT NOT NULL,
+			po_line_id INTEGER NOT NULL,
+			ipn TEXT NOT NULL,
+			qty_received REAL NOT NULL,
+			qty_passed REAL DEFAULT 0,
+			qty_failed REAL DEFAULT 0,
+			qty_on_hold REAL DEFAULT 0,
+			inspector TEXT,
+			inspected_at DATETIME,
+			notes TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create receiving_inspections table: %v", err)
 	}
 
 	return testDB

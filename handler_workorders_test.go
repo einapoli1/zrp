@@ -12,7 +12,7 @@ import (
 )
 
 func setupWorkOrderTestDB(t *testing.T) *sql.DB {
-	db, err := sql.Open("sqlite3", ":memory:")
+	db, err := sql.Open("sqlite", ":memory:")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +246,7 @@ func TestWorkOrderCompletion(t *testing.T) {
 	db = testDB
 
 	// Insert test data
-	_, err := db.Exec(`INSERT INTO work_orders (id, assembly_ipn, qty, status) VALUES ('WO003', 'ASY-003', 2, 'in_progress')`)
+	_, err := db.Exec(`INSERT INTO work_orders (id, assembly_ipn, qty, status, created_at) VALUES ('WO003', 'ASY-003', 2, 'in_progress', datetime('now'))`)
 	if err != nil {
 		t.Fatal(err)
 	}
