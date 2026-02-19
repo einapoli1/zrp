@@ -518,6 +518,20 @@ func runMigrations() error {
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`)
 
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS parts (
+		ipn TEXT PRIMARY KEY,
+		category TEXT DEFAULT '',
+		description TEXT DEFAULT '',
+		mpn TEXT DEFAULT '',
+		manufacturer TEXT DEFAULT '',
+		lifecycle TEXT DEFAULT 'active',
+		status TEXT DEFAULT 'active',
+		notes TEXT DEFAULT '',
+		fields TEXT DEFAULT '{}',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`)
+
 	tables = append(tables, `CREATE TABLE IF NOT EXISTS part_changes (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		part_ipn TEXT NOT NULL,

@@ -3,6 +3,7 @@ import { api } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { Label } from "../components/ui/label";
 import {
   Database,
   Download,
@@ -12,6 +13,9 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
+import { LoadingState } from "../components/LoadingState";
+import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
 
 interface BackupInfo {
   filename: string;
@@ -95,9 +99,13 @@ function Backups() {
     }
   };
 
+  if (loading) {
+    return <LoadingState variant="spinner" message="Loading backups..." />;
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Backups</h1>
           <p className="text-muted-foreground">
@@ -116,10 +124,12 @@ function Backups() {
       </div>
 
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" />
-          {error}
-        </div>
+        <ErrorState
+          variant="inline"
+          title="Backup operation failed"
+          message={error}
+          onRetry={fetchBackups}
+        />
       )}
 
       <Card>
@@ -131,33 +141,39 @@ function Backups() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {loading ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : backups.length === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              No backups yet. Click "Create Backup" to make one.
-            </p>
+          {backups.length === 0 ? (
+            <EmptyState
+              icon={Database}
+              title="No backups yet"
+              description="Create your first backup to protect your database. Auto-backups will also run daily at 2:00 AM."
+              action={
+                <Button onClick={handleCreate} disabled={creating}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Backup
+                </Button>
+              }
+            />
           ) : (
             <div className="divide-y">
               {backups.map((backup) => (
                 <div
                   key={backup.filename}
-                  className="flex items-center justify-between py-3"
+                  className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-3 gap-2"
                 >
-                  <div>
-                    <p className="font-mono text-sm">{backup.filename}</p>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-mono text-sm truncate">{backup.filename}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatBytes(backup.size)} •{" "}
                       {new Date(backup.created_at).toLocaleString()}
                     </p>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-shrink-0">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleDownload(backup.filename)}
+                      aria-label={`Download ${backup.filename}`}
+                      title="Download backup"
                     >
                       <Download className="h-4 w-4" />
                     </Button>
@@ -166,6 +182,8 @@ function Backups() {
                       size="sm"
                       onClick={() => handleRestore(backup.filename)}
                       disabled={restoring === backup.filename}
+                      aria-label={`Restore ${backup.filename}`}
+                      title="Restore from this backup"
                     >
                       {restoring === backup.filename ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
@@ -177,7 +195,9 @@ function Backups() {
                       variant="outline"
                       size="sm"
                       onClick={() => handleDelete(backup.filename)}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-destructive hover:text-destructive"
+                      aria-label={`Delete ${backup.filename}`}
+                      title="Delete this backup"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

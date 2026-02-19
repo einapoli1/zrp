@@ -147,6 +147,7 @@ func TestCreateCategory_Success(t *testing.T) {
 	f, _ := os.Open(csvPath)
 	defer f.Close()
 	r := csv.NewReader(f)
+	r.Comment = '#' // Skip lines starting with #
 	records, _ := r.ReadAll()
 	if len(records) < 1 {
 		t.Fatal("CSV has no header row")

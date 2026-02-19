@@ -502,9 +502,9 @@ func TestHandleChangePassword_Success(t *testing.T) {
 	db = setupAuthTestDB(t)
 	defer func() { db.Close(); db = oldDB }()
 
-	userID := createTestUser(t, db, "testuser", "oldpassword", "user", true)
+	userID := createTestUser(t, db, "testuser", "OldPassword123!", "user", true)
 
-	reqBody := `{"current_password":"oldpassword","new_password":"newpassword123"}`
+	reqBody := `{"current_password":"OldPassword123!","new_password":"NewPassword123!"}`
 	req := httptest.NewRequest("POST", "/api/v1/change-password", bytes.NewBufferString(reqBody))
 	req = withUserID(req, userID)
 	w := httptest.NewRecorder()
@@ -522,7 +522,7 @@ func TestHandleChangePassword_Success(t *testing.T) {
 		t.Fatalf("Failed to get password hash: %v", err)
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(newHash), []byte("newpassword123")); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(newHash), []byte("NewPassword123!")); err != nil {
 		t.Error("New password doesn't match")
 	}
 
@@ -537,9 +537,9 @@ func TestHandleChangePassword_WrongCurrentPassword(t *testing.T) {
 	db = setupAuthTestDB(t)
 	defer func() { db.Close(); db = oldDB }()
 
-	userID := createTestUser(t, db, "testuser", "oldpassword", "user", true)
+	userID := createTestUser(t, db, "testuser", "OldPassword123!", "user", true)
 
-	reqBody := `{"current_password":"wrongpassword","new_password":"newpassword123"}`
+	reqBody := `{"current_password":"WrongPassword123!","new_password":"NewPassword123!"}`
 	req := httptest.NewRequest("POST", "/api/v1/change-password", bytes.NewBufferString(reqBody))
 	req = withUserID(req, userID)
 	w := httptest.NewRecorder()
@@ -563,9 +563,9 @@ func TestHandleChangePassword_PasswordTooShort(t *testing.T) {
 	db = setupAuthTestDB(t)
 	defer func() { db.Close(); db = oldDB }()
 
-	userID := createTestUser(t, db, "testuser", "oldpassword", "user", true)
+	userID := createTestUser(t, db, "testuser", "OldPassword123!", "user", true)
 
-	reqBody := `{"current_password":"oldpassword","new_password":"short"}`
+	reqBody := `{"current_password":"OldPassword123!","new_password":"short"}`
 	req := httptest.NewRequest("POST", "/api/v1/change-password", bytes.NewBufferString(reqBody))
 	req = withUserID(req, userID)
 	w := httptest.NewRecorder()
@@ -579,8 +579,10 @@ func TestHandleChangePassword_PasswordTooShort(t *testing.T) {
 	var resp map[string]interface{}
 	json.NewDecoder(w.Body).Decode(&resp)
 
-	if resp["error"] != "New password must be at least 8 characters" {
-		t.Errorf("Expected error about password length, got %v", resp["error"])
+	// Check for password length error (actual message from validation)
+	errorMsg, ok := resp["error"].(string)
+	if !ok || errorMsg != "password must be at least 12 characters" {
+		t.Errorf("Expected error about password length (12 chars), got %v", resp["error"])
 	}
 }
 

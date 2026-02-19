@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"net/http"
@@ -156,7 +157,7 @@ func TestAPIHealth(t *testing.T) {
 		{"My Permissions", "GET", "/api/v1/permissions/me", "", 200, false, false},
 
 		// Attachments
-		{"List Attachments", "GET", "/api/v1/attachments", "", 200, false, false},
+		{"List Attachments", "GET", "/api/v1/attachments?module=eco&record_id=ECO-001", "", 200, false, false},
 
 		// Email
 		{"Get Email Config", "GET", "/api/v1/email/config", "", 200, false, false},
@@ -286,6 +287,10 @@ func handleAPIRequest(w http.ResponseWriter, r *http.Request) {
 
 	// Set content type
 	w.Header().Set("Content-Type", "application/json")
+
+	// Set userID in context for handlers that need it
+	ctx := context.WithValue(r.Context(), ctxUserID, userID)
+	r = r.WithContext(ctx)
 
 	// Route to the appropriate handler based on path
 	path := r.URL.Path

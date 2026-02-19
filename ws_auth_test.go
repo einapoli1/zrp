@@ -329,7 +329,7 @@ func TestChangePasswordRequiresCurrentPassword(t *testing.T) {
 	db.QueryRow("SELECT user_id FROM sessions WHERE token = ?", cookie.Value).Scan(&userID)
 
 	// Wrong current password
-	body := `{"current_password":"wrong","new_password":"newpass123"}`
+	body := `{"current_password":"WrongPassword123!","new_password":"NewPassword123!"}`
 	req := httptest.NewRequest("POST", "/auth/change-password", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(context.WithValue(req.Context(), ctxUserID, userID))
@@ -368,7 +368,7 @@ func TestChangePasswordSuccess(t *testing.T) {
 	var userID int
 	db.QueryRow("SELECT user_id FROM sessions WHERE token = ?", cookie.Value).Scan(&userID)
 
-	body := `{"current_password":"changeme","new_password":"newpassword123"}`
+	body := `{"current_password":"changeme","new_password":"NewPassword123!"}`
 	req := httptest.NewRequest("POST", "/auth/change-password", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	req = req.WithContext(context.WithValue(req.Context(), ctxUserID, userID))
@@ -390,7 +390,7 @@ func TestChangePasswordSuccess(t *testing.T) {
 	}
 
 	// New password should work
-	body3 := `{"username":"admin","password":"newpassword123"}`
+	body3 := `{"username":"admin","password":"NewPassword123!"}`
 	req3 := httptest.NewRequest("POST", "/auth/login", strings.NewReader(body3))
 	req3.Header.Set("Content-Type", "application/json")
 	w3 := httptest.NewRecorder()

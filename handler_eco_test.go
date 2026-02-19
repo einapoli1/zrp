@@ -644,8 +644,13 @@ func TestHandleCreateECORevision_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&result)
+	var response APIResponse
+	json.NewDecoder(w.Body).Decode(&response)
+
+	result, ok := response.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected Data to be a map, got %T", response.Data)
+	}
 
 	if result["revision"] != "B" {
 		t.Errorf("Expected revision B, got %v", result["revision"])
@@ -682,8 +687,13 @@ func TestHandleGetECORevision_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
+	var response APIResponse
+	json.NewDecoder(w.Body).Decode(&response)
+
+	// Marshal and unmarshal to convert from map to ECORevision
+	dataBytes, _ := json.Marshal(response.Data)
 	var result ECORevision
-	json.NewDecoder(w.Body).Decode(&result)
+	json.Unmarshal(dataBytes, &result)
 
 	if result.Revision != "A" {
 		t.Errorf("Expected revision A, got %s", result.Revision)

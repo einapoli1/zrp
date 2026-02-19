@@ -4,8 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Separator } from "../components/ui/separator";
-import { Skeleton } from "../components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { Label } from "../components/ui/label";
 import {
   ArrowLeft,
   FileText,
@@ -13,11 +13,13 @@ import {
   User,
   GitBranch,
   History,
-
   RotateCcw,
   CheckCircle,
 } from "lucide-react";
 import { api, type Document, type DocumentVersion, type DiffLine } from "../lib/api";
+import { LoadingState } from "../components/LoadingState";
+import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Draft", variant: "secondary" },
@@ -32,6 +34,7 @@ export default function DocumentDetail() {
   const [doc, setDoc] = useState<(Document & { attachments?: any[] }) | null>(null);
   const [versions, setVersions] = useState<DocumentVersion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [selectedVersion, setSelectedVersion] = useState<DocumentVersion | null>(null);
   const [diffFrom, setDiffFrom] = useState<string>("");
   const [diffTo, setDiffTo] = useState<string>("");
@@ -41,6 +44,8 @@ export default function DocumentDetail() {
 
   const fetchDoc = useCallback(async () => {
     if (!id) return;
+    setLoading(true);
+    setError(null);
     try {
       const [docData, versionsData, gitCfg] = await Promise.all([
         api.getDocument(id),
@@ -50,8 +55,9 @@ export default function DocumentDetail() {
       setDoc(docData);
       setVersions(versionsData);
       setGitConfigured(!!gitCfg?.repo_url && gitCfg.repo_url !== "");
-    } catch {
-      // not found
+    } catch (err: any) {
+      setError(err.message || "Failed to load document");
+      setDoc(null);
     } finally {
       setLoading(false);
     }
@@ -99,10 +105,22 @@ export default function DocumentDetail() {
   };
 
   if (loading) {
+    return <LoadingState variant="spinner" message="Loading document..." />;
+  }
+
+  if (error) {
     return (
-      <div className="space-y-4 p-6">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-64 w-full" />
+      <div className="p-6">
+        <ErrorState
+          title="Failed to load document"
+          message={error}
+          onRetry={fetchDoc}
+        />
+        <div className="mt-4">
+          <Button variant="outline" onClick={() => navigate("/documents")}>
+            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Documents
+          </Button>
+        </div>
       </div>
     );
   }
@@ -110,10 +128,16 @@ export default function DocumentDetail() {
   if (!doc) {
     return (
       <div className="p-6">
-        <p>Document not found</p>
-        <Button variant="outline" onClick={() => navigate("/documents")}>
-          <ArrowLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
+        <EmptyState
+          icon={FileText}
+          title="Document not found"
+          description="The document you're looking for doesn't exist or has been deleted."
+          action={
+            <Button variant="outline" onClick={() => navigate("/documents")}>
+              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Documents
+            </Button>
+          }
+        />
       </div>
     );
   }

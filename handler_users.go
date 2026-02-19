@@ -158,10 +158,15 @@ func handleUpdateUser(w http.ResponseWriter, r *http.Request, idStr string) {
 	if req.Active != nil {
 		active = *req.Active
 	}
-	_, err = db.Exec(`UPDATE users SET display_name = ?, role = ?, active = ? WHERE id = ?`,
+	result, err := db.Exec(`UPDATE users SET display_name = ?, role = ?, active = ? WHERE id = ?`,
 		req.DisplayName, req.Role, active, id)
 	if err != nil {
 		jsonErr(w, err.Error(), 500)
+		return
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		jsonErr(w, "User not found", 404)
 		return
 	}
 	jsonResp(w, map[string]string{"status": "updated"})
@@ -219,9 +224,14 @@ func handleResetPassword(w http.ResponseWriter, r *http.Request, idStr string) {
 		jsonErr(w, "Failed to hash password", 500)
 		return
 	}
-	_, err = db.Exec("UPDATE users SET password_hash = ? WHERE id = ?", string(hash), id)
+	result, err := db.Exec("UPDATE users SET password_hash = ? WHERE id = ?", string(hash), id)
 	if err != nil {
 		jsonErr(w, err.Error(), 500)
+		return
+	}
+	rows, _ := result.RowsAffected()
+	if rows == 0 {
+		jsonErr(w, "User not found", 404)
 		return
 	}
 	jsonResp(w, map[string]string{"status": "password_reset"})

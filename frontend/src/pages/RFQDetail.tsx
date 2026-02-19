@@ -9,6 +9,11 @@ import { Textarea } from "../components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Dialog, DialogContent,
   DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { LoadingState } from "../components/LoadingState";
+import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
+import { FormField } from "../components/FormField";
+import { FileQuestion } from "lucide-react";
 
 const statusColors: Record<string, string> = {
   draft: "secondary",
@@ -23,6 +28,7 @@ export default function RFQDetail() {
   const [rfq, setRfq] = useState<RFQ | null>(null);
   const [compare, setCompare] = useState<RFQCompare | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
@@ -35,21 +41,60 @@ export default function RFQDetail() {
 
   const load = async () => {
     if (!id) return;
-    const data = await api.getRFQ(id);
-    setRfq(data);
-    setEditTitle(data.title);
-    setEditDueDate(data.due_date || "");
-    setEditNotes(data.notes || "");
+    setLoading(true);
+    setError(null);
     try {
-      const cmp = await api.compareRFQ(id);
-      setCompare(cmp);
-    } catch { /* ignore */ }
-    setLoading(false);
+      const data = await api.getRFQ(id);
+      setRfq(data);
+      setEditTitle(data.title);
+      setEditDueDate(data.due_date || "");
+      setEditNotes(data.notes || "");
+      try {
+        const cmp = await api.compareRFQ(id);
+        setCompare(cmp);
+      } catch { /* ignore */ }
+    } catch (err: any) {
+      setError(err.message || "Failed to load RFQ");
+      setRfq(null);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { load(); }, [id]);
 
-  if (loading || !rfq) return <div className="p-6">Loading...</div>;
+  if (loading) {
+    return <LoadingState variant="spinner" message="Loading RFQ..." />;
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <ErrorState
+          title="Failed to load RFQ"
+          message={error}
+          onRetry={load}
+        />
+      </div>
+    );
+  }
+
+  if (!rfq) {
+    return (
+      <div className="p-6">
+        <EmptyState
+          icon={FileQuestion}
+          title="RFQ not found"
+          description="The RFQ you're looking for doesn't exist or has been deleted."
+          action={
+            <Button variant="outline" onClick={() => navigate("/rfqs")}>
+              Back to RFQs
+            </Button>
+          }
+        />
+      </div>
+    );
+  }
 
   const handleSave = async () => {
     await api.updateRFQ(rfq.id, {

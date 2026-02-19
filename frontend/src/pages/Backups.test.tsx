@@ -50,7 +50,9 @@ describe("Backups", () => {
 
   it("has Create Backup button", async () => {
     render(<Backups />);
-    expect(screen.getByText("Create Backup")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Create Backup")).toBeInTheDocument();
+    });
   });
 
   it("calls createBackup and refreshes list", async () => {

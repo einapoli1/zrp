@@ -20,10 +20,11 @@ func unmarshalResp[T any](body []byte) (T, error) {
 func TestCAPACRUD(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
+	cookie := loginAdmin(t)
 
 	// List (empty)
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("GET", "/api/v1/capas", nil)
+	req := authedRequest("GET", "/api/v1/capas", "", cookie)
 	handleListCAPAs(w, req)
 	if w.Code != 200 {
 		t.Fatalf("list: expected 200, got %d", w.Code)
@@ -36,8 +37,7 @@ func TestCAPACRUD(t *testing.T) {
 	// Create
 	body := `{"title":"Fix solder defect","type":"corrective","root_cause":"Insufficient flux","action_plan":"Update profile","owner":"engineer1","due_date":"2026-03-01","linked_ncr_id":"NCR-001"}`
 	w = httptest.NewRecorder()
-	req = httptest.NewRequest("POST", "/api/v1/capas", strings.NewReader(body))
-	req.Header.Set("Content-Type", "application/json")
+	req = authedRequest("POST", "/api/v1/capas", body, cookie)
 	handleCreateCAPA(w, req)
 	if w.Code != 200 {
 		t.Fatalf("create: expected 200, got %d: %s", w.Code, w.Body.String())
@@ -58,7 +58,7 @@ func TestCAPACRUD(t *testing.T) {
 
 	// Get
 	w = httptest.NewRecorder()
-	req = httptest.NewRequest("GET", "/api/v1/capas/"+created.ID, nil)
+	req = authedRequest("GET", "/api/v1/capas/"+created.ID, "", cookie)
 	handleGetCAPA(w, req, created.ID)
 	if w.Code != 200 {
 		t.Fatalf("get: expected 200, got %d", w.Code)
@@ -71,8 +71,7 @@ func TestCAPACRUD(t *testing.T) {
 	// Update
 	updateBody := `{"title":"Fix solder defect","type":"corrective","status":"in_progress","root_cause":"Insufficient flux","action_plan":"Update profile","owner":"engineer1","due_date":"2026-03-01"}`
 	w = httptest.NewRecorder()
-	req = httptest.NewRequest("PUT", "/api/v1/capas/"+created.ID, strings.NewReader(updateBody))
-	req.Header.Set("Content-Type", "application/json")
+	req = authedRequest("PUT", "/api/v1/capas/"+created.ID, updateBody, cookie)
 	handleUpdateCAPA(w, req, created.ID)
 	if w.Code != 200 {
 		t.Fatalf("update: expected 200, got %d: %s", w.Code, w.Body.String())
@@ -84,7 +83,7 @@ func TestCAPACRUD(t *testing.T) {
 
 	// List (should have 1)
 	w = httptest.NewRecorder()
-	req = httptest.NewRequest("GET", "/api/v1/capas", nil)
+	req = authedRequest("GET", "/api/v1/capas", "", cookie)
 	handleListCAPAs(w, req)
 	list, _ = unmarshalResp[[]CAPA](w.Body.Bytes())
 	if len(list) != 1 {
@@ -95,18 +94,17 @@ func TestCAPACRUD(t *testing.T) {
 func TestCAPACloseRequiresEffectivenessAndApproval(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
+	cookie := loginAdmin(t)
 
 	// Create
 	w := httptest.NewRecorder()
-	req := httptest.NewRequest("POST", "/api/v1/capas", strings.NewReader(`{"title":"Test close","type":"corrective","owner":"eng"}`))
-	req.Header.Set("Content-Type", "application/json")
+	req := authedRequest("POST", "/api/v1/capas", `{"title":"Test close","type":"corrective","owner":"eng"}`, cookie)
 	handleCreateCAPA(w, req)
 	c, _ := unmarshalResp[CAPA](w.Body.Bytes())
 
 	// Close without effectiveness
 	w = httptest.NewRecorder()
-	req = httptest.NewRequest("PUT", "/api/v1/capas/"+c.ID, strings.NewReader(`{"title":"Test close","type":"corrective","owner":"eng","status":"closed"}`))
-	req.Header.Set("Content-Type", "application/json")
+	req = authedRequest("PUT", "/api/v1/capas/"+c.ID, `{"title":"Test close","type":"corrective","owner":"eng","status":"closed"}`, cookie)
 	handleUpdateCAPA(w, req, c.ID)
 	if w.Code != 400 {
 		t.Fatalf("expected 400 (no effectiveness), got %d: %s", w.Code, w.Body.String())
@@ -114,8 +112,7 @@ func TestCAPACloseRequiresEffectivenessAndApproval(t *testing.T) {
 
 	// Close with effectiveness but no approvals
 	w = httptest.NewRecorder()
-	req = httptest.NewRequest("PUT", "/api/v1/capas/"+c.ID, strings.NewReader(`{"title":"Test close","type":"corrective","owner":"eng","status":"closed","effectiveness_check":"Verified"}`))
-	req.Header.Set("Content-Type", "application/json")
+	req = authedRequest("PUT", "/api/v1/capas/"+c.ID, `{"title":"Test close","type":"corrective","owner":"eng","status":"closed","effectiveness_check":"Verified"}`, cookie)
 	handleUpdateCAPA(w, req, c.ID)
 	if w.Code != 400 {
 		t.Fatalf("expected 400 (no approvals), got %d: %s", w.Code, w.Body.String())
@@ -123,8 +120,7 @@ func TestCAPACloseRequiresEffectivenessAndApproval(t *testing.T) {
 
 	// Close with all requirements
 	w = httptest.NewRecorder()
-	req = httptest.NewRequest("PUT", "/api/v1/capas/"+c.ID, strings.NewReader(`{"title":"Test close","type":"corrective","owner":"eng","status":"closed","effectiveness_check":"Verified OK","approved_by_qe":"QE Approved","approved_by_mgr":"Manager Approved"}`))
-	req.Header.Set("Content-Type", "application/json")
+	req = authedRequest("PUT", "/api/v1/capas/"+c.ID, `{"title":"Test close","type":"corrective","owner":"eng","status":"closed","effectiveness_check":"Verified OK","approved_by_qe":"QE Approved","approved_by_mgr":"Manager Approved"}`, cookie)
 	handleUpdateCAPA(w, req, c.ID)
 	if w.Code != 200 {
 		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())

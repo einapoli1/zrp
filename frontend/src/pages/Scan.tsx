@@ -1,9 +1,11 @@
 import { useState, useCallback, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
-import { ScanLine, Loader2 } from "lucide-react";
+import { ScanLine, Loader2, Search } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
+import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
 
 // Lazy load BarcodeScanner to reduce initial bundle size (329KB chunk)
 const BarcodeScanner = lazy(() => import("../components/BarcodeScanner").then(m => ({ default: m.BarcodeScanner })));
@@ -36,13 +38,19 @@ function Scan() {
       if (matches.length === 1) {
         navigate(matches[0].link);
       }
-    } catch {
-      setError("Could not look up scanned code");
+    } catch (err: any) {
+      setError(err.message || "Could not look up scanned code");
       setResults([]);
     } finally {
       setLoading(false);
     }
   }, [navigate]);
+
+  const handleRetry = () => {
+    setError(null);
+    setResults([]);
+    setScannedCode(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -58,23 +66,34 @@ function Scan() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Scan</CardTitle>
+          <CardTitle>Scan Barcode</CardTitle>
         </CardHeader>
         <CardContent>
-          <Suspense fallback={<div className="flex items-center justify-center p-8"><Loader2 className="h-8 w-8 animate-spin" /></div>}>
+          <Suspense fallback={
+            <div className="flex items-center justify-center p-8" role="status" aria-label="Loading scanner">
+              <Loader2 className="h-8 w-8 animate-spin" />
+            </div>
+          }>
             <BarcodeScanner onScan={handleScan} />
           </Suspense>
         </CardContent>
       </Card>
 
       {loading && (
-        <div className="flex items-center gap-2 text-muted-foreground">
+        <div className="flex items-center gap-2 text-muted-foreground" role="status">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Looking up "{scannedCode}"...
+          <span>Looking up "{scannedCode}"...</span>
         </div>
       )}
 
-      {error && <p className="text-red-500">{error}</p>}
+      {error && (
+        <ErrorState
+          variant="inline"
+          title="Lookup failed"
+          message={error}
+          onRetry={handleRetry}
+        />
+      )}
 
       {!loading && results.length > 1 && (
         <Card>
@@ -90,7 +109,7 @@ function Scan() {
                 onClick={() => navigate(r.link)}
               >
                 <Badge variant="secondary">{r.type}</Badge>
-                {r.label}
+                <span className="truncate">{r.label}</span>
               </Button>
             ))}
           </CardContent>
@@ -98,7 +117,11 @@ function Scan() {
       )}
 
       {!loading && scannedCode && results.length === 0 && !error && (
-        <p className="text-muted-foreground">No matches found for "{scannedCode}".</p>
+        <EmptyState
+          icon={Search}
+          title="No matches found"
+          description={`No parts, inventory, or devices found matching "${scannedCode}". Try scanning a different code.`}
+        />
       )}
     </div>
   );

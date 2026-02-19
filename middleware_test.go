@@ -52,10 +52,14 @@ func setupMiddlewareTestDB(t *testing.T) *sql.DB {
 	_, err = testDB.Exec(`
 		CREATE TABLE api_keys (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			key TEXT UNIQUE NOT NULL,
-			name TEXT,
-			active INTEGER DEFAULT 1,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			name TEXT NOT NULL,
+			key_hash TEXT NOT NULL,
+			key_prefix TEXT NOT NULL,
+			created_by TEXT DEFAULT 'admin',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			last_used DATETIME,
+			expires_at DATETIME,
+			enabled INTEGER DEFAULT 1
 		)
 	`)
 	if err != nil {
@@ -244,9 +248,10 @@ func TestRequireAuth_ValidBearerToken(t *testing.T) {
 	db = setupMiddlewareTestDB(t)
 	defer func() { db.Close(); db = oldDB }()
 
-	// Create API key
-	apiKey := "test-api-key-12345"
-	db.Exec("INSERT INTO api_keys (key, name, active) VALUES (?, ?, ?)", apiKey, "Test Key", 1)
+	// Create API key in the correct format
+	apiKey := "zrp_test_api_key_12345"
+	keyHash := hashAPIKey(apiKey)
+	db.Exec("INSERT INTO api_keys (key_hash, key_prefix, name, enabled) VALUES (?, ?, ?, ?)", keyHash, "zrp_test", "Test Key", 1)
 
 	handler := requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
@@ -259,7 +264,7 @@ func TestRequireAuth_ValidBearerToken(t *testing.T) {
 	handler.ServeHTTP(w, req)
 
 	if w.Code != 200 {
-		t.Errorf("Expected status 200 with valid API key, got %d", w.Code)
+		t.Errorf("Expected status 200 with valid API key, got %d. Body: %s", w.Code, w.Body.String())
 	}
 }
 

@@ -75,7 +75,7 @@ describe("EmailLog", () => {
     mockGetLog.mockResolvedValue([]);
     render(<EmailLog />);
     await waitFor(() => {
-      expect(screen.getByText("No emails sent yet.")).toBeInTheDocument();
+      expect(screen.getByText(/No emails sent yet/i)).toBeInTheDocument();
     });
   });
 

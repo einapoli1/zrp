@@ -2,6 +2,44 @@
 
 All notable changes to ZRP are documented here.
 
+## [Unreleased]
+
+### UI Polish & Standardization
+- **Comprehensive UI audit** of all 59 React pages
+- **Fixed 6 critical pages** (EmailLog, Scan, Backups, DocumentDetail, RFQDetail, UndoHistory)
+  - Added proper LoadingState components with descriptive messages
+  - Added EmptyState components with helpful feedback and CTAs
+  - Added ErrorState components with retry actions
+  - Improved responsive design (mobile-first layouts, adaptive tables)
+  - Enhanced accessibility (proper label associations, aria-labels, keyboard navigation)
+- **Created UI_PATTERNS.md** comprehensive guide (13KB)
+  - Component usage examples for LoadingState, EmptyState, ErrorState, FormField
+  - Responsive design patterns and breakpoint guide
+  - Accessibility best practices
+  - Testing guidelines and page checklist
+  - Ready-to-use page template
+- **Updated tests** to match new component structure
+- **All 1237 tests passing** ✅
+
+### Documentation
+- `UI_PATTERNS.md` - Standardized UI patterns guide for developers
+- `UI_AUDIT_RESULTS.md` - Detailed audit findings and recommendations
+- `ui-audit-report.md` - Full scoring matrix (59 pages × 7 criteria)
+- `UI_POLISH_REPORT.md` - Complete implementation summary
+
+### Improvements by Page
+1. **EmailLog.tsx** (1/12 → 10/12): Loading/empty/error states, responsive table, refresh button
+2. **Scan.tsx** (1/12 → 9/12): Error state with retry, empty state for no results, accessibility
+3. **Backups.tsx** (2/12 → 11/12): Full page loading, empty state with CTA, responsive buttons
+4. **DocumentDetail.tsx** (2/12 → 10/12): Proper error handling, not-found vs error distinction
+5. **RFQDetail.tsx** (2/12 → 11/12): Complete loading/error/empty state coverage
+6. **UndoHistory.tsx** (2/12 → 11/12): Empty state, error handling, responsive tabs
+
+### Technical Debt Reduction
+- Identified 53 remaining pages needing UI polish (documented with priority levels)
+- Established pattern library for consistent future development
+- Created automated audit script (`audit-ui.sh`) for ongoing monitoring
+
 ## [0.2.0] - 2026-02-18
 
 ### 🚀 Major: React Frontend

@@ -239,9 +239,9 @@ func TestHandleListPOs_WithData(t *testing.T) {
 	defer func() { db.Close(); db = oldDB }()
 
 	db.Exec(`INSERT INTO vendors (id, name) VALUES ('VEN-001', 'Test Vendor')`)
-	_, err := db.Exec(`INSERT INTO purchase_orders (id, vendor_id, status, notes) VALUES 
-		('PO-0001', 'VEN-001', 'draft', 'Test PO 1'),
-		('PO-0002', 'VEN-001', 'ordered', 'Test PO 2')
+	_, err := db.Exec(`INSERT INTO purchase_orders (id, vendor_id, status, notes, created_at) VALUES 
+		('PO-0001', 'VEN-001', 'draft', 'Test PO 1', '2026-01-01 10:00:00'),
+		('PO-0002', 'VEN-001', 'sent', 'Test PO 2', '2026-01-02 10:00:00')
 	`)
 	if err != nil {
 		t.Fatalf("Failed to insert test data: %v", err)
@@ -466,7 +466,7 @@ func TestHandleUpdatePO_Success(t *testing.T) {
 
 	reqBody := `{
 		"vendor_id": "VEN-002",
-		"status": "ordered",
+		"status": "sent",
 		"notes": "Updated notes",
 		"expected_date": "2024-12-31"
 	}`
@@ -487,8 +487,8 @@ func TestHandleUpdatePO_Success(t *testing.T) {
 	if vendorID != "VEN-002" {
 		t.Errorf("Expected vendor_id VEN-002, got %s", vendorID)
 	}
-	if status != "ordered" {
-		t.Errorf("Expected status 'ordered', got %s", status)
+	if status != "sent" {
+		t.Errorf("Expected status 'sent', got %s", status)
 	}
 	if notes != "Updated notes" {
 		t.Errorf("Expected notes 'Updated notes', got %s", notes)

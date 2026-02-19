@@ -141,9 +141,9 @@ func TestHandleListNCRs_WithData(t *testing.T) {
 	db = setupNCRTestDB(t)
 	defer func() { db.Close(); db = oldDB }()
 
-	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, severity, status) VALUES 
-		('NCR-001', 'Defect 1', 'Description 1', 'minor', 'open'),
-		('NCR-002', 'Defect 2', 'Description 2', 'critical', 'investigating')
+	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, severity, status, created_at) VALUES 
+		('NCR-001', 'Defect 1', 'Description 1', 'minor', 'open', '2026-01-01 10:00:00'),
+		('NCR-002', 'Defect 2', 'Description 2', 'critical', 'investigating', '2026-01-02 10:00:00')
 	`)
 	if err != nil {
 		t.Fatalf("Failed to insert test data: %v", err)

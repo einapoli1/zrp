@@ -4,15 +4,21 @@ import { api, type UndoEntry, type ChangeEntry } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, History } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
+import { LoadingState } from "../components/LoadingState";
+import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
 
 export default function UndoHistory() {
   const [undoEntries, setUndoEntries] = useState<UndoEntry[]>([]);
   const [changeEntries, setChangeEntries] = useState<ChangeEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchEntries = async () => {
+    setLoading(true);
+    setError(null);
     try {
       const [undoData, changeData] = await Promise.all([
         api.getUndoList(50),
@@ -20,7 +26,8 @@ export default function UndoHistory() {
       ]);
       setUndoEntries(undoData);
       setChangeEntries(changeData);
-    } catch {
+    } catch (err: any) {
+      setError(err.message || "Failed to load undo history");
       toast.error("Failed to load undo history");
     } finally {
       setLoading(false);
@@ -65,30 +72,47 @@ export default function UndoHistory() {
     }
   };
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  if (loading) {
+    return <LoadingState variant="spinner" message="Loading undo history..." />;
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <ErrorState
+          title="Failed to load undo history"
+          message={error}
+          onRetry={fetchEntries}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="space-y-6 p-6">
       <div>
-        <h1 className="text-2xl font-bold">Undo History</h1>
+        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <History className="h-8 w-8" />
+          Undo History
+        </h1>
         <p className="text-muted-foreground">
           Recent changes and undoable actions. Press Ctrl+Z to undo the last change.
         </p>
       </div>
 
       <Tabs defaultValue="changes">
-        <TabsList>
+        <TabsList className="grid w-full grid-cols-2 md:w-auto md:inline-grid">
           <TabsTrigger value="changes">Change History</TabsTrigger>
           <TabsTrigger value="snapshots">Snapshots (24h)</TabsTrigger>
         </TabsList>
 
         <TabsContent value="changes" className="space-y-3 mt-4">
           {changeEntries.length === 0 ? (
-            <Card>
-              <CardContent className="py-8 text-center text-muted-foreground">
-                No changes recorded yet
-              </CardContent>
-            </Card>
+            <EmptyState
+              icon={History}
+              title="No changes recorded yet"
+              description="Changes you make in the system will appear here and can be undone."
+            />
           ) : (
             changeEntries.map((entry) => (
               <Card key={entry.id} className={entry.undone ? "opacity-50" : ""}>

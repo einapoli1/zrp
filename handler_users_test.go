@@ -118,10 +118,15 @@ func TestHandleListUsers_AsAdmin(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var result []UserFull
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
+
+	// The data field contains the array of users
+	usersJSON, _ := json.Marshal(response.Data)
+	var result []UserFull
+	json.Unmarshal(usersJSON, &result)
 
 	if len(result) != 3 {
 		t.Errorf("Expected 3 users, got %d", len(result))
@@ -183,16 +188,17 @@ func TestHandleCreateUser_Success(t *testing.T) {
 
 	handleCreateUser(w, req)
 
-	if w.Code != 200 {
-		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
+	if w.Code != 201 {
+		t.Errorf("Expected status 201, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result map[string]interface{}
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if result["id"] == nil {
+	result, ok := response.Data.(map[string]interface{})
+	if !ok || result["id"] == nil {
 		t.Error("Expected user ID in response")
 	}
 
