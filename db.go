@@ -566,6 +566,8 @@ func runMigrations() error {
 		"ALTER TABLE ecos ADD COLUMN ncr_id TEXT DEFAULT ''",
 		"ALTER TABLE notifications ADD COLUMN emailed INTEGER DEFAULT 0",
 		"ALTER TABLE work_orders ADD COLUMN due_date TEXT DEFAULT ''",
+		"ALTER TABLE work_orders ADD COLUMN qty_good INTEGER DEFAULT 0",
+		"ALTER TABLE work_orders ADD COLUMN qty_scrap INTEGER DEFAULT 0",
 		"ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''",
 		"ALTER TABLE email_log ADD COLUMN event_type TEXT DEFAULT ''",
 		"ALTER TABLE purchase_orders ADD COLUMN created_by TEXT DEFAULT ''",
