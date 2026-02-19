@@ -1260,7 +1260,6 @@ class ApiClient {
       throw new Error(body.error || 'Failed to change password');
     }
   }
-}
 
   // RFQs
   async getRFQs(): Promise<RFQ[]> {

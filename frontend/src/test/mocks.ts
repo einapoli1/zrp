@@ -3,7 +3,7 @@ import type {
   Part, Category, ECO, WorkOrder, Vendor, PurchaseOrder,
   InventoryItem, NCR, RMA, Shipment, PackList, TestRecord, Device, FirmwareCampaign,
   Quote, DashboardStats, CalendarEvent, AuditLogEntry, User,
-  APIKey, EmailConfig, Document,
+  APIKey, EmailConfig, Document, RFQ,
 } from "../lib/api";
 
 export const mockDashboardStats: DashboardStats & Record<string, number> = {
@@ -135,6 +135,11 @@ export const mockDocuments: Document[] = [
   { id: "DOC-002", title: "Test Procedure", category: "test", ipn: "IPN-003", revision: "B", status: "draft", content: "Testing steps...", file_path: "", created_by: "admin", created_at: "2024-01-10", updated_at: "2024-01-15" },
 ];
 
+export const mockRFQs: RFQ[] = [
+  { id: "RFQ-2026-0001", title: "Resistor Bulk Quote", status: "draft", created_by: "admin", created_at: "2026-01-15", updated_at: "2026-01-15", due_date: "2026-02-01", notes: "Need pricing for Q2" },
+  { id: "RFQ-2026-0002", title: "MCU Sourcing", status: "sent", created_by: "admin", created_at: "2026-01-20", updated_at: "2026-01-21", due_date: "2026-02-15", notes: "" },
+];
+
 // Create a mock api object
 export function createMockApi() {
   return {
@@ -231,5 +236,14 @@ export function createMockApi() {
     getEmailConfig: vi.fn().mockResolvedValue(mockEmailConfig),
     updateEmailConfig: vi.fn().mockResolvedValue(mockEmailConfig),
     testEmail: vi.fn().mockResolvedValue({ success: true, message: "Email sent" }),
+    getRFQs: vi.fn().mockResolvedValue(mockRFQs),
+    getRFQ: vi.fn().mockResolvedValue(mockRFQs[0]),
+    createRFQ: vi.fn().mockResolvedValue(mockRFQs[0]),
+    updateRFQ: vi.fn().mockResolvedValue(mockRFQs[0]),
+    deleteRFQ: vi.fn().mockResolvedValue(undefined),
+    sendRFQ: vi.fn().mockResolvedValue({ ...mockRFQs[0], status: "sent" }),
+    awardRFQ: vi.fn().mockResolvedValue({ status: "awarded", po_id: "PO-2026-0001" }),
+    compareRFQ: vi.fn().mockResolvedValue({ lines: [], vendors: [], matrix: {} }),
+    createRFQQuote: vi.fn().mockResolvedValue({ id: 1, rfq_id: "RFQ-2026-0001", rfq_vendor_id: 1, rfq_line_id: 1, unit_price: 0.05, lead_time_days: 14, moq: 100, notes: "" }),
   };
 }

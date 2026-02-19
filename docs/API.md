@@ -1252,6 +1252,64 @@ Returns recent email log entries (up to 100), newest first.
 curl http://localhost:9000/api/v1/email-log -b cookies.txt
 ```
 
+## GitPLM Integration
+
+### GET /api/v1/settings/gitplm
+
+Get the gitplm-ui integration configuration.
+
+**Response:**
+
+```json
+{
+  "data": {
+    "base_url": "https://gitplm.example.com"
+  }
+}
+```
+
+### PUT /api/v1/settings/gitplm
+
+Update the gitplm-ui base URL. Trailing slashes are automatically trimmed.
+
+**Request:**
+
+```json
+{
+  "base_url": "https://gitplm.example.com"
+}
+```
+
+**Response:** Same as GET.
+
+### GET /api/v1/parts/:ipn/gitplm-url
+
+Get the direct gitplm-ui URL for a specific part. Returns `configured: false` if no base URL is set.
+
+**Response (configured):**
+
+```json
+{
+  "data": {
+    "url": "https://gitplm.example.com/parts/IPN-001",
+    "configured": true
+  }
+}
+```
+
+**Response (not configured):**
+
+```json
+{
+  "data": {
+    "url": "",
+    "configured": false
+  }
+}
+```
+
+---
+
 ### Settings Aliases
 
 The following aliases are also available for the email configuration endpoints:
@@ -1624,3 +1682,61 @@ Generate and return a pack list for the shipment. Auto-creates a `pack_lists` re
   }
 }
 ```
+
+---
+
+## Undo
+
+Undo allows reverting destructive actions (deletes, bulk deletes) within a 24-hour window. When a destructive action is performed, the response includes an `undo_id` field.
+
+### GET /api/v1/undo
+
+List recent undoable actions for the current user.
+
+**Query Parameters:**
+- `limit` (optional, default 20): Maximum entries to return
+
+**Response:**
+```json
+{
+  "data": [
+    {
+      "id": 1,
+      "user_id": "admin",
+      "action": "delete",
+      "entity_type": "vendor",
+      "entity_id": "V-001",
+      "previous_data": "{...}",
+      "created_at": "2026-02-18 12:00:00",
+      "expires_at": "2026-02-19 12:00:00"
+    }
+  ]
+}
+```
+
+### POST /api/v1/undo/:id
+
+Restore an entity from its snapshot. Removes the undo entry after successful restore.
+
+**Response:**
+```json
+{
+  "data": {
+    "status": "restored",
+    "entity_type": "vendor",
+    "entity_id": "V-001"
+  }
+}
+```
+
+**Errors:**
+- `400` — Invalid undo ID
+- `404` — Undo entry not found or expired
+
+**Supported entity types:** eco, workorder, ncr, device, inventory, rma, vendor, quote, po
+
+**Notes:**
+- Undo entries expire after 24 hours and are cleaned up automatically
+- Delete responses include `undo_id` when a snapshot was created
+- The frontend shows a 5-second toast with an "Undo" button after destructive actions
+- Undo history is accessible from the user dropdown menu → "Undo History"
