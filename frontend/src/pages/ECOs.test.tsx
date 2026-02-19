@@ -189,4 +189,85 @@ describe("ECOs", () => {
     render(<ECOs />);
     expect(screen.getByText("ECO Status")).toBeInTheDocument();
   });
+
+  // Form submission tests
+  it("fills create form and submits with correct payload", async () => {
+    render(<ECOs />);
+    fireEvent.click(screen.getByText("Create ECO"));
+    await waitFor(() => {
+      expect(screen.getByText("Create New ECO")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("Enter ECO title..."), {
+      target: { value: "New resistor spec" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Describe the change in detail..."), {
+      target: { value: "Change from 5% to 1% tolerance" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Why is this change needed?"), {
+      target: { value: "Quality improvement" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Comma-separated list of affected part numbers..."), {
+      target: { value: "IPN-001, IPN-002" },
+    });
+
+    // Find the submit button (last "Create ECO" button)
+    const createButtons = screen.getAllByText("Create ECO");
+    const submitButton = createButtons[createButtons.length - 1];
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockCreateECO).toHaveBeenCalledWith({
+        title: "New resistor spec",
+        description: "Change from 5% to 1% tolerance",
+        reason: "Quality improvement",
+        affected_ipns: "IPN-001, IPN-002",
+        status: "draft",
+        priority: "normal",
+      });
+    });
+  });
+
+  it("navigates to new ECO after successful creation", async () => {
+    render(<ECOs />);
+    fireEvent.click(screen.getByText("Create ECO"));
+    await waitFor(() => {
+      expect(screen.getByText("Create New ECO")).toBeInTheDocument();
+    });
+
+    fireEvent.change(screen.getByPlaceholderText("Enter ECO title..."), {
+      target: { value: "Test" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Describe the change in detail..."), {
+      target: { value: "Desc" },
+    });
+    fireEvent.change(screen.getByPlaceholderText("Why is this change needed?"), {
+      target: { value: "Reason" },
+    });
+
+    const createButtons = screen.getAllByText("Create ECO");
+    fireEvent.click(createButtons[createButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith("/ecos/ECO-NEW");
+    });
+  });
+
+  it("shows validation errors when submitting empty form", async () => {
+    render(<ECOs />);
+    fireEvent.click(screen.getByText("Create ECO"));
+    await waitFor(() => {
+      expect(screen.getByText("Create New ECO")).toBeInTheDocument();
+    });
+
+    // Submit without filling required fields
+    const createButtons = screen.getAllByText("Create ECO");
+    const submitButton = createButtons[createButtons.length - 1];
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(screen.getByText("Title is required")).toBeInTheDocument();
+    });
+    expect(mockCreateECO).not.toHaveBeenCalled();
+  });
 });

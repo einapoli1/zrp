@@ -208,4 +208,42 @@ describe("Procurement", () => {
       expect(screen.getByText(/no purchase orders found/i)).toBeInTheDocument();
     });
   });
+
+  // Form submission tests
+  it("fills line item fields in create dialog", async () => {
+    render(<Procurement />);
+    await waitFor(() => {
+      expect(screen.getByText("PO-001")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Create PO"));
+    await waitFor(() => {
+      expect(screen.getByText("Create Purchase Order")).toBeInTheDocument();
+    });
+
+    // Fill line item fields
+    const ipnInput = screen.getByPlaceholderText("Internal part number");
+    fireEvent.change(ipnInput, { target: { value: "IPN-001" } });
+
+    const qtyInput = screen.getByPlaceholderText("0");
+    fireEvent.change(qtyInput, { target: { value: "100" } });
+
+    const priceInput = screen.getByPlaceholderText("0.00");
+    fireEvent.change(priceInput, { target: { value: "0.50" } });
+
+    // Fill notes
+    const notesInput = screen.getByPlaceholderText("Optional notes for this PO");
+    fireEvent.change(notesInput, { target: { value: "Rush order" } });
+
+    // Verify fields are filled
+    expect(ipnInput).toHaveValue("IPN-001");
+    expect(qtyInput).toHaveValue(100);
+    expect(priceInput).toHaveValue(0.5);
+    expect(notesInput).toHaveValue("Rush order");
+
+    // Submit still disabled without vendor selection (Radix Select)
+    const createButtons = screen.getAllByText("Create PO");
+    const submitButton = createButtons[createButtons.length - 1];
+    expect(submitButton).toBeDisabled();
+  });
 });

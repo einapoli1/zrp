@@ -235,4 +235,73 @@ describe("WorkOrderDetail", () => {
       expect(screen.getByText("30")).toBeInTheDocument();
     });
   });
+
+  // Form submission tests
+  it("selects new status and clicks Update Status, verifies updateWorkOrder called", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Change Status")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Change Status"));
+    await waitFor(() => {
+      expect(screen.getByText("Change Work Order Status")).toBeInTheDocument();
+    });
+
+    // Select new status
+    fireEvent.click(screen.getByText("Select new status"));
+    await waitFor(() => {
+      expect(screen.getByText("In Progress")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("In Progress"));
+
+    // Click Update Status
+    fireEvent.click(screen.getByText("Update Status"));
+
+    await waitFor(() => {
+      expect(mockUpdateWorkOrder).toHaveBeenCalledWith("WO-001", { status: "in_progress" });
+    });
+  });
+
+  it("selects vendor and clicks Generate PO, verifies generatePOFromWorkOrder called", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Generate PO")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Generate PO"));
+    await waitFor(() => {
+      expect(screen.getByText("Generate Purchase Order")).toBeInTheDocument();
+    });
+
+    // Select vendor
+    fireEvent.click(screen.getByText("Select vendor for PO"));
+    await waitFor(() => {
+      expect(screen.getByText("Acme Corp")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Acme Corp"));
+
+    // Click Generate PO button in dialog
+    const generateButtons = screen.getAllByText("Generate PO");
+    const submitButton = generateButtons[generateButtons.length - 1];
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockGeneratePOFromWorkOrder).toHaveBeenCalledWith("WO-001", "V-001");
+    });
+  });
+
+  it("Update Status button is disabled when no status selected", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Change Status")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Change Status"));
+    await waitFor(() => {
+      expect(screen.getByText("Update Status")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Update Status")).toBeDisabled();
+  });
 });

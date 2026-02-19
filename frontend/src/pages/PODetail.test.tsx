@@ -250,4 +250,91 @@ describe("PODetail", () => {
       expect(screen.getByText("$5.00")).toBeInTheDocument();
     });
   });
+
+  // Form submission tests
+  it("enters receive quantities and submits, verifies receivePurchaseOrder called", async () => {
+    render(<PODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Receive Items")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Receive Items"));
+    await waitFor(() => {
+      expect(screen.getByText("Ordered")).toBeInTheDocument();
+    });
+
+    // Only line 1 has pending qty (100-50=50 pending), line 2 is fully received
+    // Find the receive qty input and enter a value
+    const receiveInputs = screen.getAllByPlaceholderText("0");
+    // The receive dialog shows inputs for lines with pending qty
+    fireEvent.change(receiveInputs[0], { target: { value: "25" } });
+
+    // Click Receive Items submit button
+    const receiveButtons = screen.getAllByText("Receive Items");
+    const submitButton = receiveButtons[receiveButtons.length - 1];
+    fireEvent.click(submitButton);
+
+    await waitFor(() => {
+      expect(mockReceivePurchaseOrder).toHaveBeenCalledWith("PO-001", [
+        { id: 1, qty: 25 },
+      ]);
+    });
+  });
+
+  it("Receive Items submit disabled when no quantities entered", async () => {
+    render(<PODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Receive Items")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Receive Items"));
+    await waitFor(() => {
+      expect(screen.getByText("Ordered")).toBeInTheDocument();
+    });
+
+    // Submit button should be disabled with no quantities
+    const receiveButtons = screen.getAllByText("Receive Items");
+    const submitButton = receiveButtons[receiveButtons.length - 1];
+    expect(submitButton).toBeDisabled();
+  });
+
+  it("selects new status and submits, verifies updatePurchaseOrder called", async () => {
+    render(<PODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Change Status")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Change Status"));
+    await waitFor(() => {
+      expect(screen.getByText("Change PO Status")).toBeInTheDocument();
+    });
+
+    // Select new status
+    fireEvent.click(screen.getByText("Select new status"));
+    await waitFor(() => {
+      expect(screen.getByText("Received")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Received"));
+
+    // Click Update Status
+    fireEvent.click(screen.getByText("Update Status"));
+
+    await waitFor(() => {
+      expect(mockUpdatePurchaseOrder).toHaveBeenCalledWith("PO-001", { status: "received" });
+    });
+  });
+
+  it("Update Status button is disabled when no status selected", async () => {
+    render(<PODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Change Status")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Change Status"));
+    await waitFor(() => {
+      expect(screen.getByText("Update Status")).toBeInTheDocument();
+    });
+
+    expect(screen.getByText("Update Status")).toBeDisabled();
+  });
 });
