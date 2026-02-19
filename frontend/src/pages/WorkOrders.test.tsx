@@ -304,4 +304,15 @@ describe("WorkOrders", () => {
     const onHoldBadge = screen.getByText("ON HOLD");
     expect(onHoldBadge).toHaveClass("text-orange-700");
   });
+
+  it("uses ConfigurableTable with column settings gear", async () => {
+    render(<WorkOrders />);
+    await waitFor(() => {
+      expect(screen.getByText("WO-001")).toBeInTheDocument();
+    });
+    const settingsBtn = screen.getAllByRole("button").find(
+      (btn) => btn.querySelector("svg.lucide-settings-2")
+    );
+    expect(settingsBtn).toBeTruthy();
+  });
 });

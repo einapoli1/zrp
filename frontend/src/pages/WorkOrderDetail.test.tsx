@@ -401,4 +401,13 @@ describe("WorkOrderDetail", () => {
     expect(screen.queryByText("Started")).not.toBeInTheDocument();
     expect(screen.queryByText("Completed")).not.toBeInTheDocument();
   });
+
+  it("has Print Traveler button linking to print page", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Print Traveler")).toBeInTheDocument();
+    });
+    const link = screen.getByText("Print Traveler").closest("a");
+    expect(link).toHaveAttribute("href", "/work-orders/WO-001/print");
+  });
 });

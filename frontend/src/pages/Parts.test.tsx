@@ -422,4 +422,16 @@ describe("Parts", () => {
     // cost should render as $3.25
     expect(screen.getByText("$3.25")).toBeInTheDocument();
   });
+
+  it("uses ConfigurableTable with column settings gear", async () => {
+    render(<Parts />);
+    await waitFor(() => {
+      expect(screen.getByText("IPN-001")).toBeInTheDocument();
+    });
+    // ConfigurableTable renders a Settings2 icon button for column config
+    const settingsBtn = screen.getAllByRole("button").find(
+      (btn) => btn.querySelector("svg.lucide-settings-2")
+    );
+    expect(settingsBtn).toBeTruthy();
+  });
 });

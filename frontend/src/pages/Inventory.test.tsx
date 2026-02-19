@@ -409,4 +409,15 @@ describe("Inventory", () => {
       );
     });
   });
+
+  it("uses ConfigurableTable with column settings gear", async () => {
+    render(<Inventory />);
+    await waitFor(() => {
+      expect(screen.getByText("IPN-001")).toBeInTheDocument();
+    });
+    const settingsBtn = screen.getAllByRole("button").find(
+      (btn) => btn.querySelector("svg.lucide-settings-2")
+    );
+    expect(settingsBtn).toBeTruthy();
+  });
 });

@@ -442,4 +442,13 @@ describe("PODetail", () => {
     });
     consoleSpy.mockRestore();
   });
+
+  it("has Print PO button linking to print page", async () => {
+    render(<PODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Print PO")).toBeInTheDocument();
+    });
+    const link = screen.getByText("Print PO").closest("a");
+    expect(link).toHaveAttribute("href", "/purchase-orders/PO-001/print");
+  });
 });
