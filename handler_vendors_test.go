@@ -72,12 +72,13 @@ func setupVendorsTestDB(t *testing.T) *sql.DB {
 	_, err = testDB.Exec(`
 		CREATE TABLE audit_log (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			username TEXT NOT NULL,
+			user_id INTEGER,
+			username TEXT DEFAULT 'system',
 			action TEXT NOT NULL,
 			module TEXT NOT NULL,
 			record_id TEXT NOT NULL,
 			summary TEXT,
-			timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
@@ -94,7 +95,7 @@ func setupVendorsTestDB(t *testing.T) *sql.DB {
 			action TEXT NOT NULL,
 			old_value TEXT,
 			new_value TEXT,
-			timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
@@ -109,7 +110,7 @@ func setupVendorsTestDB(t *testing.T) *sql.DB {
 			action TEXT NOT NULL,
 			module TEXT NOT NULL,
 			record_id TEXT NOT NULL,
-			timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
