@@ -62,7 +62,7 @@ vi.mock("../lib/api", () => ({
   },
 }));
 
-const mockGitPLM = { baseUrl: "", configured: false, loading: false, buildUrl: () => null as string | null };
+const mockGitPLM: { baseUrl: string; configured: boolean; loading: boolean; buildUrl: (ipn: string) => string | null } = { baseUrl: "", configured: false, loading: false, buildUrl: () => null };
 vi.mock("../hooks/useGitPLM", () => ({
   useGitPLM: () => mockGitPLM,
 }));

@@ -9,7 +9,7 @@ import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Textarea } from "../components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { Smartphone, Plus, Upload, Download, Pencil, Trash2 } from "lucide-react";
+import { Smartphone, Plus, Upload, Download, Pencil } from "lucide-react";
 import { Checkbox } from "../components/ui/checkbox";
 import { api, type Device } from "../lib/api";
 import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog";

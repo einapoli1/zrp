@@ -20,7 +20,7 @@ export default defineConfig({
   webServer: {
     command: 'cd .. && go run . &',
     url: 'http://localhost:9000',
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: true,
     timeout: 30000,
   },
 });

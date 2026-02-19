@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, EmailLogEntry } from "../lib/api";
+import { api, type EmailLogEntry } from "../lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { Mail } from "lucide-react";

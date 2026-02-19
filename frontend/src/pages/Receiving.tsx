@@ -216,7 +216,7 @@ function Receiving() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {inspections.filter((item) => !scanSearch || item.ipn?.toLowerCase().includes(scanSearch.toLowerCase()) || item.po_number?.toLowerCase().includes(scanSearch.toLowerCase())).map((item) => (
+              {inspections.filter((item) => !scanSearch || item.ipn?.toLowerCase().includes(scanSearch.toLowerCase()) || item.po_id?.toLowerCase().includes(scanSearch.toLowerCase())).map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="font-mono">RI-{item.id}</TableCell>
                   <TableCell>

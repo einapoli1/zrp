@@ -119,7 +119,7 @@ describe("Receiving", () => {
     render(<Receiving />);
     await waitForLoad();
     // Find the Inspected summary card (the one in the card grid, not the filter button)
-    const cards = screen.getAllByText("Inspected");
+    screen.getAllByText("Inspected");
     // The summary card version is inside a card with green styling
     const greenCount = screen.getByText("2");
     expect(greenCount).toHaveClass("text-green-600");

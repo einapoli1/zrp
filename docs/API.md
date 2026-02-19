@@ -784,6 +784,22 @@ curl -X POST http://localhost:9000/api/v1/inventory/transact \
 
 Bulk operations on inventory. **Supported actions:** `delete`
 
+### POST /api/v1/inventory/bulk-update
+
+Bulk update inventory fields. **Allowed fields:** `location`, `reorder_point`, `reorder_qty`
+
+```bash
+curl -X POST http://localhost:9000/api/v1/inventory/bulk-update \
+  -H "Content-Type: application/json" \
+  -d '{"ids":["CAP-001-0001","RES-001-0001"],"updates":{"location":"Shelf-B3","reorder_point":"50"}}' \
+  -b cookies.txt
+```
+
+**Response:**
+```json
+{"data":{"success":2,"failed":0,"errors":[]}}
+```
+
 ### GET /api/v1/inventory/:ipn/history
 
 Transaction history for a specific IPN.

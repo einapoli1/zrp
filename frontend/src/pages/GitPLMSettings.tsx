@@ -38,7 +38,7 @@ function GitPLMSettings() {
     setTesting(true);
     setTestResult(null);
     try {
-      const resp = await fetch(baseUrl, { mode: "no-cors" });
+      await fetch(baseUrl, { mode: "no-cors" });
       setTestResult({ ok: true, message: "Connection successful (reachable)" });
     } catch {
       setTestResult({ ok: false, message: "Could not reach the URL" });
