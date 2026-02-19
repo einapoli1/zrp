@@ -109,8 +109,9 @@ describe("Firmware", () => {
     await waitFor(() => {
       expect(screen.getByText("Total Campaigns")).toBeInTheDocument();
     });
-    expect(screen.getByText("Running")).toBeInTheDocument();
-    expect(screen.getByText("Completed")).toBeInTheDocument();
+    // "Running" may also appear as a badge in the table
+    expect(screen.getAllByText("Running").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Completed").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Paused/Draft")).toBeInTheDocument();
   });
 

@@ -65,7 +65,7 @@ describe("DeviceDetail", () => {
   it("renders device info after loading", async () => {
     renderWithRoute();
     await waitFor(() => {
-      expect(screen.getByText("SN-100")).toBeInTheDocument();
+      expect(screen.getAllByText("SN-100").length).toBeGreaterThanOrEqual(1);
     });
     expect(screen.getByText("Device Information")).toBeInTheDocument();
   });
@@ -91,7 +91,9 @@ describe("DeviceDetail", () => {
   it("shows firmware version", async () => {
     renderWithRoute();
     await waitFor(() => {
-      expect(screen.getByText("1.0.0")).toBeInTheDocument();
+      expect(screen.getByText("Firmware Version")).toBeInTheDocument();
+      // 1.0.0 appears in device info and firmware sidebar
+      expect(screen.getAllByText("1.0.0").length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -193,10 +195,12 @@ describe("DeviceDetail", () => {
     });
   });
 
-  it("shows created date", async () => {
+  it("shows created date label", async () => {
     renderWithRoute();
     await waitFor(() => {
-      expect(screen.getByText("Created")).toBeInTheDocument();
+      // "Created" label exists in Device History sidebar
+      const labels = screen.getAllByText("Created");
+      expect(labels.length).toBeGreaterThanOrEqual(1);
     });
   });
 
