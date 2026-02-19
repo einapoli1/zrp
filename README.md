@@ -245,6 +245,48 @@ zrp/
 go test ./...
 ```
 
+### Build Verification
+
+Before committing or deploying, run the verification script to ensure all checks pass:
+
+```bash
+./scripts/verify.sh
+```
+
+This script runs:
+- ✓ Backend build (`go build ./...`)
+- ✓ Backend tests (`go test ./...`)
+- ✓ Frontend tests (`npx vitest run`)
+- ✓ Frontend build (`npm run build` — catches TypeScript errors)
+
+The script exits with a non-zero status if any check fails, making it ideal for pre-commit hooks or CI pipelines.
+
+**Rebuild and restart workflow:**
+
+After making changes, use this script to verify, rebuild, and restart the server:
+
+```bash
+./scripts/rebuild-and-restart.sh
+```
+
+This script:
+1. Runs full verification
+2. Rebuilds the frontend
+3. Rebuilds the backend binary
+4. Kills the existing ZRP server
+5. Starts the new server
+6. Verifies the server is healthy
+
+**Continuous Integration:**
+
+The `.github/workflows/ci.yml` workflow runs on every push and pull request, ensuring:
+- All backend code compiles
+- All backend tests pass
+- All frontend tests pass
+- Frontend builds without TypeScript errors
+
+No broken code reaches the main branch.
+
 ### Building
 
 ```bash
