@@ -122,6 +122,43 @@
   .cursor-pointer:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
   }
+
+  /* Mobile responsiveness improvements */
+  /* Touch-friendly minimum sizes on mobile */
+  @media (max-width: 767px) {
+    /* Minimum button touch targets (44x44px) */
+    button:not(.btn-no-min) {
+      min-height: 2.75rem;
+      min-width: 2.75rem;
+    }
+    
+    /* Table cells - more padding on mobile */
+    tbody td {
+      padding: 0.75rem 0.5rem;
+    }
+    
+    /* Increase font size to prevent zoom on input focus */
+    input, select, textarea {
+      font-size: 16px;
+    }
+  }
+
+  /* Horizontal scroll indicator for tables on mobile */
+  @media (max-width: 767px) {
+    .table-scroll-indicator {
+      position: relative;
+    }
+    .table-scroll-indicator::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 20px;
+      background: linear-gradient(to left, rgba(0,0,0,0.1), transparent);
+      pointer-events: none;
+    }
+  }
 }
 
 @theme inline {
