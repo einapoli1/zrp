@@ -93,16 +93,17 @@ func setupProcurementTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create inventory table: %v", err)
 	}
 
-	// Create audit_log table
+	// Create audit_log table (match production schema)
 	_, err = testDB.Exec(`
 		CREATE TABLE audit_log (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user TEXT,
-			action TEXT,
-			entity_type TEXT,
-			entity_id TEXT,
-			details TEXT,
-			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+			user_id INTEGER,
+			username TEXT DEFAULT 'system',
+			action TEXT NOT NULL,
+			module TEXT NOT NULL,
+			record_id TEXT NOT NULL,
+			summary TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
@@ -154,10 +155,13 @@ func TestHandleListPOs_Empty(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var result []PurchaseOrder
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response struct {
+		Data []PurchaseOrder `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
+	result := response.Data
 
 	if len(result) != 0 {
 		t.Errorf("Expected empty list, got %d items", len(result))
@@ -183,17 +187,20 @@ func TestHandleListPOs_WithData(t *testing.T) {
 
 	handleListPOs(w, req)
 
-	var result []PurchaseOrder
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response struct {
+		Data []PurchaseOrder `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
+	result := response.Data
 
 	if len(result) != 2 {
 		t.Errorf("Expected 2 items, got %d", len(result))
 	}
 
 	// Should be ordered by created_at DESC
-	if result[0].ID != "PO-0002" {
+	if len(result) > 0 && result[0].ID != "PO-0002" {
 		t.Errorf("Expected PO-0002 first, got %s", result[0].ID)
 	}
 }
@@ -221,10 +228,13 @@ func TestHandleGetPO_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var result PurchaseOrder
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response struct {
+		Data PurchaseOrder `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
+	result := response.Data
 
 	if result.ID != "PO-0001" {
 		t.Errorf("Expected ID PO-0001, got %s", result.ID)
@@ -232,7 +242,7 @@ func TestHandleGetPO_Success(t *testing.T) {
 	if len(result.Lines) != 2 {
 		t.Errorf("Expected 2 lines, got %d", len(result.Lines))
 	}
-	if result.Lines[0].IPN != "IPN-001" {
+	if len(result.Lines) > 0 && result.Lines[0].IPN != "IPN-001" {
 		t.Errorf("Expected first line IPN-001, got %s", result.Lines[0].IPN)
 	}
 }

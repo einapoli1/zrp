@@ -10,7 +10,7 @@ import (
 	"testing"
 )
 
-func setupTestPartsDir(t *testing.T) func() {
+func setupTestPartsDirForChanges(t *testing.T) func() {
 	t.Helper()
 	dir := t.TempDir()
 	// Create a category dir with a CSV
@@ -36,7 +36,7 @@ func setupTestPartsDir(t *testing.T) func() {
 func TestCreatePartChanges(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
-	cleanupParts := setupTestPartsDir(t)
+	cleanupParts := setupTestPartsDirForChanges(t)
 	defer cleanupParts()
 	cookie := loginAdmin(t)
 
@@ -67,7 +67,7 @@ func TestCreatePartChanges(t *testing.T) {
 func TestCreatePartChangesPartNotFound(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
-	cleanupParts := setupTestPartsDir(t)
+	cleanupParts := setupTestPartsDirForChanges(t)
 	defer cleanupParts()
 	cookie := loginAdmin(t)
 
@@ -97,7 +97,7 @@ func TestCreatePartChangesEmpty(t *testing.T) {
 func TestListPartChanges(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
-	cleanupParts := setupTestPartsDir(t)
+	cleanupParts := setupTestPartsDirForChanges(t)
 	defer cleanupParts()
 	cookie := loginAdmin(t)
 
@@ -128,7 +128,7 @@ func TestListPartChanges(t *testing.T) {
 func TestDeletePartChange(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
-	cleanupParts := setupTestPartsDir(t)
+	cleanupParts := setupTestPartsDirForChanges(t)
 	defer cleanupParts()
 	cookie := loginAdmin(t)
 
@@ -163,7 +163,7 @@ func TestDeletePartChange(t *testing.T) {
 func TestDeletePartChangeNotDraft(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
-	cleanupParts := setupTestPartsDir(t)
+	cleanupParts := setupTestPartsDirForChanges(t)
 	defer cleanupParts()
 	cookie := loginAdmin(t)
 
@@ -183,7 +183,7 @@ func TestDeletePartChangeNotDraft(t *testing.T) {
 func TestCreateECOFromChanges(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
-	cleanupParts := setupTestPartsDir(t)
+	cleanupParts := setupTestPartsDirForChanges(t)
 	defer cleanupParts()
 	cookie := loginAdmin(t)
 
@@ -237,7 +237,7 @@ func TestCreateECOFromChangesNoDrafts(t *testing.T) {
 func TestApplyPartChangesOnECOImplement(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
-	cleanupParts := setupTestPartsDir(t)
+	cleanupParts := setupTestPartsDirForChanges(t)
 	defer cleanupParts()
 	cookie := loginAdmin(t)
 
@@ -292,7 +292,7 @@ func TestApplyPartChangesOnECOImplement(t *testing.T) {
 func TestListECOPartChanges(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
-	cleanupParts := setupTestPartsDir(t)
+	cleanupParts := setupTestPartsDirForChanges(t)
 	defer cleanupParts()
 	cookie := loginAdmin(t)
 

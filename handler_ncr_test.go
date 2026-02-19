@@ -61,16 +61,17 @@ func setupNCRTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create ecos table: %v", err)
 	}
 
-	// Create audit_log table
+	// Create audit_log table (match production schema)
 	_, err = testDB.Exec(`
 		CREATE TABLE audit_log (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user TEXT,
-			action TEXT,
-			entity_type TEXT,
-			entity_id TEXT,
-			details TEXT,
-			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+			user_id INTEGER,
+			username TEXT DEFAULT 'system',
+			action TEXT NOT NULL,
+			module TEXT NOT NULL,
+			record_id TEXT NOT NULL,
+			summary TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
@@ -122,10 +123,13 @@ func TestHandleListNCRs_Empty(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var result []NCR
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response struct {
+		Data []NCR `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
+	result := response.Data
 
 	if len(result) != 0 {
 		t.Errorf("Expected empty list, got %d items", len(result))
@@ -150,17 +154,20 @@ func TestHandleListNCRs_WithData(t *testing.T) {
 
 	handleListNCRs(w, req)
 
-	var result []NCR
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response struct {
+		Data []NCR `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
+	result := response.Data
 
 	if len(result) != 2 {
 		t.Errorf("Expected 2 items, got %d", len(result))
 	}
 
 	// Should be ordered by created_at DESC
-	if result[0].ID != "NCR-002" {
+	if len(result) > 0 && result[0].ID != "NCR-002" {
 		t.Errorf("Expected NCR-002 first, got %s", result[0].ID)
 	}
 }
@@ -186,10 +193,13 @@ func TestHandleGetNCR_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var result NCR
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response struct {
+		Data NCR `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
+	result := response.Data
 
 	if result.ID != "NCR-001" {
 		t.Errorf("Expected ID NCR-001, got %s", result.ID)
@@ -240,10 +250,13 @@ func TestHandleCreateNCR_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result NCR
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response struct {
+		Data NCR `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
+	result := response.Data
 
 	if result.ID == "" {
 		t.Error("Expected ID to be generated")
@@ -257,7 +270,7 @@ func TestHandleCreateNCR_Success(t *testing.T) {
 
 	// Verify audit log
 	var auditCount int
-	db.QueryRow("SELECT COUNT(*) FROM audit_log WHERE entity_type='ncr'").Scan(&auditCount)
+	db.QueryRow("SELECT COUNT(*) FROM audit_log WHERE module='ncr'").Scan(&auditCount)
 	if auditCount != 1 {
 		t.Errorf("Expected 1 audit log entry, got %d", auditCount)
 	}
@@ -312,8 +325,13 @@ func TestHandleCreateNCR_DefaultValues(t *testing.T) {
 
 	handleCreateNCR(w, req)
 
-	var result NCR
-	json.NewDecoder(w.Body).Decode(&result)
+	var response struct {
+		Data NCR `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+	result := response.Data
 
 	if result.Status != "open" {
 		t.Errorf("Expected default status 'open', got %s", result.Status)
@@ -419,8 +437,13 @@ func TestHandleUpdateNCR_AutoCreateECO(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var result map[string]interface{}
-	json.NewDecoder(w.Body).Decode(&result)
+	var response struct {
+		Data map[string]interface{} `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+	result := response.Data
 
 	// Verify linked ECO was created
 	if result["linked_eco_id"] == nil || result["linked_eco_id"] == "" {
@@ -428,7 +451,10 @@ func TestHandleUpdateNCR_AutoCreateECO(t *testing.T) {
 	}
 
 	// Verify ECO exists in database
-	linkedECOID := result["linked_eco_id"].(string)
+	linkedECOID, ok := result["linked_eco_id"].(string)
+	if !ok {
+		t.Fatalf("linked_eco_id is not a string: %v", result["linked_eco_id"])
+	}
 	var ecoTitle string
 	err := db.QueryRow("SELECT title FROM ecos WHERE id=?", linkedECOID).Scan(&ecoTitle)
 	if err != nil {

@@ -54,16 +54,17 @@ func setupInventoryTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create inventory_transactions table: %v", err)
 	}
 
-	// Create audit_log table
+	// Create audit_log table (match production schema)
 	_, err = testDB.Exec(`
 		CREATE TABLE audit_log (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user TEXT,
-			action TEXT,
-			entity_type TEXT,
-			entity_id TEXT,
-			details TEXT,
-			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+			user_id INTEGER,
+			username TEXT DEFAULT 'system',
+			action TEXT NOT NULL,
+			module TEXT NOT NULL,
+			record_id TEXT NOT NULL,
+			summary TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
@@ -462,12 +463,16 @@ func TestHandleInventoryHistory_WithData(t *testing.T) {
 	db = setupInventoryTestDB(t)
 	defer func() { db.Close(); db = oldDB }()
 
-	db.Exec(`INSERT INTO inventory (ipn) VALUES ('IPN-001')`)
-	db.Exec(`INSERT INTO inventory_transactions (ipn, type, qty, reference) VALUES 
+	if _, err := db.Exec(`INSERT INTO inventory (ipn) VALUES ('IPN-001')`); err != nil {
+		t.Fatalf("Failed to insert inventory: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO inventory_transactions (ipn, type, qty, reference) VALUES 
 		('IPN-001', 'receive', 100, 'PO-123'),
 		('IPN-001', 'issue', 20, 'WO-456'),
 		('IPN-001', 'receive', 50, 'PO-789')
-	`)
+	`); err != nil {
+		t.Fatalf("Failed to insert transactions: %v", err)
+	}
 
 	req := httptest.NewRequest("GET", "/api/v1/inventory/IPN-001/history", nil)
 	w := httptest.NewRecorder()
@@ -475,14 +480,16 @@ func TestHandleInventoryHistory_WithData(t *testing.T) {
 	handleInventoryHistory(w, req, "IPN-001")
 
 	var result []InventoryTransaction
-	json.NewDecoder(w.Body).Decode(&result)
+	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
 
 	if len(result) != 3 {
 		t.Errorf("Expected 3 transactions, got %d", len(result))
 	}
 
 	// Should be ordered by created_at DESC
-	if result[0].Reference != "PO-789" {
+	if len(result) > 0 && result[0].Reference != "PO-789" {
 		t.Errorf("Expected most recent transaction first, got %s", result[0].Reference)
 	}
 }

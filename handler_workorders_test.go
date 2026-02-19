@@ -61,12 +61,13 @@ func setupWorkOrderTestDB(t *testing.T) *sql.DB {
 		)`,
 		`CREATE TABLE audit_log (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			username TEXT NOT NULL,
+			user_id INTEGER,
+			username TEXT DEFAULT 'system',
 			action TEXT NOT NULL,
-			table_name TEXT NOT NULL,
+			module TEXT NOT NULL,
 			record_id TEXT NOT NULL,
-			details TEXT,
-			timestamp TEXT NOT NULL
+			summary TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 	}
 

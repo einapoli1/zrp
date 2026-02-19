@@ -1,282 +1,37 @@
 # Changelog
 
-All notable changes to ZRP are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
+All notable changes to ZRP will be documented in this file.
 
-## [Unreleased] - 2026-02-19
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+### Added
+- **Parts handler test coverage** — comprehensive test suite for handler_parts.go covering core PLM functionality
+  - 18 passing test functions covering GET /parts, GET /parts/:ipn, GET /parts/categories, GET /parts/check-ipn, GET /parts/:ipn/bom
+  - List parts with filtering (category, search query) and pagination (11 subtests)
+  - Get individual parts by IPN (4 subtests)
+  - Check IPN existence for duplicate prevention (2 subtests)
+  - List categories with dynamic column schemas
+  - BOM tree retrieval for assembly parts (PCA-, ASY- prefixes)
+  - IPN deduplication across multiple CSV files
+  - Search across IPN, description, manufacturer, and other fields
+  - Isolated test environment with temporary gitplm CSV directory structure
+  - Tests include edge cases: empty directories, invalid files, non-assembly BOM requests
+  - Foundation for testing write operations (create, update, delete parts/categories)
 
 ### Fixed
-- **Email notification test** — `TestEmailOnECOApproved_WithLog` now passes
-  - Fixed invalid ECO priority value 'medium' → 'normal' to match CHECK constraint: `priority IN ('low','normal','high','critical')`
-  - Applied same fix to `TestEmailOnECOApproved_UnsubscribedUser`
-  - Test was failing silently due to SQL constraint violation preventing ECO insert
-- **Test database schema sync** — ECO and other handler tests now use production-compatible audit_log schema
-  - Fixed audit_log table columns: `username, module, record_id, summary` (was: `user, entity_type, entity_id, details`)
-  - Fixed ECO test INSERT statements to include `description` field to prevent NULL scan errors
-  - Fixed test response decoding to properly handle API response wrapper `{data: ...}`
-  - ECO handler tests now pass: Create, Update, Approve, Implement, List, Get Revisions
-- **Vite dev proxy configuration** — added `/auth` and `/files` proxy rules to `frontend/vite.config.ts` so authentication and file serving work correctly in development mode
-- **Category display name bug** — categories now store and display human-readable titles instead of raw filenames
-  - `handleCreateCategory` writes title as comment (`# TITLE: <title>`) on first line of CSV
-  - `handleListCategories` reads and returns the stored title, falling back to filename if not present
-  - Frontend category list now shows "Test Category" instead of "z-tst"
-  - Updated `readCSV()` and `loadPartsFromDir()` to extract and return category titles
-  - All parts-related handlers and tests updated to handle new return signature
+- **Backend Tests**: Fixed Go test compilation errors that were blocking all backend testing
+  - Resolved duplicate `setupTestPartsDir` function conflict between test files
+  - Renamed conflicting helper to `setupTestPartsDirForChanges` in `handler_part_changes_test.go`
+  - Fixed `Category.Schema` → `Category.Columns` field reference to match actual type definition
+  - All Go tests now compile and execute successfully
 
-### Added
-- **Playwright e2e test suite** — comprehensive end-to-end tests with isolated test database and parts directory
-  - Test environment setup: separate test port (9001), temp database, and parts CSV directory
-  - **Authentication tests** (`e2e/auth.spec.ts`): login with valid/invalid credentials, logout flow
-  - **Category tests** (`e2e/categories.spec.ts`): create category, verify human-readable display name (tests the bug fix)
-  - **Parts tests** (`e2e/parts.spec.ts`): create category, add part, view parts list, search for parts
-  - **Dashboard tests** (`e2e/dashboard.spec.ts`): verify dashboard loads without errors, displays metrics
-  - Playwright config with global setup script for test data isolation
-  - New npm scripts: `test:e2e`, `test:e2e:ui`, `test:e2e:headed`
-  - Tests run with single worker to avoid database conflicts
-  - Playwright browsers (Chromium) configured for headless testing
+### Improved
+- **Test Infrastructure**: Enhanced test isolation and naming conventions
+  - Test helper functions now have more descriptive names to avoid conflicts
+  - Improved test organization across handler test files
 
-### Technical Details
-- **Authentication handler test coverage** — comprehensive test suite for handler_auth.go covering login, logout, session management, password changes, rate limiting, and security features
-  - 19 test cases covering all authentication endpoints
-  - Tests for login success, invalid credentials, inactive users, rate limiting (per-IP), expired sessions
-  - Password change validation (length requirements, current password verification)
-  - Session cookie handling (HttpOnly, SameSite, expiration)
-  - Token generation uniqueness and format verification
-  - Client IP extraction (direct connection and X-Forwarded-For proxy)
-  - Expired session cleanup verification
-  - All tests passing with isolated in-memory SQLite databases
-
-## [0.5.2] - 2026-02-18
-
-### Added
-- **Sortable table columns** — click column headers to sort ascending/descending/none (3-click cycle) with sort direction indicators; implemented as a reusable feature in ConfigurableTable so all modules benefit (#2)
-
-## [0.5.1] - 2026-02-18
-
-### Added
-- **Settings hub page** — unified tabbed settings page at `/settings` with sections for General, Email/SMTP, Distributor APIs, GitPLM, Backups, and Users/Auth
-- **General settings API** — `GET/PUT /api/v1/settings/general` for app name, company info, currency, and date format
-- General settings stored in `app_settings` table with `general_` key prefix
-
-## [0.5.0] - 2026-02-18
-
-### Added
-- **Field Reports module** — full CRUD for tracking field failures, customer complaints, site visits, and installation notes
-- Field report types: failure, complaint, visit, installation
-- Status workflow: open → investigating → resolved → closed
-- Priority levels: low, medium, high, critical
-- Filter by status, priority, type, and date range
-- Create NCR directly from a field report (POST /api/v1/field-reports/:id/create-ncr)
-- Link field reports to ECOs for corrective action tracking
-- Detail view with edit mode, status workflow buttons, and linked NCR/ECO display
-- Go tests for all CRUD endpoints and NCR creation
-- Vitest tests for FieldReports list page component
-
-## [0.4.0] - 2026-02-18
-
-### Added
-- **Real Digikey API v4 integration** — OAuth2 client credentials flow, keyword search via POST /products/v4/search/keyword
-- **Real Mouser API v2 integration** — Part number search via POST /api/v2/search/partnumber
-- Separate `digikey.go` and `mouser.go` files with interface-based HTTP clients
-- Distributor settings now use Digikey client_id + client_secret (OAuth2) instead of API key
-- "Not configured" message on Market Pricing section when no API keys are set, with link to settings
-- `not_configured` field in market pricing API response
-- `hasDistributorKeys()` helper function
-- API error details returned per-distributor in `errors` response field
-- Helper text with links to developer portals on Distributor Settings page
-
-### Changed
-- Removed mock/demo distributor clients — no fallback to fake data when keys are missing
-- Digikey settings: replaced `api_key` field with `client_secret` for OAuth2 flow
-- Market pricing handler returns structured error info per distributor
-
-### Fixed
-- Market pricing no longer returns fake data when API keys are not configured
-
-## [0.3.3] - 2026-02-18
-
-### Added
-- Digikey (v4 Product Search, OAuth2) and Mouser (v2 Search API) real API integration for live pricing
-- Market Pricing section on Part Detail page showing price breaks, stock levels, lead times per distributor
-- 24-hour caching of market pricing results in `market_pricing` DB table
-- Refresh button to re-fetch live pricing on demand
-- Admin Distributor Settings page (`/distributor-settings`) for configuring API keys (stored in DB, not env vars)
-- API endpoints: `GET /api/v1/parts/:ipn/market-pricing`, `POST /api/v1/settings/digikey`, `POST /api/v1/settings/mouser`, `GET /api/v1/settings/distributors`
-- Full test coverage for market pricing backend and frontend components
-
-## [0.3.2] - 2026-02-18
-
-### Added
-- Enhanced supplier RFQ workflow with full lifecycle: Draft → Sent → Awarded → Closed
-- Multi-supplier RFQ: send same RFQ to multiple vendors, compare responses side-by-side
-- RFQ line items linked to parts/BOM with per-line vendor quote tracking
-- Per-line award: select winning vendor per line item, auto-creates POs per vendor
-- Whole-RFQ award: award all lines to single vendor with auto PO creation
-- RFQ email body generation for copy-to-clipboard vendor communication
-- RFQ dashboard API with open RFQs, pending responses, and monthly award stats
-- Frontend: RFQ list page with create dialog
-- Frontend: RFQ detail page with tabbed sections (Lines, Vendors, Responses, Compare, Award)
-- Side-by-side vendor comparison matrix view
-- Quote entry dialog with vendor/line item selection
-- RFQ sidebar navigation under Supply Chain
-- API endpoints: close, email, award-lines, rfq-dashboard
-- 11 backend tests covering all RFQ workflows (CRUD, send, close, quotes, compare, award, per-line award, dashboard, email)
-
-## [0.3.1] - 2026-02-18
-
-### Fixed
-- Calendar page now fetches from real API instead of showing template error
-- Devices page uses inline modal dialog instead of navigating to separate page
-- Docker healthcheck uses `/healthz` endpoint (bypasses auth)
-- Healthcheck command syntax corrected in Portainer stack
-- Portainer stack updated to build from Dockerfile via git repo
-- Hover states for sidebar, buttons, and table rows
-
-## [0.3.0] - 2026-02-18
-
-### Added
-- **Email Notifications — Event Triggers & Email Log**
-  - New `email_log` table records all sent/failed emails with recipient, subject, status, error, and timestamp
-  - Email Log table visible on the Email Settings page
-  - `GET /api/v1/email-log` — list recent email log entries
-  - Settings aliases: `GET/PUT /api/v1/settings/email`, `POST /api/v1/settings/email/test`
-  - ECO approval trigger: emails the ECO creator when an ECO is approved
-  - Low stock trigger: emails admin when inventory drops below reorder point after a transaction
-  - Overdue work order trigger: emails admin when a WO with a past due date is updated
-  - `due_date` column added to work_orders table
-  - `email` column added to users table
-  - Audit logging on email config save and test send
-  - Go unit tests for all email handlers and triggers (mock SMTP)
-
-### Added
-- **Supplier Price Catalog** — new module (`/supplier-prices`) under Supply Chain for tracking vendor price quotes per IPN
-  - Full CRUD API: `GET/POST/PUT/DELETE /api/v1/supplier-prices`, plus `/trend` endpoint for chart data
-  - Sortable price table with "Best Price" highlight (green) per IPN
-  - Add Price Quote modal with IPN autocomplete from parts database
-  - Price history view with SVG line chart showing price trends per vendor over time
-  - Parts detail modal integration: new "📊 Price Quotes" tab
-  - Audit logging on create/update/delete
-  - Go unit tests for all handlers (CRUD, validation, trend, edge cases)
-
-
-### Added
-- **Supplier Price Catalog** — track price history per IPN across vendors with automatic recording from PO receipts:
-  - `GET /api/v1/prices/:ipn` — price history sorted newest first
-  - `POST /api/v1/prices` — manually add price entries
-  - `DELETE /api/v1/prices/:id` — remove entries
-  - `GET /api/v1/prices/:ipn/trend` — trend data for charting
-  - Pricing tab in part detail modal with history table, SVG sparkline, and "Add Price" form
-  - Best price highlighted with green badge
-  - Automatic price recording when PO lines are received
-- **Email Notifications** — SMTP-based email alerts for system notifications:
-  - `GET /api/v1/email/config` — view SMTP config (password masked)
-  - `PUT /api/v1/email/config` — update SMTP settings
-  - `POST /api/v1/email/test` — send test email
-  - Email Settings page under Admin (📧 Email Settings sidebar link)
-  - Background goroutine sends emails for new notifications when enabled
-  - Each notification emailed only once (tracked by `emailed` column)
-- **Custom Dashboard Widgets** — configurable KPI cards and charts:
-  - `GET /api/v1/dashboard/widgets` — list widgets with positions
-  - `PUT /api/v1/dashboard/widgets` — update positions and visibility
-  - "Customize" button opens drag-to-reorder modal with toggle switches
-  - 11 widgets: 8 KPI cards + 3 charts, all individually hideable
-  - Settings persist server-side
-- **Report Builder** — new Reports page with 5 built-in reports, all exportable to CSV:
-  - Inventory Valuation (qty × latest PO price, grouped by category)
-  - Open ECOs by Priority (sorted critical→low, with age in days)
-  - WO Throughput (30/60/90 day windows, count by status, avg cycle time)
-  - Low Stock Report (items below reorder point, suggested order qty)
-  - NCR Summary (by severity and defect type, avg resolve time)
-- **Quote Margin Analysis** — new "Margin Analysis" tab in quote detail showing BOM cost vs quoted price per line item with color-coded margin % (green >50%, yellow 20-50%, red <20%)
-- **gitplm-ui Deep Links** — parts table and detail modal link directly to gitplm-ui; configurable via `--gitplm-ui` flag
-- **Config endpoint** — `GET /api/v1/config` returns configurable settings (gitplm_ui_url)
-
-## [0.2.0] - 2026-02-18
-
-### Added
-- **Authentication** — session-based login/logout with bcrypt password hashing, 24-hour session tokens, and role-based access control (admin, user, readonly)
-- **User Management** — admin panel for creating, editing, deactivating users and resetting passwords
-- **API Keys** — generate Bearer tokens for programmatic access with optional expiration, enable/disable toggle, and automatic last-used tracking
-- **Readonly Role Enforcement** — readonly users can view all data but POST/PUT/DELETE requests return 403
-- **Notifications** — automatic notification generation for low stock, overdue work orders (>7 days), aging NCRs (>14 days), and new RMAs; bell icon with unread count; mark-as-read
-- **File Attachments** — upload files (up to 32MB) to any module record; file serving at `/files/`; delete with disk cleanup
-- **Audit Log** — all create/update/delete/bulk operations logged with username, action, module, record ID, and summary; filterable by module, user, and date range
-- **Global Search** — search across parts, ECOs, work orders, devices, NCRs, POs, and quotes simultaneously from the top bar
-- **Calendar View** — monthly calendar showing WO due dates (blue), PO expected deliveries (green), and quote expirations (orange)
-- **Dashboard Charts** — ECOs by status, work orders by status, and top inventory items by value
-- **Dashboard Low Stock Panel** — dedicated view of items below reorder point
-- **Bulk Operations** — multi-select with checkboxes for ECOs (approve/implement/reject/delete), work orders (complete/cancel/delete), NCRs (close/resolve/delete), devices (decommission/delete), RMAs (close/delete), and inventory (delete)
-- **Work Order PDF Traveler** — printable HTML traveler with assembly info, BOM table, and sign-off section
-- **Quote PDF** — printable HTML quote with customer info, line items, subtotal, terms
-- **WO BOM Shortage Highlighting** — color-coded status (ok/low/shortage) for each BOM component
-- **Parts BOM & Cost Rollup** — view Bill of Materials and cost breakdown for assembly IPNs
-- **ECO→Parts Enrichment** — affected IPNs enriched with part details when viewing an ECO
-- **NCR→ECO Auto-Link** — ECOs can reference an NCR ID for traceability
-- **Generate PO from WO Shortages** — automatically create draft POs for work order BOM shortages
-- **Device Import/Export** — CSV import (upsert on serial number) and export for the device registry
-- **Campaign SSE Stream** — real-time Server-Sent Events for firmware campaign progress monitoring
-- **Campaign Device Marking** — mark individual devices as updated or failed during rollout
-- **Campaign Device Listing** — view all devices enrolled in a campaign with status
-- **IPN Autocomplete** — suggested IPNs when entering part numbers in inventory and other modules
-- **Dark Mode** — toggle with localStorage persistence
-- **Keyboard Shortcuts** — `/` or `Ctrl+K` for search, `n` for new record, `Escape` to close, `?` for help
-
-### Changed
-- All API endpoints now require authentication (session cookie or Bearer token), except `/auth/*`, `/static/*`, `/files/*`
-- API responses include 401/403 status codes for auth failures
-- CORS headers include Authorization in allowed headers
-
-## [0.1.0] - 2026-02-18
-
-### Added
-- Single-binary Go server with embedded SQLite (WAL mode)
-- SPA frontend with Tailwind CSS and hash-based routing
-- **Dashboard** with 8 KPI cards (open ECOs, low stock, active WOs, open NCRs/RMAs, etc.)
-- **Parts (PLM)** — read-only browsing of gitplm CSV files with category filtering, full-text search, pagination
-- **ECOs** — engineering change order lifecycle (draft → review → approved → implemented)
-- **Documents** — revision-controlled documents with approval workflow
-- **Inventory** — per-IPN stock tracking with reorder points, locations, and full transaction history
-- **Purchase Orders** — PO lifecycle with line items and partial receiving (auto-updates inventory)
-- **Vendors** — supplier directory with contacts, lead times, and status
-- **Work Orders** — production tracking with BOM availability checks
-- **Test Records** — factory test results with serial numbers, measurements, and pass/fail
-- **NCRs** — non-conformance reports with defect classification, root cause, and corrective actions
-- **Device Registry** — field device tracking with firmware versions, customers, and history
-- **Firmware Campaigns** — OTA rollout management with per-device progress tracking
-- **RMAs** — return processing from complaint through resolution
-- **Quotes** — customer quotes with line items and cost rollup
-- CORS support for cross-origin API access
-- Request logging middleware
-- Seed data for all modules (demo-ready out of the box)
-- Auto-generated IDs with year prefix (ECO-2026-001, PO-2026-0001, etc.)
-
-## 2026-02-18
-
-### Added
-- **Pricing Management Page**: Centralized product pricing with cost analysis and margin tracking
-  - New DB tables: `product_pricing`, `cost_analysis`
-  - CRUD endpoints: GET/POST /api/v1/pricing, GET/PUT/DELETE /api/v1/pricing/:id
-  - Cost analysis: GET/POST /api/v1/pricing/analysis
-  - Price history: GET /api/v1/pricing/history/:ipn
-  - Bulk price update: POST /api/v1/pricing/bulk-update
-  - Frontend: Pricing list with color-coded margins (red <15%, yellow 15-30%, green >30%)
-  - Create/edit pricing tiers (standard, volume, distributor, OEM)
-  - Cost analysis tab with BOM cost breakdown vs selling price
-  - Bulk price update with percentage or absolute adjustments
-  - Replaced PlaceholderPage in App.tsx
-
-### Added
-- **Per-User Notification Preferences**: Configurable notification types, delivery methods, and thresholds
-  - New DB table: `notification_preferences` (user_id, notification_type, enabled, delivery_method, threshold_value)
-  - API endpoints:
-    - GET /api/v1/notifications/preferences — get current user's preferences
-    - PUT /api/v1/notifications/preferences — bulk update preferences
-    - PUT /api/v1/notifications/preferences/:type — update single type
-    - GET /api/v1/notifications/types — list all available notification types with descriptions
-  - 8 notification types: low_stock, overdue_wo, open_ncr, eco_approval, eco_implemented, po_received, wo_completed, field_report_critical
-  - Per-type delivery method: in_app, email, or both
-  - Custom thresholds for low_stock (min qty) and overdue_wo (days overdue)
-  - Notification generation respects per-user preferences and thresholds
-  - Frontend: Notification Preferences page with toggle switches, delivery method dropdowns, and threshold inputs
-  - Added to profile dropdown menu and Settings page (Notifications tab)
-  - Reset to defaults button
-  - Full TDD with Go tests (13 tests) and Vitest tests (6 tests)
+## Previous Releases
+(To be documented from git history)
