@@ -42,6 +42,7 @@ func main() {
 		log.Fatal("DB init failed:", err)
 	}
 	seedDB()
+	initNotificationPrefsTable()
 
 	// Start auto-backup scheduler (default 2am, override with ZRP_BACKUP_TIME=HH:MM)
 	startAutoBackup(os.Getenv("ZRP_BACKUP_TIME"))
@@ -52,11 +53,11 @@ func main() {
 	// Start background notification generator
 	go func() {
 		time.Sleep(5 * time.Second)
-		generateNotifications()
+		generateNotificationsFiltered()
 		emailNotificationsForRecent()
 		for {
 			time.Sleep(5 * time.Minute)
-			generateNotifications()
+			generateNotificationsFiltered()
 			emailNotificationsForRecent()
 		}
 	}()
@@ -503,6 +504,14 @@ func main() {
 			handleListNotifications(w, r)
 		case parts[0] == "notifications" && len(parts) == 3 && parts[2] == "read" && r.Method == "POST":
 			handleMarkNotificationRead(w, r, parts[1])
+		case parts[0] == "notifications" && len(parts) == 2 && parts[1] == "preferences" && r.Method == "GET":
+			handleGetNotificationPreferences(w, r)
+		case parts[0] == "notifications" && len(parts) == 2 && parts[1] == "preferences" && r.Method == "PUT":
+			handleUpdateNotificationPreferences(w, r)
+		case parts[0] == "notifications" && len(parts) == 3 && parts[1] == "preferences" && r.Method == "PUT":
+			handleUpdateSingleNotificationPreference(w, r, parts[2])
+		case parts[0] == "notifications" && len(parts) == 2 && parts[1] == "types" && r.Method == "GET":
+			handleListNotificationTypes(w, r)
 
 		// RFQs
 		case parts[0] == "rfqs" && len(parts) == 1 && r.Method == "GET":

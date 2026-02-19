@@ -353,6 +353,58 @@ Mark a notification as read.
 curl -X POST http://localhost:9000/api/v1/notifications/1/read -b cookies.txt
 ```
 
+### GET /api/v1/notifications/types
+
+List all available notification types with descriptions.
+
+**Response:**
+
+```json
+{
+  "data": [
+    { "type": "low_stock", "name": "Low Stock", "description": "When inventory drops below the minimum quantity threshold", "icon": "package", "has_threshold": true, "threshold_label": "Minimum Qty", "threshold_default": 10 },
+    { "type": "overdue_wo", "name": "Overdue Work Order", "description": "When a work order has been in progress longer than the threshold days", "icon": "clock", "has_threshold": true, "threshold_label": "Days Overdue", "threshold_default": 7 }
+  ]
+}
+```
+
+### GET /api/v1/notifications/preferences
+
+Get current user's notification preferences (creates defaults if none exist).
+
+**Response:**
+
+```json
+{
+  "data": [
+    { "id": 1, "user_id": 1, "notification_type": "low_stock", "enabled": true, "delivery_method": "in_app", "threshold_value": 10 }
+  ]
+}
+```
+
+### PUT /api/v1/notifications/preferences
+
+Bulk update notification preferences.
+
+**Body:**
+
+```json
+[
+  { "notification_type": "low_stock", "enabled": true, "delivery_method": "email", "threshold_value": 5 },
+  { "notification_type": "overdue_wo", "enabled": false, "delivery_method": "in_app", "threshold_value": 3 }
+]
+```
+
+### PUT /api/v1/notifications/preferences/:type
+
+Update a single notification type preference.
+
+**Body:**
+
+```json
+{ "enabled": true, "delivery_method": "both", "threshold_value": 15 }
+```
+
 ---
 
 ## Attachments

@@ -215,3 +215,20 @@ All notable changes to ZRP are documented here. Format follows [Keep a Changelog
   - Cost analysis tab with BOM cost breakdown vs selling price
   - Bulk price update with percentage or absolute adjustments
   - Replaced PlaceholderPage in App.tsx
+
+### Added
+- **Per-User Notification Preferences**: Configurable notification types, delivery methods, and thresholds
+  - New DB table: `notification_preferences` (user_id, notification_type, enabled, delivery_method, threshold_value)
+  - API endpoints:
+    - GET /api/v1/notifications/preferences — get current user's preferences
+    - PUT /api/v1/notifications/preferences — bulk update preferences
+    - PUT /api/v1/notifications/preferences/:type — update single type
+    - GET /api/v1/notifications/types — list all available notification types with descriptions
+  - 8 notification types: low_stock, overdue_wo, open_ncr, eco_approval, eco_implemented, po_received, wo_completed, field_report_critical
+  - Per-type delivery method: in_app, email, or both
+  - Custom thresholds for low_stock (min qty) and overdue_wo (days overdue)
+  - Notification generation respects per-user preferences and thresholds
+  - Frontend: Notification Preferences page with toggle switches, delivery method dropdowns, and threshold inputs
+  - Added to profile dropdown menu and Settings page (Notifications tab)
+  - Reset to defaults button
+  - Full TDD with Go tests (13 tests) and Vitest tests (6 tests)

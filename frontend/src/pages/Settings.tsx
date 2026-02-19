@@ -7,11 +7,12 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { toast } from "sonner";
-import { Settings as SettingsIcon, Mail, Globe, Database, Users, Wrench } from "lucide-react";
+import { Settings as SettingsIcon, Mail, Globe, Database, Users, Wrench, Bell } from "lucide-react";
 import EmailSettings from "./EmailSettings";
 import GitPLMSettings from "./GitPLMSettings";
 import GitDocsSettings from "./GitDocsSettings";
 import DistributorSettings from "./DistributorSettings";
+import NotificationPreferences from "./NotificationPreferences";
 import Backups from "./Backups";
 
 interface GeneralSettings {
@@ -165,6 +166,7 @@ export default function Settings() {
           <TabsTrigger value="git-docs">Git Docs</TabsTrigger>
           <TabsTrigger value="backups"><Database className="h-4 w-4 mr-1" />Backups</TabsTrigger>
           <TabsTrigger value="users"><Users className="h-4 w-4 mr-1" />Users / Auth</TabsTrigger>
+          <TabsTrigger value="notifications"><Bell className="h-4 w-4 mr-1" />Notifications</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general">
@@ -193,6 +195,10 @@ export default function Settings() {
 
         <TabsContent value="users">
           <UsersAuthTab />
+        </TabsContent>
+
+        <TabsContent value="notifications">
+          <NotificationPreferences />
         </TabsContent>
       </Tabs>
     </div>

@@ -60,6 +60,8 @@ func handleMarkNotificationRead(w http.ResponseWriter, r *http.Request, id strin
 type pendingNotif struct {
 	ntype, severity, title string
 	message, recordID, module *string
+	deliveryMethod string
+	userID         int
 }
 
 func generateNotifications() {
@@ -74,8 +76,8 @@ func generateNotifications() {
 		for rows.Next() {
 			var ipn string; var qty, rp float64
 			rows.Scan(&ipn, &qty, &rp)
-			pending = append(pending, pendingNotif{"low_stock", "warning", "Low Stock: " + ipn,
-				stringPtr(fmt.Sprintf("%.0f on hand, reorder point %.0f", qty, rp)), stringPtr(ipn), stringPtr("inventory")})
+			pending = append(pending, pendingNotif{ntype: "low_stock", severity: "warning", title: "Low Stock: " + ipn,
+				message: stringPtr(fmt.Sprintf("%.0f on hand, reorder point %.0f", qty, rp)), recordID: stringPtr(ipn), module: stringPtr("inventory")})
 		}
 	}()
 
@@ -87,8 +89,8 @@ func generateNotifications() {
 		for rows.Next() {
 			var id, ipn string
 			rows.Scan(&id, &ipn)
-			pending = append(pending, pendingNotif{"overdue_wo", "warning", "Overdue WO: " + id,
-				stringPtr("In progress for >7 days: " + ipn), stringPtr(id), stringPtr("workorders")})
+			pending = append(pending, pendingNotif{ntype: "overdue_wo", severity: "warning", title: "Overdue WO: " + id,
+				message: stringPtr("In progress for >7 days: " + ipn), recordID: stringPtr(id), module: stringPtr("workorders")})
 		}
 	}()
 
@@ -101,8 +103,8 @@ func generateNotifications() {
 			var id, title string
 			rows.Scan(&id, &title)
 			t := title
-			pending = append(pending, pendingNotif{"open_ncr", "error", "Open NCR >14d: " + id,
-				&t, stringPtr(id), stringPtr("ncr")})
+			pending = append(pending, pendingNotif{ntype: "open_ncr", severity: "error", title: "Open NCR >14d: " + id,
+				message: &t, recordID: stringPtr(id), module: stringPtr("ncr")})
 		}
 	}()
 
@@ -116,8 +118,8 @@ func generateNotifications() {
 			rows.Scan(&id, &sn, &cust)
 			msg := "SN: " + sn
 			if cust != nil { msg += " — " + *cust }
-			pending = append(pending, pendingNotif{"new_rma", "info", "New RMA: " + id,
-				&msg, stringPtr(id), stringPtr("rma")})
+			pending = append(pending, pendingNotif{ntype: "new_rma", severity: "info", title: "New RMA: " + id,
+				message: &msg, recordID: stringPtr(id), module: stringPtr("rma")})
 		}
 	}()
 

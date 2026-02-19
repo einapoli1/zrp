@@ -48,6 +48,7 @@ const Users = React.lazy(() => import("./pages/Users"));
 const APIKeys = React.lazy(() => import("./pages/APIKeys"));
 const EmailSettings = React.lazy(() => import("./pages/EmailSettings"));
 const EmailPreferences = React.lazy(() => import("./pages/EmailPreferences"));
+const NotificationPreferences = React.lazy(() => import("./pages/NotificationPreferences"));
 const EmailLog = React.lazy(() => import("./pages/EmailLog"));
 const GitPLMSettings = React.lazy(() => import("./pages/GitPLMSettings"));
 const DistributorSettings = React.lazy(() => import("./pages/DistributorSettings"));
@@ -131,6 +132,7 @@ function App() {
             <Route path="/api-keys" element={<APIKeys />} />
             <Route path="/email-settings" element={<EmailSettings />} />
             <Route path="/email-preferences" element={<EmailPreferences />} />
+            <Route path="/notification-preferences" element={<NotificationPreferences />} />
             <Route path="/email-log" element={<EmailLog />} />
             <Route path="/gitplm-settings" element={<GitPLMSettings />} />
             <Route path="/distributor-settings" element={<DistributorSettings />} />

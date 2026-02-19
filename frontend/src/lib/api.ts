@@ -1371,6 +1371,29 @@ class ApiClient {
     });
   }
 
+  // Notification preferences
+  async getNotificationTypes(): Promise<NotificationTypeInfo[]> {
+    return this.request('/notifications/types');
+  }
+
+  async getNotificationPreferences(): Promise<NotificationPreference[]> {
+    return this.request('/notifications/preferences');
+  }
+
+  async updateNotificationPreferences(prefs: Partial<NotificationPreference>[]): Promise<NotificationPreference[]> {
+    return this.request('/notifications/preferences', {
+      method: 'PUT',
+      body: JSON.stringify(prefs),
+    });
+  }
+
+  async updateSingleNotificationPreference(type: string, pref: Partial<NotificationPreference>): Promise<NotificationPreference[]> {
+    return this.request(`/notifications/preferences/${type}`, {
+      method: 'PUT',
+      body: JSON.stringify(pref),
+    });
+  }
+
   // Email subscriptions
   async getEmailSubscriptions(): Promise<Record<string, boolean>> {
     return this.request('/email/subscriptions');
@@ -1676,6 +1699,26 @@ export interface CostAnalysis {
 export interface BulkPriceUpdateResult {
   updated: number;
   total: number;
+}
+
+// Notification preferences
+export interface NotificationTypeInfo {
+  type: string;
+  name: string;
+  description: string;
+  icon: string;
+  has_threshold: boolean;
+  threshold_label?: string;
+  threshold_default?: number;
+}
+
+export interface NotificationPreference {
+  id: number;
+  user_id: number;
+  notification_type: string;
+  enabled: boolean;
+  delivery_method: string;
+  threshold_value: number | null;
 }
 
 // Export singleton instance
