@@ -90,8 +90,8 @@ function Procurement() {
 
   const fetchParts = async () => {
     try {
-      const data = await api.getParts();
-      const partsArray = Array.isArray(data) ? data : [];
+      const response = await api.getParts();
+      const partsArray = Array.isArray(response) ? response : (response?.data || []);
       setParts(partsArray.map(p => ({ ipn: p.ipn, description: p.description })));
     } catch (error) {
       console.error("Failed to fetch parts:", error);

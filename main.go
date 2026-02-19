@@ -529,6 +529,7 @@ func main() {
 			handleRestoreBackup(w, r)
 
 		default:
+			w.WriteHeader(404)
 			json.NewEncoder(w).Encode(map[string]string{"error": "not found"})
 		}
 	})

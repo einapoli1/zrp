@@ -41,7 +41,7 @@ interface EditUserForm {
   status: 'active' | 'inactive';
 }
 
-const roleConfig = {
+const roleConfig: Record<string, { label: string; color: string; icon: typeof Shield; description: string }> = {
   admin: {
     label: 'Administrator',
     color: 'bg-red-100 text-red-800',
@@ -356,8 +356,8 @@ function Users() {
               </TableHeader>
               <TableBody>
                 {users.map((user) => {
-                  const roleInfo = roleConfig[user.role];
-                  const statusInfo = statusConfig[user.status];
+                  const roleInfo = roleConfig[user.role] || { label: user.role, color: 'bg-gray-100 text-gray-800', icon: Eye, description: 'Unknown role' };
+                  const statusInfo = statusConfig[user.status] || { label: user.status || 'unknown', color: 'bg-gray-100 text-gray-800' };
                   const RoleIcon = roleInfo.icon;
                   
                   return (

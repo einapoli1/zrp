@@ -945,15 +945,15 @@ class ApiClient {
 
   // Testing
   async getTestRecords(): Promise<TestRecord[]> {
-    return this.request('/testing');
+    return this.request('/tests');
   }
 
   async getTestRecord(id: number): Promise<TestRecord> {
-    return this.request(`/testing/${id}`);
+    return this.request(`/tests/${id}`);
   }
 
   async createTestRecord(testRecord: Partial<TestRecord>): Promise<TestRecord> {
-    return this.request('/testing', {
+    return this.request('/tests', {
       method: 'POST',
       body: JSON.stringify(testRecord),
     });
