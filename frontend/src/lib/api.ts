@@ -663,11 +663,22 @@ class ApiClient {
     return this.request(`/parts/${ipn}/cost`);
   }
 
-  async createPart(part: Partial<Part>): Promise<Part> {
+  async createPart(part: { ipn: string; category: string; fields: Record<string, string> }): Promise<Part> {
     return this.request('/parts', {
       method: 'POST',
       body: JSON.stringify(part),
     });
+  }
+
+  async createCategory(data: { title: string; prefix: string }): Promise<Category> {
+    return this.request('/categories', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async checkIPN(ipn: string): Promise<{ exists: boolean }> {
+    return this.request(`/parts/check-ipn?ipn=${encodeURIComponent(ipn)}`);
   }
 
   async updatePart(ipn: string, part: Partial<Part>): Promise<Part> {

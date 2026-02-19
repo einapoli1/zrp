@@ -142,6 +142,8 @@ func main() {
 			handleListParts(w, r)
 		case parts[0] == "parts" && len(parts) == 1 && r.Method == "POST":
 			handleCreatePart(w, r)
+		case parts[0] == "parts" && len(parts) == 2 && parts[1] == "check-ipn" && r.Method == "GET":
+			handleCheckIPN(w, r)
 		case parts[0] == "parts" && len(parts) == 2 && r.Method == "GET":
 			handleGetPart(w, r, parts[1])
 		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "bom" && r.Method == "GET":
@@ -168,6 +170,8 @@ func main() {
 			handleListAllPartChanges(w, r)
 
 		// Categories
+		case parts[0] == "categories" && len(parts) == 1 && r.Method == "POST":
+			handleCreateCategory(w, r)
 		case parts[0] == "categories" && len(parts) == 1 && r.Method == "GET":
 			handleListCategories(w, r)
 		case parts[0] == "categories" && len(parts) == 3 && parts[2] == "columns" && r.Method == "POST":

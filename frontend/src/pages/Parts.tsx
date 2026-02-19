@@ -5,7 +5,6 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
-import { Textarea } from "../components/ui/textarea";
 import { 
   Select, 
   SelectContent, 
@@ -49,15 +48,13 @@ interface PartWithFields extends Part {
 
 interface CreatePartData {
   ipn: string;
-  description: string;
   category: string;
-  cost: string;
-  price: string;
-  minimum_stock: string;
-  current_stock: string;
-  location: string;
-  vendor: string;
-  status: string;
+  dynamicFields: Record<string, string>;
+}
+
+interface NewCategoryData {
+  title: string;
+  prefix: string;
 }
 
 function Parts() {
@@ -73,19 +70,17 @@ function Parts() {
   const { configured: gitplmConfigured, buildUrl: gitplmUrl } = useGitPLM();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState("");
+  const [ipnError, setIpnError] = useState("");
+  const [newCatDialogOpen, setNewCatDialogOpen] = useState(false);
+  const [newCatData, setNewCatData] = useState<NewCategoryData>({ title: "", prefix: "" });
+  const [creatingCategory, setCreatingCategory] = useState(false);
   const pageSize = 50;
 
   const [partForm, setPartForm] = useState<CreatePartData>({
     ipn: "",
-    description: "",
     category: "",
-    cost: "",
-    price: "",
-    minimum_stock: "",
-    current_stock: "",
-    location: "",
-    vendor: "",
-    status: "active"
+    dynamicFields: {},
   });
 
   // Debounced search effect
@@ -158,49 +153,56 @@ function Parts() {
     setCurrentPage(1);
   };
 
+  const selectedCategoryColumns = useMemo(() => {
+    if (!partForm.category) return [];
+    const cat = categories.find(c => c.id === partForm.category);
+    return cat?.columns?.filter(c => c.toLowerCase() !== "ipn") || [];
+  }, [partForm.category, categories]);
+
   const handleCreatePart = async () => {
     setCreating(true);
+    setCreateError("");
+    setIpnError("");
     try {
-      const partData = {
+      // Check for duplicate IPN
+      const check = await api.checkIPN(partForm.ipn);
+      if (check.exists) {
+        setIpnError("This IPN already exists");
+        setCreating(false);
+        return;
+      }
+
+      await api.createPart({
         ipn: partForm.ipn,
-        description: partForm.description,
-        cost: partForm.cost ? parseFloat(partForm.cost) : undefined,
-        price: partForm.price ? parseFloat(partForm.price) : undefined,
-        minimum_stock: partForm.minimum_stock ? parseInt(partForm.minimum_stock) : undefined,
-        current_stock: partForm.current_stock ? parseInt(partForm.current_stock) : undefined,
-        location: partForm.location || undefined,
-        vendor: partForm.vendor || undefined,
-        status: partForm.status,
-        fields: {
-          category: partForm.category,
-          description: partForm.description,
-          cost: partForm.cost,
-          stock: partForm.current_stock,
-          status: partForm.status
-        }
-      };
-      
-      await api.createPart(partData);
-      setCreateDialogOpen(false);
-      setPartForm({
-        ipn: "",
-        description: "",
-        category: "",
-        cost: "",
-        price: "",
-        minimum_stock: "",
-        current_stock: "",
-        location: "",
-        vendor: "",
-        status: "active"
+        category: partForm.category,
+        fields: partForm.dynamicFields,
       });
-      
-      // Refresh the parts list
+      setCreateDialogOpen(false);
+      setPartForm({ ipn: "", category: "", dynamicFields: {} });
       fetchParts();
-    } catch (error) {
-      console.error('Failed to create part:', error);
+    } catch (error: any) {
+      const msg = error?.message || "Failed to create part";
+      if (msg.includes("already exists")) {
+        setIpnError("This IPN already exists");
+      } else {
+        setCreateError(msg);
+      }
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleCreateCategory = async () => {
+    setCreatingCategory(true);
+    try {
+      await api.createCategory(newCatData);
+      setNewCatDialogOpen(false);
+      setNewCatData({ title: "", prefix: "" });
+      await fetchCategories();
+    } catch (error: any) {
+      console.error("Failed to create category:", error);
+    } finally {
+      setCreatingCategory(false);
     }
   };
 
@@ -321,6 +323,12 @@ function Parts() {
               </DialogDescription>
             </DialogHeader>
             
+            {createError && (
+              <div className="text-sm text-destructive bg-destructive/10 p-2 rounded" data-testid="create-error">
+                {createError}
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="ipn">IPN *</Label>
@@ -328,104 +336,52 @@ function Parts() {
                   id="ipn"
                   placeholder="Internal Part Number"
                   value={partForm.ipn}
-                  onChange={(e) => setPartForm(prev => ({ ...prev, ipn: e.target.value }))}
+                  onChange={(e) => {
+                    setPartForm(prev => ({ ...prev, ipn: e.target.value }));
+                    setIpnError("");
+                  }}
                 />
+                {ipnError && <p className="text-sm text-destructive" data-testid="ipn-error">{ipnError}</p>}
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select
-                  value={partForm.category}
-                  onValueChange={(value) => setPartForm(prev => ({ ...prev, category: value }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category.id} value={category.id}>
-                        {category.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Label>Category *</Label>
+                <div className="flex gap-2">
+                  <Select
+                    value={partForm.category}
+                    onValueChange={(value) => setPartForm(prev => ({ ...prev, category: value, dynamicFields: {} }))}
+                  >
+                    <SelectTrigger className="flex-1">
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="icon" onClick={() => setNewCatDialogOpen(true)} title="New Category">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
-              
-              <div className="col-span-2 space-y-2">
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Part description..."
-                  value={partForm.description}
-                  onChange={(e) => setPartForm(prev => ({ ...prev, description: e.target.value }))}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="cost">Cost ($)</Label>
-                <Input
-                  id="cost"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={partForm.cost}
-                  onChange={(e) => setPartForm(prev => ({ ...prev, cost: e.target.value }))}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="price">Price ($)</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  step="0.01"
-                  placeholder="0.00"
-                  value={partForm.price}
-                  onChange={(e) => setPartForm(prev => ({ ...prev, price: e.target.value }))}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="minimum_stock">Minimum Stock</Label>
-                <Input
-                  id="minimum_stock"
-                  type="number"
-                  placeholder="0"
-                  value={partForm.minimum_stock}
-                  onChange={(e) => setPartForm(prev => ({ ...prev, minimum_stock: e.target.value }))}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="current_stock">Current Stock</Label>
-                <Input
-                  id="current_stock"
-                  type="number"
-                  placeholder="0"
-                  value={partForm.current_stock}
-                  onChange={(e) => setPartForm(prev => ({ ...prev, current_stock: e.target.value }))}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
-                <Input
-                  id="location"
-                  placeholder="Storage location"
-                  value={partForm.location}
-                  onChange={(e) => setPartForm(prev => ({ ...prev, location: e.target.value }))}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="vendor">Vendor</Label>
-                <Input
-                  id="vendor"
-                  placeholder="Primary vendor"
-                  value={partForm.vendor}
-                  onChange={(e) => setPartForm(prev => ({ ...prev, vendor: e.target.value }))}
-                />
-              </div>
+
+              {selectedCategoryColumns.map((col) => (
+                <div key={col} className="space-y-2">
+                  <Label htmlFor={`field-${col}`} className="capitalize">{col}</Label>
+                  <Input
+                    id={`field-${col}`}
+                    placeholder={col}
+                    value={partForm.dynamicFields[col] || ""}
+                    onChange={(e) => setPartForm(prev => ({
+                      ...prev,
+                      dynamicFields: { ...prev.dynamicFields, [col]: e.target.value }
+                    }))}
+                  />
+                </div>
+              ))}
             </div>
             
             <DialogFooter>
@@ -439,9 +395,52 @@ function Parts() {
               </Button>
               <Button 
                 onClick={handleCreatePart}
-                disabled={creating || !partForm.ipn}
+                disabled={creating || !partForm.ipn || !partForm.category}
               >
                 {creating ? 'Creating...' : 'Create Part'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* New Category Dialog */}
+        <Dialog open={newCatDialogOpen} onOpenChange={setNewCatDialogOpen}>
+          <DialogContent className="sm:max-w-[400px]">
+            <DialogHeader>
+              <DialogTitle>Create New Category</DialogTitle>
+              <DialogDescription>
+                Add a new category for organizing parts.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="cat-title">Title</Label>
+                <Input
+                  id="cat-title"
+                  placeholder="e.g., Connectors"
+                  value={newCatData.title}
+                  onChange={(e) => setNewCatData(prev => ({ ...prev, title: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="cat-prefix">Prefix</Label>
+                <Input
+                  id="cat-prefix"
+                  placeholder="e.g., CON"
+                  value={newCatData.prefix}
+                  onChange={(e) => setNewCatData(prev => ({ ...prev, prefix: e.target.value.toUpperCase() }))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Will create category file: z-{newCatData.prefix.toLowerCase() || "xxx"}.csv
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setNewCatDialogOpen(false)} disabled={creatingCategory}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreateCategory} disabled={creatingCategory || !newCatData.title || !newCatData.prefix}>
+                {creatingCategory ? "Creating..." : "Create Category"}
               </Button>
             </DialogFooter>
           </DialogContent>

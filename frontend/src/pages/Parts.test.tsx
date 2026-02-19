@@ -5,12 +5,16 @@ import { mockParts, mockCategories } from "../test/mocks";
 const mockGetParts = vi.fn();
 const mockGetCategories = vi.fn();
 const mockCreatePart = vi.fn();
+const mockCheckIPN = vi.fn();
+const mockCreateCategory = vi.fn();
 
 vi.mock("../lib/api", () => ({
   api: {
     getParts: (...args: any[]) => mockGetParts(...args),
     getCategories: (...args: any[]) => mockGetCategories(...args),
     createPart: (...args: any[]) => mockCreatePart(...args),
+    checkIPN: (...args: any[]) => mockCheckIPN(...args),
+    createCategory: (...args: any[]) => mockCreateCategory(...args),
     deletePart: vi.fn().mockResolvedValue(undefined),
     getGitPLMConfig: vi.fn().mockResolvedValue({ base_url: "" }),
   },
@@ -27,10 +31,24 @@ beforeEach(() => {
   mockGetParts.mockResolvedValue({ data: mockParts, meta: { total: 3, page: 1, limit: 50 } });
   mockGetCategories.mockResolvedValue(mockCategories);
   mockCreatePart.mockResolvedValue(mockParts[0]);
+  mockCheckIPN.mockResolvedValue({ exists: false });
+  mockCreateCategory.mockResolvedValue({ id: "z-new", name: "New", count: 0, columns: [] });
 });
 
 // Helper: wait for parts to load
 const waitForLoad = () => waitFor(() => expect(screen.getByText("IPN-001")).toBeInTheDocument());
+
+// Helper: select a category in the create dialog
+const selectCategory = async (name: string) => {
+  // Find the "Category *" label, then the combobox near it
+  const dialog = screen.getByRole("dialog");
+  const comboboxes = dialog.querySelectorAll('[role="combobox"]');
+  // The category combobox is the one with "Select category" placeholder
+  const catCombo = Array.from(comboboxes).find(c => c.textContent?.includes("Select category")) || comboboxes[0];
+  fireEvent.click(catCombo);
+  await waitFor(() => expect(screen.getByText(name)).toBeInTheDocument());
+  fireEvent.click(screen.getByText(name));
+};
 
 describe("Parts", () => {
   it("renders page title and subtitle", async () => {
@@ -133,13 +151,7 @@ describe("Parts", () => {
     fireEvent.click(screen.getByText("Add Part"));
     await waitFor(() => {
       expect(screen.getByLabelText("IPN *")).toBeInTheDocument();
-      expect(screen.getByLabelText("Description")).toBeInTheDocument();
-      expect(screen.getByLabelText("Cost ($)")).toBeInTheDocument();
-      expect(screen.getByLabelText("Price ($)")).toBeInTheDocument();
-      expect(screen.getByLabelText("Minimum Stock")).toBeInTheDocument();
-      expect(screen.getByLabelText("Current Stock")).toBeInTheDocument();
-      expect(screen.getByLabelText("Location")).toBeInTheDocument();
-      expect(screen.getByLabelText("Vendor")).toBeInTheDocument();
+      expect(screen.getByText("Category *")).toBeInTheDocument();
     });
   });
 
@@ -152,12 +164,15 @@ describe("Parts", () => {
     });
   });
 
-  it("create button enabled when IPN filled", async () => {
+  it("create button enabled when IPN and category filled", async () => {
     render(<Parts />);
     await waitForLoad();
     fireEvent.click(screen.getByText("Add Part"));
     await waitFor(() => expect(screen.getByLabelText("IPN *")).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText("IPN *"), { target: { value: "NEW-001" } });
+    // Still disabled without category
+    expect(screen.getByText("Create Part")).toBeDisabled();
+    await selectCategory("Resistors");
     expect(screen.getByText("Create Part")).not.toBeDisabled();
   });
 
@@ -167,11 +182,12 @@ describe("Parts", () => {
     fireEvent.click(screen.getByText("Add Part"));
     await waitFor(() => expect(screen.getByLabelText("IPN *")).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText("IPN *"), { target: { value: "NEW-001" } });
-    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Test part" } });
+    await selectCategory("Resistors");
     fireEvent.click(screen.getByText("Create Part"));
     await waitFor(() => {
+      expect(mockCheckIPN).toHaveBeenCalledWith("NEW-001");
       expect(mockCreatePart).toHaveBeenCalledWith(
-        expect.objectContaining({ ipn: "NEW-001", description: "Test part" })
+        expect.objectContaining({ ipn: "NEW-001", category: "resistors" })
       );
     });
   });
@@ -358,6 +374,7 @@ describe("Parts", () => {
     fireEvent.click(screen.getByText("Add Part"));
     await waitFor(() => expect(screen.getByLabelText("IPN *")).toBeInTheDocument());
     fireEvent.change(screen.getByLabelText("IPN *"), { target: { value: "FAIL-001" } });
+    await selectCategory("Resistors");
     fireEvent.click(screen.getByText("Create Part"));
     await waitFor(() => {
       expect(mockCreatePart).toHaveBeenCalled();
@@ -367,37 +384,35 @@ describe("Parts", () => {
     expect(screen.getByLabelText("IPN *")).toBeInTheDocument();
   });
 
-  it("create part with all fields sends correct payload types", async () => {
+  it("shows IPN duplicate error from checkIPN", async () => {
+    mockCheckIPN.mockResolvedValue({ exists: true });
     render(<Parts />);
     await waitForLoad();
     fireEvent.click(screen.getByText("Add Part"));
     await waitFor(() => expect(screen.getByLabelText("IPN *")).toBeInTheDocument());
-    fireEvent.change(screen.getByLabelText("IPN *"), { target: { value: "FULL-001" } });
-    fireEvent.change(screen.getByLabelText("Description"), { target: { value: "Full test part" } });
-    fireEvent.change(screen.getByLabelText("Cost ($)"), { target: { value: "12.50" } });
-    fireEvent.change(screen.getByLabelText("Price ($)"), { target: { value: "25.99" } });
-    fireEvent.change(screen.getByLabelText("Current Stock"), { target: { value: "100" } });
-    fireEvent.change(screen.getByLabelText("Location"), { target: { value: "Bin A3" } });
-    fireEvent.change(screen.getByLabelText("Vendor"), { target: { value: "Acme Corp" } });
+    fireEvent.change(screen.getByLabelText("IPN *"), { target: { value: "DUP-001" } });
+    await selectCategory("Resistors");
     fireEvent.click(screen.getByText("Create Part"));
     await waitFor(() => {
-      expect(mockCreatePart).toHaveBeenCalledWith(
-        expect.objectContaining({
-          ipn: "FULL-001",
-          description: "Full test part",
-          cost: 12.50,
-          price: 25.99,
-          current_stock: 100,
-          location: "Bin A3",
-          vendor: "Acme Corp",
-        })
-      );
+      expect(screen.getByTestId("ipn-error")).toBeInTheDocument();
+      expect(screen.getByText("This IPN already exists")).toBeInTheDocument();
     });
-    // Verify types
-    const payload = mockCreatePart.mock.calls[0][0];
-    expect(typeof payload.cost).toBe("number");
-    expect(typeof payload.price).toBe("number");
-    expect(typeof payload.current_stock).toBe("number");
+    // createPart should NOT have been called
+    expect(mockCreatePart).not.toHaveBeenCalled();
+  });
+
+  it("shows dynamic fields based on selected category", async () => {
+    render(<Parts />);
+    await waitForLoad();
+    fireEvent.click(screen.getByText("Add Part"));
+    await waitFor(() => expect(screen.getByLabelText("IPN *")).toBeInTheDocument());
+    // Select Resistors category (columns: resistance, tolerance)
+    await selectCategory("Resistors");
+    // Dynamic fields should appear
+    await waitFor(() => {
+      expect(screen.getByLabelText("resistance")).toBeInTheDocument();
+      expect(screen.getByLabelText("tolerance")).toBeInTheDocument();
+    });
   });
 
   it("displayParts extracts fields from alternative field names", async () => {

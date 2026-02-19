@@ -173,8 +173,174 @@ func handleGetPart(w http.ResponseWriter, r *http.Request, ipn string) {
 }
 
 func handleCreatePart(w http.ResponseWriter, r *http.Request) {
-	// For now, parts are read-only from CSVs
-	jsonErr(w, "creating parts via API not yet supported — edit CSVs directly", 501)
+	var body struct {
+		IPN      string            `json:"ipn"`
+		Category string            `json:"category"`
+		Fields   map[string]string `json:"fields"`
+	}
+	if err := decodeBody(r, &body); err != nil {
+		jsonErr(w, "invalid request body", 400)
+		return
+	}
+	if body.IPN == "" {
+		jsonErr(w, "ipn is required", 400)
+		return
+	}
+	if body.Category == "" {
+		jsonErr(w, "category is required", 400)
+		return
+	}
+
+	// Find the CSV file for this category
+	csvPath := findCategoryCSV(body.Category)
+	if csvPath == "" {
+		jsonErr(w, "category not found", 404)
+		return
+	}
+
+	// Check IPN uniqueness across all categories
+	cats, _, _ := loadPartsFromDir()
+	for _, parts := range cats {
+		for _, p := range parts {
+			if p.IPN == body.IPN {
+				jsonErr(w, "IPN already exists", 409)
+				return
+			}
+		}
+	}
+
+	// Read existing CSV to get headers
+	f, err := os.Open(csvPath)
+	if err != nil {
+		jsonErr(w, "failed to read category CSV", 500)
+		return
+	}
+	csvReader := csv.NewReader(f)
+	csvReader.LazyQuotes = true
+	csvReader.TrimLeadingSpace = true
+	records, err := csvReader.ReadAll()
+	f.Close()
+	if err != nil || len(records) < 1 {
+		jsonErr(w, "failed to parse category CSV", 500)
+		return
+	}
+
+	headers := records[0]
+
+	// Build the new row
+	row := make([]string, len(headers))
+	for i, h := range headers {
+		hl := strings.ToLower(h)
+		if hl == "ipn" || hl == "part_number" || hl == "pn" {
+			row[i] = body.IPN
+		} else if v, ok := body.Fields[h]; ok {
+			row[i] = v
+		} else if v, ok := body.Fields[strings.ToLower(h)]; ok {
+			row[i] = v
+		}
+	}
+
+	// Append to CSV
+	records = append(records, row)
+	wf, err := os.Create(csvPath)
+	if err != nil {
+		jsonErr(w, "failed to write CSV", 500)
+		return
+	}
+	csvWriter := csv.NewWriter(wf)
+	csvWriter.WriteAll(records)
+	wf.Close()
+
+	fields := make(map[string]string)
+	for i, h := range headers {
+		fields[h] = row[i]
+	}
+	fields["_category"] = body.Category
+
+	jsonResp(w, Part{IPN: body.IPN, Fields: fields})
+}
+
+// findCategoryCSV locates the CSV file for a given category name
+func findCategoryCSV(category string) string {
+	if partsDir == "" {
+		return ""
+	}
+	// Try direct filename match (e.g., "z-ana" -> "z-ana.csv")
+	p := filepath.Join(partsDir, category+".csv")
+	if _, err := os.Stat(p); err == nil {
+		return p
+	}
+	// Try case-insensitive
+	entries, err := os.ReadDir(partsDir)
+	if err != nil {
+		return ""
+	}
+	for _, e := range entries {
+		if !e.IsDir() && strings.HasSuffix(e.Name(), ".csv") {
+			name := strings.TrimSuffix(e.Name(), ".csv")
+			if strings.EqualFold(name, category) {
+				return filepath.Join(partsDir, e.Name())
+			}
+		}
+	}
+	return ""
+}
+
+func handleCreateCategory(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		Title  string `json:"title"`
+		Prefix string `json:"prefix"`
+	}
+	if err := decodeBody(r, &body); err != nil || body.Title == "" || body.Prefix == "" {
+		jsonErr(w, "title and prefix are required", 400)
+		return
+	}
+
+	prefix := strings.ToLower(body.Prefix)
+	filename := "z-" + prefix + ".csv"
+	csvPath := filepath.Join(partsDir, filename)
+
+	// Check if already exists
+	if _, err := os.Stat(csvPath); err == nil {
+		jsonErr(w, "category with this prefix already exists", 409)
+		return
+	}
+
+	// Create CSV with default headers
+	f, err := os.Create(csvPath)
+	if err != nil {
+		jsonErr(w, "failed to create category file", 500)
+		return
+	}
+	csvWriter := csv.NewWriter(f)
+	csvWriter.Write([]string{"IPN", "description", "manufacturer", "value"})
+	csvWriter.Flush()
+	f.Close()
+
+	catID := strings.TrimSuffix(filename, ".csv")
+	jsonResp(w, Category{ID: catID, Name: body.Title, Count: 0, Columns: []string{"IPN", "description", "manufacturer", "value"}})
+}
+
+func handleCheckIPN(w http.ResponseWriter, r *http.Request) {
+	ipn := r.URL.Query().Get("ipn")
+	if ipn == "" {
+		jsonErr(w, "ipn query parameter required", 400)
+		return
+	}
+	cats, _, _ := loadPartsFromDir()
+	exists := false
+	for _, parts := range cats {
+		for _, p := range parts {
+			if p.IPN == ipn {
+				exists = true
+				break
+			}
+		}
+		if exists {
+			break
+		}
+	}
+	jsonResp(w, map[string]bool{"exists": exists})
 }
 
 func handleUpdatePart(w http.ResponseWriter, r *http.Request, ipn string) {
