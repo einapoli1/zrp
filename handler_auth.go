@@ -128,6 +128,7 @@ func handleLogin(w http.ResponseWriter, r *http.Request) {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   true, // Only transmit over HTTPS
 		SameSite: http.SameSiteLaxMode,
 		Expires:  expires,
 	})
@@ -203,8 +204,10 @@ func handleChangePassword(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Current and new password required", 400)
 		return
 	}
-	if len(req.NewPassword) < 8 {
-		jsonErr(w, "New password must be at least 8 characters", 400)
+	
+	// Validate password strength
+	if err := ValidatePasswordStrength(req.NewPassword); err != nil {
+		jsonErr(w, err.Error(), 400)
 		return
 	}
 

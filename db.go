@@ -28,10 +28,28 @@ func initDB(path string) error {
 	if err != nil {
 		return err
 	}
+	
+	// Configure connection pool for better concurrency
+	// SQLite can handle 1 writer + multiple readers with WAL mode
+	db.SetMaxOpenConns(10)  // Allow up to 10 concurrent connections
+	db.SetMaxIdleConns(5)   // Keep 5 connections alive
+	db.SetConnMaxLifetime(0) // Connections don't expire
+	
+	// Explicitly set WAL mode (some drivers don't parse connection string params correctly)
+	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		return fmt.Errorf("enable WAL mode: %w", err)
+	}
+	
+	// Set busy timeout explicitly (30 seconds for high concurrency)
+	if _, err := db.Exec("PRAGMA busy_timeout=30000"); err != nil {
+		return fmt.Errorf("set busy_timeout: %w", err)
+	}
+	
 	// Ensure foreign keys are enforced for every connection
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		return fmt.Errorf("enable foreign keys: %w", err)
 	}
+	
 	return runMigrations()
 }
 
@@ -599,6 +617,23 @@ func runMigrations() error {
 		db.Exec(s) // ignore errors (column already exists)
 	}
 
+	// Enhanced audit logging migrations - MUST run BEFORE indexes
+	auditMigrations := []string{
+		`ALTER TABLE audit_log ADD COLUMN before_value TEXT`,
+		`ALTER TABLE audit_log ADD COLUMN after_value TEXT`,
+		`ALTER TABLE audit_log ADD COLUMN ip_address TEXT`,
+		`ALTER TABLE audit_log ADD COLUMN user_agent TEXT`,
+	}
+	
+	for _, migration := range auditMigrations {
+		if _, err := db.Exec(migration); err != nil {
+			// Ignore "duplicate column" errors - column already exists
+			if !strings.Contains(err.Error(), "duplicate column") {
+				log.Printf("Audit migration warning: %v\nSQL: %s", err, migration)
+			}
+		}
+	}
+
 	// Create indexes on frequently queried columns
 	indexes := []string{
 		"CREATE INDEX IF NOT EXISTS idx_ecos_status ON ecos(status)",
@@ -713,23 +748,6 @@ func runMigrations() error {
 			// Ignore "duplicate column" errors - column already exists
 			if !strings.Contains(err.Error(), "duplicate column") {
 				log.Printf("Quality migration warning: %v\nSQL: %s", err, migration)
-			}
-		}
-	}
-
-	// Enhanced audit logging migrations
-	auditMigrations := []string{
-		`ALTER TABLE audit_log ADD COLUMN before_value TEXT`,
-		`ALTER TABLE audit_log ADD COLUMN after_value TEXT`,
-		`ALTER TABLE audit_log ADD COLUMN ip_address TEXT`,
-		`ALTER TABLE audit_log ADD COLUMN user_agent TEXT`,
-	}
-	
-	for _, migration := range auditMigrations {
-		if _, err := db.Exec(migration); err != nil {
-			// Ignore "duplicate column" errors - column already exists
-			if !strings.Contains(err.Error(), "duplicate column") {
-				log.Printf("Audit migration warning: %v\nSQL: %s", err, migration)
 			}
 		}
 	}

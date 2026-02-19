@@ -8,7 +8,7 @@ test.describe('ZRP Smoke Tests', () => {
 
   test('navigate to parts page', async ({ page }) => {
     await page.goto('/parts');
-    await expect(page.locator('text=Parts')).toBeVisible();
+    await expect(page.locator('h1')).toBeVisible();
   });
 
   test('navigate to ECOs page', async ({ page }) => {

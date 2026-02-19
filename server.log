@@ -1,3 +1,6 @@
-2026/02/17 20:58:31 ZRP server starting on http://localhost:9000
-2026/02/17 20:58:31 listen tcp :9000: bind: address already in use
-exit status 1
+Warning: Failed to create index: SQL logic error: no such table: main.parts (1)
+Warning: Failed to create index: SQL logic error: no such table: main.parts (1)
+2026/02/19 13:53:31 [QueryProfiler] Enabled with threshold: 100ms
+2026/02/19 13:53:31 Query profiler enabled with 100ms threshold
+2026/02/19 13:53:31 ZRP server starting on http://localhost:9000
+2026/02/19 13:53:31 listen tcp :9000: bind: address already in use

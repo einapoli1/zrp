@@ -110,10 +110,18 @@ func validateForeignKey(ve *ValidationErrors, field, table, id string) {
 	if id == "" {
 		return
 	}
+	
+	// Validate table name to prevent SQL injection
+	validatedTable, err := ValidateAndSanitizeTable(table)
+	if err != nil {
+		ve.Add(field, "invalid table reference")
+		return
+	}
+	
 	var count int
-	err := db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE id=?", table), id).Scan(&count)
+	err = db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE id=?", validatedTable), id).Scan(&count)
 	if err != nil || count == 0 {
-		ve.Add(field, fmt.Sprintf("references non-existent %s: %s", table, id))
+		ve.Add(field, fmt.Sprintf("references non-existent %s: %s", validatedTable, id))
 	}
 }
 
@@ -122,8 +130,22 @@ func validateForeignKeyCol(ve *ValidationErrors, field, table, col, value string
 	if value == "" {
 		return
 	}
+	
+	// Validate table and column names to prevent SQL injection
+	validatedTable, err := ValidateAndSanitizeTable(table)
+	if err != nil {
+		ve.Add(field, "invalid table reference")
+		return
+	}
+	
+	validatedCol, err := ValidateAndSanitizeColumn(col)
+	if err != nil {
+		ve.Add(field, "invalid column reference")
+		return
+	}
+	
 	var count int
-	err := db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE %s=?", table, col), value).Scan(&count)
+	err = db.QueryRow(fmt.Sprintf("SELECT COUNT(*) FROM %s WHERE %s=?", validatedTable, validatedCol), value).Scan(&count)
 	if err != nil || count == 0 {
 		ve.Add(field, fmt.Sprintf("references non-existent record: %s", value))
 	}

@@ -1,6 +1,18 @@
 import { test, expect } from '@playwright/test';
 
+// Login helper function
+async function login(page: any) {
+  await page.goto('/login');
+  await page.fill('#username', 'admin');
+  await page.fill('#password', 'changeme');
+  await page.click('button[type="submit"]');
+  await page.waitForURL(/dashboard/);
+}
+
 test.describe('Dashboard', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
   test('loads and shows dashboard heading', async ({ page }) => {
     await page.goto('/');
     await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
@@ -13,6 +25,9 @@ test.describe('Dashboard', () => {
 });
 
 test.describe('Navigation - Module List Pages', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
   const modules = [
     { url: '/parts', heading: 'Parts' },
     { url: '/ecos', heading: 'Engineering Change Orders' },
@@ -35,6 +50,9 @@ test.describe('Navigation - Module List Pages', () => {
 });
 
 test.describe('Parts CRUD', () => {
+  test.beforeEach(async ({ page }) => {
+    await login(page);
+  });
   test('shows parts table with IPN column', async ({ page }) => {
     await page.goto('/parts');
     await expect(page.getByRole('heading', { name: 'Parts' })).toBeVisible({ timeout: 10000 });

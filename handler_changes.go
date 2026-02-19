@@ -172,8 +172,21 @@ func handleUndoChange(w http.ResponseWriter, r *http.Request, idStr string) {
 
 // deleteByTable deletes a record by table name and ID
 func deleteByTable(tableName, recordID string) error {
-	idCol := tableIDColumn(tableName)
-	_, err := db.Exec(fmt.Sprintf("DELETE FROM %s WHERE %s = ?", tableName, idCol), recordID)
+	// Validate table name to prevent SQL injection
+	validatedTable, err := ValidateAndSanitizeTable(tableName)
+	if err != nil {
+		return fmt.Errorf("invalid table name: %v", err)
+	}
+	
+	idCol := tableIDColumn(validatedTable)
+	
+	// Validate column name
+	validatedCol, err := ValidateAndSanitizeColumn(idCol)
+	if err != nil {
+		return fmt.Errorf("invalid column name: %v", err)
+	}
+	
+	_, err = db.Exec(fmt.Sprintf("DELETE FROM %s WHERE %s = ?", validatedTable, validatedCol), recordID)
 	return err
 }
 
@@ -223,12 +236,25 @@ func genericRestore(tableName, jsonData string) error {
 		placeholders = append(placeholders, "?")
 	}
 
+	// Validate table name to prevent SQL injection
+	validatedTable, err := ValidateAndSanitizeTable(tableName)
+	if err != nil {
+		return fmt.Errorf("invalid table name: %v", err)
+	}
+	
+	// Validate all column names
+	for _, col := range cols {
+		if _, err := ValidateAndSanitizeColumn(col); err != nil {
+			return fmt.Errorf("invalid column name '%s': %v", col, err)
+		}
+	}
+	
 	query := fmt.Sprintf("INSERT OR REPLACE INTO %s (%s) VALUES (%s)",
-		tableName,
+		validatedTable,
 		joinStrings(cols, ", "),
 		joinStrings(placeholders, ", "),
 	)
-	_, err := db.Exec(query, vals...)
+	_, err = db.Exec(query, vals...)
 	return err
 }
 

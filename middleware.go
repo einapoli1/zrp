@@ -69,6 +69,42 @@ func logging(next http.Handler) http.Handler {
 	})
 }
 
+// securityHeaders adds security headers to all responses
+func securityHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Prevent clickjacking
+		w.Header().Set("X-Frame-Options", "DENY")
+		
+		// Prevent MIME-sniffing
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		
+		// Enable XSS protection (legacy browsers)
+		w.Header().Set("X-XSS-Protection", "1; mode=block")
+		
+		// Content Security Policy
+		csp := "default-src 'self'; " +
+			"script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+			"style-src 'self' 'unsafe-inline'; " +
+			"img-src 'self' data: blob:; " +
+			"font-src 'self' data:; " +
+			"connect-src 'self'"
+		w.Header().Set("Content-Security-Policy", csp)
+		
+		// Referrer Policy
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		
+		// Permissions Policy (disable unnecessary features)
+		w.Header().Set("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
+		
+		// HSTS (if using HTTPS)
+		if r.TLS != nil {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
+		
+		next.ServeHTTP(w, r)
+	})
+}
+
 func requireAuth(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -142,6 +178,7 @@ func requireAuth(next http.Handler) http.Handler {
 			Value:    cookie.Value,
 			Path:     "/",
 			HttpOnly: true,
+			Secure:   true, // Only transmit over HTTPS
 			SameSite: http.SameSiteLaxMode,
 			Expires:  newExpiry,
 		})
