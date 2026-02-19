@@ -31,7 +31,7 @@ interface BulkEditDialogProps {
   onOpenChange: (open: boolean) => void;
   fields: BulkEditField[];
   selectedCount: number;
-  onSubmit: (updates: Record<string, string>) => Promise<void>;
+  onSubmit: (updates: Record<string, string>) => Promise<{ success: number; failed: number; errors?: string[] } | void>;
   title?: string;
 }
 

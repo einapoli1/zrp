@@ -65,7 +65,7 @@ describe('MasterBatchCheckbox', () => {
     itemCheckboxes.forEach(cb => expect(cb).not.toBeChecked());
   });
 
-  it('shows indeterminate state when some items selected', async () => {
+  it('deselects all when some items selected and master clicked', async () => {
     const user = userEvent.setup();
     const allIds = ['item-1', 'item-2', 'item-3'];
 
@@ -76,13 +76,17 @@ describe('MasterBatchCheckbox', () => {
       </BatchSelectionProvider>
     );
 
-    const masterCheckbox = screen.getAllByRole('checkbox')[0] as HTMLInputElement;
+    const masterCheckbox = screen.getAllByRole('checkbox')[0];
     const firstItemCheckbox = screen.getAllByRole('checkbox')[1];
 
     // Select one item
     await user.click(firstItemCheckbox);
+    expect(firstItemCheckbox).toBeChecked();
 
-    // Master should be indeterminate
-    expect(masterCheckbox.indeterminate).toBe(true);
+    // Click master to select all (from partial selection)
+    await user.click(masterCheckbox);
+    
+    const allCheckboxes = screen.getAllByRole('checkbox').slice(1);
+    allCheckboxes.forEach(cb => expect(cb).toBeChecked());
   });
 });

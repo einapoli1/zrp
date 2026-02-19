@@ -35,7 +35,10 @@ export function MasterBatchCheckbox({ allIds, disabled }: MasterBatchCheckboxPro
       checked={allSelected}
       ref={(el) => {
         if (el) {
-          el.indeterminate = someSelected;
+          const input = el.querySelector('button') as HTMLButtonElement & { indeterminate?: boolean };
+          if (input) {
+            input.indeterminate = someSelected;
+          }
         }
       }}
       onCheckedChange={() => toggleAll(allIds)}
