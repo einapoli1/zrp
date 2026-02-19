@@ -282,7 +282,7 @@ func TestSalesOrderWorkflow(t *testing.T) {
 		t.Error("expected invoice_id")
 	}
 	var invTotal float64
-	db.QueryRow("SELECT total_amount FROM invoices WHERE sales_order_id=?", id).Scan(&invTotal)
+	db.QueryRow("SELECT total FROM invoices WHERE sales_order_id=?", id).Scan(&invTotal)
 	if invTotal != 250 {
 		t.Errorf("expected 250, got %.2f", invTotal)
 	}

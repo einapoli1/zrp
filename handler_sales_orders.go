@@ -318,11 +318,12 @@ func handleInvoiceSalesOrder(w http.ResponseWriter, r *http.Request, id string) 
 
 	now := time.Now().Format("2006-01-02 15:04:05")
 	invID := nextID("INV", "invoices", 4)
+	issueDate := time.Now().Format("2006-01-02")
 	dueDate := time.Now().AddDate(0, 0, 30).Format("2006-01-02")
 	username := getUsername(r)
 
-	_, err = db.Exec("INSERT INTO invoices (id,sales_order_id,customer,status,total_amount,created_at,due_date) VALUES (?,?,?,?,?,?,?)",
-		invID, id, o.Customer, "draft", total, now, dueDate)
+	_, err = db.Exec("INSERT INTO invoices (id,invoice_number,sales_order_id,customer,status,total,created_at,issue_date,due_date) VALUES (?,?,?,?,?,?,?,?,?)",
+		invID, invID, id, o.Customer, "draft", total, now, issueDate, dueDate)
 	if err != nil {
 		jsonErr(w, err.Error(), 500)
 		return

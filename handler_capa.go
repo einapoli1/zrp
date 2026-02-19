@@ -182,6 +182,17 @@ func handleUpdateCAPA(w http.ResponseWriter, r *http.Request, id string) {
 		return
 	}
 
+	// Preserve current values if not provided in update
+	if title == "" { title = currentCAPA.Title }
+	if capaType == "" { capaType = currentCAPA.Type }
+	if linkedNCRID == "" { linkedNCRID = currentCAPA.LinkedNCRID }
+	if linkedRMAID == "" { linkedRMAID = currentCAPA.LinkedRMAID }
+	if rootCause == "" { rootCause = currentCAPA.RootCause }
+	if actionPlan == "" { actionPlan = currentCAPA.ActionPlan }
+	if owner == "" { owner = currentCAPA.Owner }
+	if dueDate == "" { dueDate = currentCAPA.DueDate }
+	if effectivenessCheck == "" { effectivenessCheck = currentCAPA.EffectivenessCheck }
+
 	// Handle approval actions with security (Gap 5.4)
 	var newQEAt, newMgrAt interface{}
 	newApprovedByQE := currentCAPA.ApprovedByQE
@@ -213,12 +224,12 @@ func handleUpdateCAPA(w http.ResponseWriter, r *http.Request, id string) {
 		newStatus = currentCAPA.Status // Keep current status if not specified
 	}
 	
-	// Check if we should auto-advance to approved
+	// Check if we should auto-advance to pending_review
 	if (newApprovedByQE != "" && newApprovedByMgr != "") && 
-	   (currentCAPA.Status == "open" || currentCAPA.Status == "pending_approval") &&
-	   newStatus != "approved" {
-		newStatus = "approved"
-		logAudit(db, username, "auto-advanced", "capa", id, "Auto-advanced to approved status after both approvals received")
+	   (currentCAPA.Status == "open" || currentCAPA.Status == "in_progress") &&
+	   newStatus != "pending_review" && newStatus != "closed" {
+		newStatus = "pending_review"
+		logAudit(db, username, "auto-advanced", "capa", id, "Auto-advanced to pending_review status after both approvals received")
 	}
 
 	_, err = db.Exec(`UPDATE capas SET title=?,type=?,linked_ncr_id=?,linked_rma_id=?,root_cause=?,action_plan=?,

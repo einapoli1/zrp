@@ -45,8 +45,8 @@ func seedTestUsers(t *testing.T) {
 		}
 
 		// Create session for the user
-		_, err = db.Exec(`INSERT INTO sessions (token, user_id) 
-			SELECT ?, id FROM users WHERE username = ?`,
+		_, err = db.Exec(`INSERT INTO sessions (token, user_id, expires_at) 
+			SELECT ?, id, datetime('now', '+30 days') FROM users WHERE username = ?`,
 			user.username+"_token", user.username)
 		if err != nil {
 			t.Fatalf("Failed to create session for %s: %v", user.username, err)
@@ -189,9 +189,9 @@ func testCreateECOFromNCRAPI(t *testing.T) {
 func testCAPAApprovalSecurity(t *testing.T) {
 	// Create a test CAPA
 	capaID := "CAPA-2026-TEST"
-	_, err := db.Exec(`INSERT INTO capas (id, title, status, created_at, updated_at)
-		VALUES (?, ?, ?, datetime('now'), datetime('now'))`,
-		capaID, "Test CAPA", "open")
+	_, err := db.Exec(`INSERT INTO capas (id, title, type, status, created_at, updated_at)
+		VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		capaID, "Test CAPA", "corrective", "open")
 	if err != nil {
 		t.Fatalf("Failed to create test CAPA: %v", err)
 	}
@@ -254,9 +254,9 @@ func testCAPAApprovalSecurity(t *testing.T) {
 func testCAPAStatusAutoAdvancement(t *testing.T) {
 	// Create a test CAPA
 	capaID := "CAPA-2026-AUTO"
-	_, err := db.Exec(`INSERT INTO capas (id, title, status, created_at, updated_at)
-		VALUES (?, ?, ?, datetime('now'), datetime('now'))`,
-		capaID, "Auto-advancement test CAPA", "open")
+	_, err := db.Exec(`INSERT INTO capas (id, title, type, status, created_at, updated_at)
+		VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
+		capaID, "Auto-advancement test CAPA", "corrective", "open")
 	if err != nil {
 		t.Fatalf("Failed to create test CAPA: %v", err)
 	}

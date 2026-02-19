@@ -23,8 +23,17 @@ func extractData(body []byte) json.RawMessage {
 
 func insertReceivingInspection(t *testing.T, poID, ipn string, qtyReceived float64) int {
 	t.Helper()
-	res, err := db.Exec(`INSERT INTO receiving_inspections (po_id, po_line_id, ipn, qty_received, created_at) VALUES (?, 1, ?, ?, datetime('now'))`,
-		poID, ipn, qtyReceived)
+	// Ensure PO exists
+	db.Exec(`INSERT OR IGNORE INTO purchase_orders (id, vendor_id, status, created_at, updated_at) VALUES (?, 'V-001', 'open', datetime('now'), datetime('now'))`, poID)
+	// Create PO line (let it auto-generate the ID)
+	result, err := db.Exec(`INSERT INTO po_lines (po_id, ipn, qty_ordered, unit_price) VALUES (?, ?, ?, 1.00)`, poID, ipn, qtyReceived)
+	if err != nil {
+		t.Fatal("Failed to create PO line:", err)
+	}
+	poLineID, _ := result.LastInsertId()
+	
+	res, err := db.Exec(`INSERT INTO receiving_inspections (po_id, po_line_id, ipn, qty_received, created_at) VALUES (?, ?, ?, ?, datetime('now'))`,
+		poID, poLineID, ipn, qtyReceived)
 	if err != nil {
 		t.Fatal(err)
 	}

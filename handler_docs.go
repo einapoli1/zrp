@@ -79,9 +79,21 @@ func handleUpdateDoc(w http.ResponseWriter, r *http.Request, id string) {
 	var d Document
 	if err := decodeBody(r, &d); err != nil { jsonErr(w, "invalid body", 400); return }
 
+	// Get current document to preserve status if not provided
+	var currentStatus string
+	if err := db.QueryRow("SELECT status FROM documents WHERE id=?", id).Scan(&currentStatus); err != nil {
+		jsonErr(w, "document not found", 404)
+		return
+	}
+	
 	// Snapshot current state before updating
 	username := getUsername(r)
 	snapshotDocumentVersion(id, "Before update", username, nil)
+
+	// Use current status if not provided in update
+	if d.Status == "" {
+		d.Status = currentStatus
+	}
 
 	now := time.Now().Format("2006-01-02 15:04:05")
 	_, err := db.Exec("UPDATE documents SET title=?,category=?,ipn=?,revision=?,status=?,content=?,file_path=?,updated_at=? WHERE id=?",

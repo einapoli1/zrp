@@ -87,7 +87,7 @@ func TestWorkOrderKit(t *testing.T) {
 	db = testDB // Set global db for handlers
 
 	// Insert test data
-	_, err := db.Exec(`INSERT INTO work_orders (id, assembly_ipn, qty, status) VALUES ('WO001', 'ASY-001', 5, 'open')`)
+	_, err := db.Exec(`INSERT INTO work_orders (id, assembly_ipn, qty, status, created_at) VALUES ('WO001', 'ASY-001', 5, 'open', '2026-01-01 00:00:00')`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +110,7 @@ func TestWorkOrderKit(t *testing.T) {
 	handleWorkOrderKit(rr, req, "WO001")
 
 	if status := rr.Code; status != http.StatusOK {
-		t.Errorf("handler returned wrong status code: got %v want %v", status, http.StatusOK)
+		t.Errorf("handler returned wrong status code: got %v want %v, body: %s", status, http.StatusOK, rr.Body.String())
 	}
 
 	var result map[string]interface{}
@@ -144,7 +144,7 @@ func TestWorkOrderSerials(t *testing.T) {
 	db = testDB
 
 	// Insert test data
-	_, err := db.Exec(`INSERT INTO work_orders (id, assembly_ipn, qty, status) VALUES ('WO002', 'ASY-002', 2, 'in_progress')`)
+	_, err := db.Exec(`INSERT INTO work_orders (id, assembly_ipn, qty, status, created_at) VALUES ('WO002', 'ASY-002', 2, 'in_progress', '2026-01-01 00:00:00')`)
 	if err != nil {
 		t.Fatal(err)
 	}
