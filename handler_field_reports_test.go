@@ -170,7 +170,7 @@ func TestFieldReportResolve(t *testing.T) {
 	defer cleanup()
 
 	// Create
-	body := `{"title":"Test issue","report_type":"complaint"}`
+	body := `{"title":"Test issue","report_type":"other"}`
 	req := authedRequest("POST", "/api/v1/field-reports", body, nil)
 	w := httptest.NewRecorder()
 	handleCreateFieldReport(w, req)

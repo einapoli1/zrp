@@ -370,4 +370,43 @@ type DocumentVersion struct {
 	ECOID         *string `json:"eco_id"`
 }
 
+// Sales Order types
+type SalesOrder struct {
+	ID         string           `json:"id"`
+	QuoteID    string           `json:"quote_id"`
+	Customer   string           `json:"customer"`
+	Status     string           `json:"status"`
+	Notes      string           `json:"notes"`
+	CreatedBy  string           `json:"created_by"`
+	CreatedAt  string           `json:"created_at"`
+	UpdatedAt  string           `json:"updated_at"`
+	ShipmentID *string          `json:"shipment_id,omitempty"`
+	InvoiceID  *string          `json:"invoice_id,omitempty"`
+	Lines      []SalesOrderLine `json:"lines,omitempty"`
+}
+
+type SalesOrderLine struct {
+	ID           int     `json:"id"`
+	SalesOrderID string  `json:"sales_order_id"`
+	IPN          string  `json:"ipn"`
+	Description  string  `json:"description"`
+	Qty          int     `json:"qty"`
+	QtyAllocated int     `json:"qty_allocated"`
+	QtyPicked    int     `json:"qty_picked"`
+	QtyShipped   int     `json:"qty_shipped"`
+	UnitPrice    float64 `json:"unit_price"`
+	Notes        string  `json:"notes"`
+}
+
+type Invoice struct {
+	ID           string  `json:"id"`
+	SalesOrderID string  `json:"sales_order_id"`
+	Customer     string  `json:"customer"`
+	Status       string  `json:"status"`
+	TotalAmount  float64 `json:"total_amount"`
+	CreatedAt    string  `json:"created_at"`
+	DueDate      string  `json:"due_date"`
+	PaidAt       *string `json:"paid_at,omitempty"`
+}
+
 var _ = time.Now // keep time imported

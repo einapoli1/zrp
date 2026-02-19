@@ -1,23 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "../test/test-utils";
 
-const mockReport = {
-  id: "FR-001",
-  title: "Overheating Issue",
-  report_type: "failure",
-  status: "open",
-  priority: "high",
-  description: "Device overheating in field",
-  device_serial: "SN-1234",
-  reporter: "John Doe",
-  created_at: "2024-01-15",
-  updated_at: "2024-01-15",
-  linked_ncr_id: null,
-};
-
-const mockGetFieldReport = vi.fn().mockResolvedValue(mockReport);
-const mockUpdateFieldReport = vi.fn().mockResolvedValue(mockReport);
-const mockCreateNCRFromFieldReport = vi.fn().mockResolvedValue({ id: "NCR-001", title: "From FR-001" });
+const mockGetFieldReport = vi.fn();
+const mockUpdateFieldReport = vi.fn();
+const mockCreateNCRFromFieldReport = vi.fn();
 
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {
@@ -35,7 +21,19 @@ vi.mock("../lib/api", () => ({
 
 import FieldReportDetail from "./FieldReportDetail";
 
-beforeEach(() => vi.clearAllMocks());
+const mockReport = {
+  id: "FR-001", title: "Overheating Issue", report_type: "failure",
+  status: "open", priority: "high", description: "Device overheating in field",
+  device_serial: "SN-1234", reporter: "John Doe",
+  created_at: "2024-01-15", updated_at: "2024-01-15", linked_ncr_id: null,
+};
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockGetFieldReport.mockResolvedValue(mockReport);
+  mockUpdateFieldReport.mockResolvedValue(mockReport);
+  mockCreateNCRFromFieldReport.mockResolvedValue({ id: "NCR-001", title: "From FR-001" });
+});
 
 describe("FieldReportDetail", () => {
   it("renders loading state initially", () => {

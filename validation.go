@@ -151,27 +151,31 @@ func validateIPN(ve *ValidationErrors, field, value string) {
 
 // Common enum values
 var (
-	validECOStatuses      = []string{"draft", "review", "approved", "implemented", "rejected"}
-	validECOPriorities    = []string{"low", "normal", "high", "critical"}
-	validPOStatuses       = []string{"draft", "sent", "partial", "received", "cancelled"}
-	validWOStatuses       = []string{"open", "in_progress", "completed", "cancelled"}
-	validWOPriorities     = []string{"low", "normal", "high", "urgent"}
-	validNCRSeverities    = []string{"minor", "major", "critical"}
-	validNCRStatuses      = []string{"open", "investigating", "resolved", "closed"}
-	validRMAStatuses      = []string{"open", "received", "diagnosing", "repaired", "shipped", "closed"}
-	validQuoteStatuses    = []string{"draft", "sent", "accepted", "rejected", "expired"}
-	validShipmentTypes    = []string{"inbound", "outbound", "return"}
-	validShipmentStatuses = []string{"draft", "packing", "shipped", "delivered", "cancelled"}
-	validDeviceStatuses   = []string{"active", "inactive", "rma", "retired"}
-	validCampaignStatuses = []string{"draft", "active", "completed", "cancelled"}
-	validDocStatuses      = []string{"draft", "review", "approved", "released", "obsolete"}
-	validCAPATypes        = []string{"corrective", "preventive"}
-	validCAPAStatuses     = []string{"open", "in-progress", "verification", "closed"}
-	validVendorStatuses   = []string{"active", "inactive", "blocked"}
-	validInventoryTypes   = []string{"receive", "issue", "adjust", "return"}
-	validRFQStatuses      = []string{"draft", "sent", "quoting", "awarded", "closed", "cancelled"}
-	validFieldReportTypes = []string{"incident", "warranty", "maintenance", "installation", "failure", "complaint", "visit"}
-	validFieldReportStatuses = []string{"open", "investigating", "resolved", "closed"}
+	// These MUST match DB CHECK constraints in db.go
+	validECOStatuses           = []string{"draft", "review", "approved", "implemented", "rejected", "cancelled"}
+	validECOPriorities         = []string{"low", "normal", "high", "critical"}
+	validPOStatuses            = []string{"draft", "sent", "confirmed", "partial", "received", "cancelled"}
+	validWOStatuses            = []string{"open", "in_progress", "complete", "cancelled", "on_hold"}
+	validWOPriorities          = []string{"low", "normal", "high", "critical"}
+	validNCRSeverities         = []string{"minor", "major", "critical"}
+	validNCRStatuses           = []string{"open", "investigating", "resolved", "closed"}
+	validRMAStatuses           = []string{"open", "received", "diagnosing", "repairing", "resolved", "closed", "scrapped"}
+	validQuoteStatuses         = []string{"draft", "sent", "accepted", "rejected", "expired", "cancelled"}
+	validShipmentTypes         = []string{"inbound", "outbound", "transfer"}
+	validShipmentStatuses      = []string{"draft", "packed", "shipped", "delivered", "cancelled"}
+	validDeviceStatuses        = []string{"active", "inactive", "rma", "decommissioned", "maintenance"}
+	validCampaignStatuses      = []string{"draft", "active", "paused", "completed", "cancelled"}
+	validCampaignDevStatuses   = []string{"pending", "in_progress", "success", "failed", "skipped"}
+	validDocStatuses           = []string{"draft", "review", "approved", "released", "obsolete"}
+	validCAPATypes             = []string{"corrective", "preventive"}
+	validCAPAStatuses          = []string{"open", "in_progress", "pending_review", "closed", "cancelled"}
+	validVendorStatuses        = []string{"active", "preferred", "inactive", "blocked"}
+	validInventoryTypes        = []string{"receive", "issue", "adjust", "transfer", "return", "scrap"}
+	validRFQStatuses           = []string{"draft", "sent", "quoting", "awarded", "cancelled"}
+	validFieldReportTypes      = []string{"failure", "performance", "safety", "visit", "other"}
+	validFieldReportStatuses   = []string{"open", "investigating", "resolved", "closed"}
+	validSalesOrderStatuses    = []string{"draft", "confirmed", "allocated", "picked", "shipped", "invoiced", "closed"}
+	validInvoiceStatuses       = []string{"draft", "sent", "paid", "overdue", "cancelled"}
 	validFieldReportPriorities = []string{"low", "medium", "high", "critical"}
 )
 

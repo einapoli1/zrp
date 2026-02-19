@@ -67,7 +67,7 @@ func runMigrations() error {
 
 	fieldReportTable := `CREATE TABLE IF NOT EXISTS field_reports (
 		id TEXT PRIMARY KEY, title TEXT NOT NULL,
-		report_type TEXT DEFAULT 'failure' CHECK(report_type IN ('failure','performance','safety','other')),
+		report_type TEXT DEFAULT 'failure' CHECK(report_type IN ('failure','performance','safety','visit','other')),
 		status TEXT DEFAULT 'open' CHECK(status IN ('open','investigating','resolved','closed')),
 		priority TEXT DEFAULT 'medium' CHECK(priority IN ('low','medium','high','critical')),
 		customer_name TEXT DEFAULT '', site_location TEXT DEFAULT '',
@@ -95,7 +95,7 @@ func runMigrations() error {
 		)`,
 		`CREATE TABLE IF NOT EXISTS documents (
 			id TEXT PRIMARY KEY, title TEXT NOT NULL, category TEXT, ipn TEXT,
-			revision TEXT DEFAULT 'A', status TEXT DEFAULT 'draft' CHECK(status IN ('draft','review','approved','obsolete')),
+			revision TEXT DEFAULT 'A', status TEXT DEFAULT 'draft' CHECK(status IN ('draft','review','approved','released','obsolete')),
 			content TEXT, file_path TEXT, created_by TEXT DEFAULT 'engineer',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -501,6 +501,43 @@ func runMigrations() error {
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`)
 
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS sales_orders (
+		id TEXT PRIMARY KEY,
+		quote_id TEXT DEFAULT '',
+		customer TEXT NOT NULL,
+		status TEXT DEFAULT 'draft' CHECK(status IN ('draft','confirmed','allocated','picked','shipped','invoiced','closed')),
+		notes TEXT DEFAULT '',
+		created_by TEXT DEFAULT '',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`)
+
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS sales_order_lines (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		sales_order_id TEXT NOT NULL,
+		ipn TEXT NOT NULL,
+		description TEXT DEFAULT '',
+		qty INTEGER NOT NULL CHECK(qty > 0),
+		qty_allocated INTEGER DEFAULT 0 CHECK(qty_allocated >= 0),
+		qty_picked INTEGER DEFAULT 0 CHECK(qty_picked >= 0),
+		qty_shipped INTEGER DEFAULT 0 CHECK(qty_shipped >= 0),
+		unit_price REAL DEFAULT 0 CHECK(unit_price >= 0),
+		notes TEXT DEFAULT '',
+		FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE CASCADE
+	)`)
+
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS invoices (
+		id TEXT PRIMARY KEY,
+		sales_order_id TEXT NOT NULL,
+		customer TEXT NOT NULL,
+		status TEXT DEFAULT 'draft' CHECK(status IN ('draft','sent','paid','overdue','cancelled')),
+		total_amount REAL DEFAULT 0,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		due_date DATE,
+		paid_at DATETIME,
+		FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE RESTRICT
+	)`)
+
 	for _, t := range tables {
 		if _, err := db.Exec(t); err != nil {
 			return fmt.Errorf("migration error: %w\nSQL: %s", err, t)
@@ -517,6 +554,7 @@ func runMigrations() error {
 		"ALTER TABLE users ADD COLUMN email TEXT DEFAULT ''",
 		"ALTER TABLE email_log ADD COLUMN event_type TEXT DEFAULT ''",
 		"ALTER TABLE purchase_orders ADD COLUMN created_by TEXT DEFAULT ''",
+		"ALTER TABLE shipment_lines ADD COLUMN sales_order_id TEXT DEFAULT ''",
 	}
 	for _, s := range alterStmts {
 		db.Exec(s) // ignore errors (column already exists)
@@ -568,6 +606,12 @@ func runMigrations() error {
 		"CREATE INDEX IF NOT EXISTS idx_price_history_ipn ON price_history(ipn)",
 		"CREATE INDEX IF NOT EXISTS idx_price_history_vendor_id ON price_history(vendor_id)",
 		"CREATE INDEX IF NOT EXISTS idx_eco_revisions_eco_id ON eco_revisions(eco_id)",
+		"CREATE INDEX IF NOT EXISTS idx_sales_orders_status ON sales_orders(status)",
+		"CREATE INDEX IF NOT EXISTS idx_sales_orders_quote_id ON sales_orders(quote_id)",
+		"CREATE INDEX IF NOT EXISTS idx_sales_orders_customer ON sales_orders(customer)",
+		"CREATE INDEX IF NOT EXISTS idx_sales_order_lines_order_id ON sales_order_lines(sales_order_id)",
+		"CREATE INDEX IF NOT EXISTS idx_invoices_sales_order_id ON invoices(sales_order_id)",
+		"CREATE INDEX IF NOT EXISTS idx_shipment_lines_sales_order_id ON shipment_lines(sales_order_id)",
 		"CREATE INDEX IF NOT EXISTS idx_receiving_inspections_po_id ON receiving_inspections(po_id)",
 		"CREATE INDEX IF NOT EXISTS idx_rfq_vendors_rfq_id ON rfq_vendors(rfq_id)",
 		"CREATE INDEX IF NOT EXISTS idx_rfq_lines_rfq_id ON rfq_lines(rfq_id)",

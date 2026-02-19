@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "../test/test-utils";
-import { mockRFQs } from "../test/mocks";
 
-const mockGetRFQs = vi.fn().mockResolvedValue(mockRFQs);
-const mockCreateRFQ = vi.fn().mockResolvedValue(mockRFQs[0]);
+const mockGetRFQs = vi.fn();
+const mockCreateRFQ = vi.fn();
 
 const mockNavigate = vi.fn();
 vi.mock("react-router-dom", async () => {
@@ -20,7 +19,16 @@ vi.mock("../lib/api", () => ({
 
 import RFQs from "./RFQs";
 
-beforeEach(() => vi.clearAllMocks());
+const mockRFQsList = [
+  { id: "RFQ-2026-0001", title: "Resistor Bulk Quote", status: "draft", created_by: "admin", created_at: "2026-01-15", updated_at: "2026-01-15", due_date: "2026-02-01", notes: "" },
+  { id: "RFQ-2026-0002", title: "MCU Sourcing", status: "sent", created_by: "admin", created_at: "2026-01-20", updated_at: "2026-01-21", due_date: "2026-02-15", notes: "" },
+];
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  mockGetRFQs.mockResolvedValue(mockRFQsList);
+  mockCreateRFQ.mockResolvedValue(mockRFQsList[0]);
+});
 
 describe("RFQs", () => {
   it("renders loading state", () => {
@@ -69,7 +77,7 @@ describe("RFQs", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() => {
       expect(mockCreateRFQ).toHaveBeenCalledWith(expect.objectContaining({ title: "New RFQ" }));
-      expect(mockNavigate).toHaveBeenCalledWith(`/rfqs/${mockRFQs[0].id}`);
+      expect(mockNavigate).toHaveBeenCalledWith(`/rfqs/${mockRFQsList[0].id}`);
     });
   });
 

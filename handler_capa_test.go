@@ -69,7 +69,7 @@ func TestCAPACRUD(t *testing.T) {
 	}
 
 	// Update
-	updateBody := `{"title":"Fix solder defect","type":"corrective","status":"in-progress","root_cause":"Insufficient flux","action_plan":"Update profile","owner":"engineer1","due_date":"2026-03-01"}`
+	updateBody := `{"title":"Fix solder defect","type":"corrective","status":"in_progress","root_cause":"Insufficient flux","action_plan":"Update profile","owner":"engineer1","due_date":"2026-03-01"}`
 	w = httptest.NewRecorder()
 	req = httptest.NewRequest("PUT", "/api/v1/capas/"+created.ID, strings.NewReader(updateBody))
 	req.Header.Set("Content-Type", "application/json")
@@ -78,8 +78,8 @@ func TestCAPACRUD(t *testing.T) {
 		t.Fatalf("update: expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 	updated, _ := unmarshalResp[CAPA](w.Body.Bytes())
-	if updated.Status != "in-progress" {
-		t.Fatalf("expected 'in-progress', got '%s'", updated.Status)
+	if updated.Status != "in_progress" {
+		t.Fatalf("expected 'in_progress', got '%s'", updated.Status)
 	}
 
 	// List (should have 1)

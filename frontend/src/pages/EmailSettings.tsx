@@ -8,8 +8,9 @@ import { Label } from "../components/ui/label";
 import { Checkbox } from "../components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Separator } from "../components/ui/separator";
+import { toast } from "sonner";
 import { 
-import { toast } from "sonner";  Mail, 
+  Mail, 
   Send, 
   CheckCircle2, 
   AlertTriangle, 
