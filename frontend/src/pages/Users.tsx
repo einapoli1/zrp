@@ -7,7 +7,8 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { Dialog, DialogContent,
+  DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { toast } from "sonner";
 import { 
   Users as UsersIcon, 
@@ -213,7 +214,11 @@ function Users() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create New User</DialogTitle>
-            </DialogHeader>
+            
+              <DialogDescription>
+                Fill out the form below to create a new new user.
+              </DialogDescription>
+              </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="username">Username</Label>
@@ -419,7 +424,11 @@ function Users() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit User: {selectedUser?.username}</DialogTitle>
-          </DialogHeader>
+          
+              <DialogDescription>
+                Update the information for this user: {selectedUser?.username}.
+              </DialogDescription>
+              </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="edit-role">Role</Label>

@@ -3,7 +3,8 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { Dialog, DialogContent,
+  DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
@@ -114,7 +115,11 @@ function CAPAs() {
             <Button><Plus className="mr-2 h-4 w-4" />New CAPA</Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg">
-            <DialogHeader><DialogTitle>Create CAPA</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Create CAPA</DialogTitle>
+              <DialogDescription>
+                Fill out the form below to create a new capa.
+              </DialogDescription>
+              </DialogHeader>
             <form onSubmit={handleCreate} className="space-y-4">
               <div><Label>Title</Label><Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required /></div>
               <div><Label>Type</Label>

@@ -6,7 +6,8 @@ import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { Dialog, DialogContent,
+  DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { toast } from "sonner";
 import { 
   Key, 
@@ -161,7 +162,11 @@ function APIKeys() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Generate New API Key</DialogTitle>
-            </DialogHeader>
+            
+              <DialogDescription>
+                Generate a new new api key based on the selected data.
+              </DialogDescription>
+              </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="key-name">Key Name</Label>
@@ -412,7 +417,11 @@ function APIKeys() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Revoke API Key</DialogTitle>
-          </DialogHeader>
+          
+              <DialogDescription>
+                Complete the form below.
+              </DialogDescription>
+              </DialogHeader>
           <div className="space-y-4">
             <div className="bg-red-50 border border-red-200 rounded-lg p-4">
               <div className="flex items-start gap-2">

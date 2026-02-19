@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -434,7 +435,11 @@ export default function Pricing() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Create Pricing</DialogTitle>
-          </DialogHeader>
+          
+              <DialogDescription>
+                Fill out the form below to create a new pricing.
+              </DialogDescription>
+              </DialogHeader>
           <PricingForm form={form} setForm={setForm} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowCreate(false)}>Cancel</Button>
@@ -448,7 +453,11 @@ export default function Pricing() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Pricing</DialogTitle>
-          </DialogHeader>
+          
+              <DialogDescription>
+                Update the information for this pricing.
+              </DialogDescription>
+              </DialogHeader>
           <PricingForm form={form} setForm={setForm} />
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowEdit(false)}>Cancel</Button>
@@ -462,7 +471,11 @@ export default function Pricing() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Bulk Price Update</DialogTitle>
-          </DialogHeader>
+          
+              <DialogDescription>
+                Complete the form below.
+              </DialogDescription>
+              </DialogHeader>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Updating {selectedIds.length} pricing entries

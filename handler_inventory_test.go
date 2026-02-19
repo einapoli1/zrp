@@ -88,9 +88,15 @@ func TestHandleListInventory_Empty(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var result []InventoryItem
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var resp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	dataBytes, _ := json.Marshal(resp.Data)
+	var result []InventoryItem
+	if err := json.Unmarshal(dataBytes, &result); err != nil {
+		t.Fatalf("Failed to decode data: %v", err)
 	}
 
 	if len(result) != 0 {
@@ -121,9 +127,15 @@ func TestHandleListInventory_WithData(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var result []InventoryItem
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var resp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	dataBytes, _ := json.Marshal(resp.Data)
+	var result []InventoryItem
+	if err := json.Unmarshal(dataBytes, &result); err != nil {
+		t.Fatalf("Failed to decode data: %v", err)
 	}
 
 	if len(result) != 2 {

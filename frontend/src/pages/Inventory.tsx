@@ -19,6 +19,7 @@ import { Checkbox } from "../components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -297,6 +298,10 @@ function Inventory() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Quick Receive Inventory</DialogTitle>
+              
+              <DialogDescription>
+                Record received items and update inventory.
+              </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>

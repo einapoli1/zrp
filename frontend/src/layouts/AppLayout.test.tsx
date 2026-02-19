@@ -104,7 +104,8 @@ describe("AppLayout", () => {
   it("renders supply chain nav items", () => {
     render(<AppLayout />);
     expect(screen.getByText("Purchase Orders")).toBeInTheDocument();
-    expect(screen.getByText("Procurement")).toBeInTheDocument();
+    expect(screen.getByText("Vendors")).toBeInTheDocument();
+    expect(screen.getByText("RFQs")).toBeInTheDocument();
   });
 
   it("renders field service nav items", () => {

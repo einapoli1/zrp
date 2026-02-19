@@ -23,6 +23,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -218,7 +219,11 @@ function InventoryDetail() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Inventory Transaction</DialogTitle>
-            </DialogHeader>
+            
+              <DialogDescription>
+                Fill out the form below to create a new inventory transaction.
+              </DialogDescription>
+              </DialogHeader>
             <div className="space-y-4">
               <div>
                 <Label htmlFor="type">Transaction Type</Label>

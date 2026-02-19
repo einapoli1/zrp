@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { Dialog, DialogContent,
+  DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
@@ -145,7 +146,11 @@ function Quotes() {
           <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Create New Quote</DialogTitle>
-            </DialogHeader>
+            
+              <DialogDescription>
+                Fill out the form below to create a new new quote.
+              </DialogDescription>
+              </DialogHeader>
             <form onSubmit={handleCreateQuote} className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>

@@ -19,6 +19,7 @@ import { Textarea } from "../components/ui/textarea";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -359,6 +360,9 @@ function WorkOrders() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Create Work Order</DialogTitle>
+              <DialogDescription>
+                Create a new work order to track production of an assembly.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div>

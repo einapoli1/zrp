@@ -27,6 +27,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -202,7 +203,11 @@ function Vendors() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Vendor</DialogTitle>
-            </DialogHeader>
+            
+              <DialogDescription>
+                Complete the form below.
+              </DialogDescription>
+              </DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
@@ -468,7 +473,11 @@ function Vendors() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Vendor</DialogTitle>
-          </DialogHeader>
+          
+              <DialogDescription>
+                Update the information for this vendor.
+              </DialogDescription>
+              </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>

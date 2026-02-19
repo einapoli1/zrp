@@ -29,6 +29,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -388,6 +389,10 @@ function WorkOrderDetail() {
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Serial Number Management</DialogTitle>
+              
+              <DialogDescription>
+                Complete the form below.
+              </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div>
@@ -450,7 +455,11 @@ function WorkOrderDetail() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Change Work Order Status</DialogTitle>
-                </DialogHeader>
+                
+              <DialogDescription>
+                Complete the form below.
+              </DialogDescription>
+              </DialogHeader>
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm font-medium text-muted-foreground mb-2">Current Status</p>
@@ -499,7 +508,11 @@ function WorkOrderDetail() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Generate Purchase Order</DialogTitle>
-                </DialogHeader>
+                
+              <DialogDescription>
+                Generate a new purchase order based on the selected data.
+              </DialogDescription>
+              </DialogHeader>
                 <div className="space-y-4">
                   <div>
                     <p className="text-sm text-muted-foreground mb-4">

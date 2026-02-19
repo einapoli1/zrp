@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Accessibility**: Added missing `DialogDescription` components to 50+ dialogs for screen reader support
+  - Affects: WorkOrders, Inventory, Procurement, PODetail, WorkOrderDetail, Users, Devices, Testing, Firmware, InventoryDetail, Vendors, Quotes, NCRs, APIKeys, RMAs, FieldReports, Pricing, Shipments, RFQs, CAPAs, Receiving, and more
+  - Reduced accessibility warnings from 90+ to near-zero in test output
+  - All dialogs now follow Radix UI accessibility guidelines
+- **Tests**: Fixed AppLayout navigation test (removed obsolete "Procurement" reference)
+
 ### Added
 - **Parts handler test coverage** — comprehensive test suite for handler_parts.go covering core PLM functionality
   - 18 passing test functions covering GET /parts, GET /parts/:ipn, GET /parts/categories, GET /parts/check-ipn, GET /parts/:ipn/bom

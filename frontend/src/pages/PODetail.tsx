@@ -25,6 +25,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -264,7 +265,11 @@ function PODetail() {
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Change PO Status</DialogTitle>
-                </DialogHeader>
+                
+              <DialogDescription>
+                Complete the form below.
+              </DialogDescription>
+              </DialogHeader>
                 <div className="space-y-4">
                   <div>
                     <Label>Current Status</Label>
@@ -310,7 +315,11 @@ function PODetail() {
               <DialogContent className="max-w-4xl">
                 <DialogHeader>
                   <DialogTitle>Receive Items</DialogTitle>
-                </DialogHeader>
+                
+              <DialogDescription>
+                Record received items and update inventory.
+              </DialogDescription>
+              </DialogHeader>
                 <div className="space-y-4">
                   <Table>
                     <TableHeader>

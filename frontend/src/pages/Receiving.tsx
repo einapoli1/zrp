@@ -18,6 +18,7 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
@@ -299,7 +300,11 @@ function Receiving() {
             <DialogTitle>
               Inspect RI-{selectedItem?.id} — {selectedItem?.ipn}
             </DialogTitle>
-          </DialogHeader>
+          
+              <DialogDescription>
+                Update the information for this ri-{selectedItem?.id} — {selectedItem?.ipn}.
+              </DialogDescription>
+              </DialogHeader>
           <div className="space-y-4">
             <div className="p-3 bg-muted rounded-md text-sm">
               <span className="font-medium">Qty Received:</span>{" "}

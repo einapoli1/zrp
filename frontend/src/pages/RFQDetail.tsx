@@ -7,7 +7,8 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { Dialog, DialogContent,
+  DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 
 const statusColors: Record<string, string> = {
   draft: "secondary",
@@ -211,7 +212,11 @@ export default function RFQDetail() {
             <Dialog open={quoteDialogOpen} onOpenChange={setQuoteDialogOpen}>
               <DialogTrigger asChild><Button size="sm">Add Quote</Button></DialogTrigger>
               <DialogContent>
-                <DialogHeader><DialogTitle>Add Vendor Quote</DialogTitle></DialogHeader>
+                <DialogHeader><DialogTitle>Add Vendor Quote</DialogTitle>
+              <DialogDescription>
+                Complete the form below.
+              </DialogDescription>
+              </DialogHeader>
                 <div className="space-y-3">
                   <div>
                     <Label>Vendor</Label>
@@ -359,7 +364,11 @@ export default function RFQDetail() {
 
       <Dialog open={emailDialogOpen} onOpenChange={setEmailDialogOpen}>
         <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>RFQ Email</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>RFQ Email</DialogTitle>
+              <DialogDescription>
+                Complete the form below.
+              </DialogDescription>
+              </DialogHeader>
           {emailBody && (
             <div className="space-y-3">
               <div><Label>Subject</Label><Input readOnly value={emailBody.subject} /></div>

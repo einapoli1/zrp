@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { Dialog, DialogContent,
+  DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
@@ -79,7 +80,11 @@ function Shipments() {
             <Button><Plus className="mr-2 h-4 w-4" />Create Shipment</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Create Shipment</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>Create Shipment</DialogTitle>
+              <DialogDescription>
+                Fill out the form below to create a new shipment.
+              </DialogDescription>
+              </DialogHeader>
             <form onSubmit={handleCreateShipment} className="space-y-4">
               <div>
                 <Label htmlFor="type">Type</Label>
