@@ -251,7 +251,13 @@ func handleWorkOrderBOM(w http.ResponseWriter, r *http.Request, id string) {
 		Shortage    float64 `json:"shortage"`
 		Status      string  `json:"status"`
 	}
-	rows, _ := db.Query("SELECT ipn, qty_on_hand FROM inventory")
+	
+	// PERFORMANCE NOTE: This loads all inventory instead of actual BOM from CSV.
+	// TODO: Use buildBOMTree() from handler_parts.go to get real BOM, then query only those IPNs
+	// Current optimization: Filter to only parts with stock or reserved quantities
+	rows, _ := db.Query(`SELECT ipn, qty_on_hand FROM inventory 
+		WHERE qty_on_hand > 0 OR qty_reserved > 0 
+		ORDER BY ipn LIMIT 1000`)
 	var bom []BOMLine
 	if rows != nil {
 		defer rows.Close()
@@ -305,7 +311,13 @@ func handleWorkOrderPDF(w http.ResponseWriter, r *http.Request, id string) {
 		QtyOnHand    float64
 		RefDes       string
 	}
-	rows, _ := db.Query("SELECT ipn, qty_on_hand FROM inventory")
+	
+	// PERFORMANCE NOTE: This loads all inventory instead of actual BOM from CSV.
+	// TODO: Use buildBOMTree() from handler_parts.go to get real BOM, then query only those IPNs
+	// Current optimization: Filter to only parts with stock or reserved quantities
+	rows, _ := db.Query(`SELECT ipn, qty_on_hand FROM inventory 
+		WHERE qty_on_hand > 0 OR qty_reserved > 0 
+		ORDER BY ipn LIMIT 1000`)
 	var bom []BOMLine
 	if rows != nil {
 		defer rows.Close()

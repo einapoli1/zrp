@@ -265,10 +265,10 @@ export function ConfigurableTable<T>({
                   >
                     <span>{col.label}</span>
                     {isSorted && sortDirection === "asc" && (
-                    <ArrowUpNarrowWide className="h-3.5 w-3.5 text-muted-foreground" />
+                    <ArrowUpNarrowWide className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                   )}
                   {sortState?.colId === col.id && sortState.direction === "desc" && (
-                    <ArrowDownWideNarrow className="h-3.5 w-3.5 text-muted-foreground" />
+                    <ArrowDownWideNarrow className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
                   )}
                   {/* Resize handle */}
                   <div
