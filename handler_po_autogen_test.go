@@ -149,6 +149,13 @@ func TestPOAutogen_BOMShortageDetection(t *testing.T) {
 	oldDB := db
 	db = setupPOAutogenTestDB(t)
 	defer func() { db.Close(); db = oldDB }()
+	
+	// Verify database is properly set up
+	var tableCount int
+	err := db.QueryRow("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='inventory'").Scan(&tableCount)
+	if err != nil || tableCount != 1 {
+		t.Fatalf("inventory table not found in test database: err=%v, count=%d", err, tableCount)
+	}
 
 	// Setup: Assembly that requires 100 units of a component, but only 30 in stock
 	db.Exec(`INSERT INTO work_orders (id, assembly_ipn, qty, status) VALUES 
