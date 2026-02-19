@@ -12,11 +12,28 @@ import (
 )
 
 func setupConcurrencyTestDB(t *testing.T) *sql.DB {
-	testDB, err := sql.Open("sqlite", ":memory:")
+	// Use shared cache mode with WAL to properly test concurrency
+	testDB, err := sql.Open("sqlite", "file::memory:?mode=memory&cache=shared&_journal_mode=WAL&_busy_timeout=10000&_foreign_keys=1")
 	if err != nil {
 		t.Fatalf("Failed to open test DB: %v", err)
 	}
 
+	// Configure connection pool like production
+	testDB.SetMaxOpenConns(10)
+	testDB.SetMaxIdleConns(5)
+	testDB.SetConnMaxLifetime(0)
+
+	// Explicitly enable WAL mode
+	if _, err := testDB.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		t.Fatalf("Failed to enable WAL mode: %v", err)
+	}
+
+	// Set busy timeout
+	if _, err := testDB.Exec("PRAGMA busy_timeout=30000"); err != nil {
+		t.Fatalf("Failed to set busy_timeout: %v", err)
+	}
+
+	// Enable foreign keys
 	if _, err := testDB.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		t.Fatalf("Failed to enable foreign keys: %v", err)
 	}
