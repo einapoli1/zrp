@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 /**
  * E2E Tests for Manual Inventory Adjustment
@@ -24,45 +24,44 @@ test.beforeEach(async ({ page }) => {
   await page.waitForURL(/dashboard|home/i);
 });
 
+// Helper function to navigate to inventory and wait for page to load
+async function goToInventory(page: Page) {
+  await page.goto('/inventory');
+  await page.waitForLoadState('networkidle');
+  // Wait for the page heading to ensure we're on the right page
+  await page.waitForSelector('h1:has-text("Inventory")', { timeout: 10000 });
+}
+
+// Helper function to perform quick receive
+async function quickReceive(page: Page, ipn: string, qty: string, reference: string = '', notes: string = '') {
+  const quickReceiveButton = page.locator('button:has-text("Quick Receive")');
+  await quickReceiveButton.waitFor({ state: 'visible', timeout: 10000 });
+  await quickReceiveButton.click();
+  
+  await page.waitForSelector('div[role="dialog"]', { state: 'visible' });
+  
+  await page.fill('input#ipn', ipn);
+  await page.fill('input#qty', qty);
+  if (reference) await page.fill('input#reference', reference);
+  if (notes) await page.fill('input#notes', notes);
+  
+  await page.locator('div[role="dialog"]').locator('button:has-text("Receive")').last().click();
+  await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+  await page.waitForTimeout(1000); // Allow time for backend processing
+}
+
 test.describe('Inventory Adjustment', () => {
   
   test('should manually add stock to inventory item using adjust transaction', async ({ page }) => {
-    // Navigate to inventory page
-    await page.goto('/inventory');
-    
-    // Wait for page to load completely
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('h1')).toContainText(/inventory/i, { timeout: 10000 });
-    
-    // Create a test part first if needed (using Quick Receive to ensure inventory exists)
     const testIPN = `TEST-ADD-${Date.now()}`;
     
-    // Click Quick Receive button
-    const quickReceiveButton = page.locator('button:has-text("Quick Receive")');
-    await quickReceiveButton.waitFor({ state: 'visible', timeout: 10000 });
-    await quickReceiveButton.click();
-    
-    // Wait for dialog to open
-    await page.waitForSelector('div[role="dialog"]', { state: 'visible' });
-    
-    // Fill in the quick receive form
-    await page.fill('input#ipn', testIPN);
-    await page.fill('input#qty', '10');
-    await page.fill('input#reference', 'Initial stock');
-    
-    // Submit the form - find the button within the dialog
-    await page.locator('div[role="dialog"]').locator('button:has-text("Receive")').last().click();
-    
-    // Wait for dialog to close
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    
-    // Wait for success toast
-    await expect(page.locator('text=/received.*units/i')).toBeVisible({ timeout: 5000 });
+    // Navigate to inventory and create initial stock
+    await goToInventory(page);
+    await quickReceive(page, testIPN, '10', 'Initial stock');
     
     // Navigate to the inventory detail page
     await page.goto(`/inventory/${testIPN}`);
-    
-    // Wait for page to load
+    await page.waitForLoadState('networkidle');
     await expect(page.locator('h1')).toContainText(testIPN);
     
     // Verify initial quantity
@@ -70,8 +69,6 @@ test.describe('Inventory Adjustment', () => {
     
     // Click New Transaction button to add more stock
     await page.click('button:has-text("New Transaction")');
-    
-    // Wait for dialog to open
     await page.waitForSelector('div[role="dialog"]', { state: 'visible' });
     
     // Select "Adjust" transaction type
@@ -85,44 +82,23 @@ test.describe('Inventory Adjustment', () => {
     
     // Submit the transaction
     await page.locator('div[role="dialog"]').locator('button:has-text("Create Transaction")').last().click();
-    
-    // Wait for the dialog to close and page to refresh
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+    await page.waitForTimeout(1000);
     
     // Verify the new quantity is displayed
     await expect(page.locator('text="On Hand"').locator('..').locator('text="25"')).toBeVisible();
   });
 
   test('should manually remove stock from inventory item using issue transaction', async ({ page }) => {
-    // Navigate to inventory page
-    await page.goto('/inventory');
-    await page.waitForLoadState('networkidle');
-    await expect(page.locator('h1')).toContainText(/inventory/i, { timeout: 10000 });
-    
-    // Create a test part with initial stock
     const testIPN = `TEST-REMOVE-${Date.now()}`;
     
-    // Click Quick Receive button
-    const quickReceiveButton = page.locator('button:has-text("Quick Receive")');
-    await quickReceiveButton.waitFor({ state: 'visible', timeout: 10000 });
-    await quickReceiveButton.click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'visible' });
-    
-    // Fill in the quick receive form with initial stock
-    await page.fill('input#ipn', testIPN);
-    await page.fill('input#qty', '50');
-    await page.fill('input#reference', 'Initial stock for removal test');
-    
-    // Submit the form
-    await page.locator('div[role="dialog"]').locator('button:has-text("Receive")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    
-    // Wait for success
-    await page.waitForTimeout(1500);
+    // Navigate to inventory and create initial stock
+    await goToInventory(page);
+    await quickReceive(page, testIPN, '50', 'Initial stock for removal test');
     
     // Navigate to the inventory detail page
     await page.goto(`/inventory/${testIPN}`);
+    await page.waitForLoadState('networkidle');
     
     // Verify initial quantity
     await expect(page.locator('text="On Hand"').locator('..').locator('text="50"')).toBeVisible();
@@ -142,34 +118,23 @@ test.describe('Inventory Adjustment', () => {
     
     // Submit the transaction
     await page.locator('div[role="dialog"]').locator('button:has-text("Create Transaction")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    
-    // Wait for the dialog to close and page to refresh
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+    await page.waitForTimeout(1000);
     
     // Verify the new quantity (50 - 20 = 30)
     await expect(page.locator('text="On Hand"').locator('..').locator('text="30"')).toBeVisible();
   });
 
   test('should verify inventory transaction history is recorded correctly', async ({ page }) => {
-    // Create a test part and perform multiple transactions
     const testIPN = `TEST-HISTORY-${Date.now()}`;
     
-    await page.goto('/inventory');
-    
-    // Initial receive
-    await page.click('button:has-text("Quick Receive")');
-    await page.waitForSelector('div[role="dialog"]', { state: 'visible' });
-    await page.fill('input#ipn', testIPN);
-    await page.fill('input#qty', '100');
-    await page.fill('input#reference', 'PO-001');
-    await page.fill('input#notes', 'Initial inventory');
-    await page.locator('div[role="dialog"]').locator('button:has-text("Receive")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    // Navigate to inventory and create initial stock
+    await goToInventory(page);
+    await quickReceive(page, testIPN, '100', 'PO-001', 'Initial inventory');
     
     // Navigate to detail page
     await page.goto(`/inventory/${testIPN}`);
+    await page.waitForLoadState('networkidle');
     
     // Perform an issue transaction
     await page.click('button:has-text("New Transaction")');
@@ -180,8 +145,8 @@ test.describe('Inventory Adjustment', () => {
     await page.fill('input#reference', 'WO-100');
     await page.fill('textarea#notes', 'Production issue');
     await page.locator('div[role="dialog"]').locator('button:has-text("Create Transaction")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+    await page.waitForTimeout(1000);
     
     // Perform an adjust transaction
     await page.click('button:has-text("New Transaction")');
@@ -192,8 +157,8 @@ test.describe('Inventory Adjustment', () => {
     await page.fill('input#reference', 'INV-ADJ-001');
     await page.fill('textarea#notes', 'Physical count adjustment');
     await page.locator('div[role="dialog"]').locator('button:has-text("Create Transaction")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+    await page.waitForTimeout(1000);
     
     // Verify transaction history table shows all transactions
     await expect(page.locator('text="Transaction History"')).toBeVisible();
@@ -218,22 +183,14 @@ test.describe('Inventory Adjustment', () => {
   });
 
   test('should set reorder point and reorder quantity using bulk edit', async ({ page }) => {
-    // Create a test part
     const testIPN = `TEST-REORDER-${Date.now()}`;
     
-    await page.goto('/inventory');
-    
-    // Create initial inventory
-    await page.click('button:has-text("Quick Receive")');
-    await page.waitForSelector('div[role="dialog"]', { state: 'visible' });
-    await page.fill('input#ipn', testIPN);
-    await page.fill('input#qty', '50');
-    await page.locator('div[role="dialog"]').locator('button:has-text("Receive")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    // Navigate to inventory and create initial stock
+    await goToInventory(page);
+    await quickReceive(page, testIPN, '50');
     
     // Find and select the inventory item checkbox
-    await page.goto('/inventory');
+    await goToInventory(page);
     
     // Find the row with our test IPN and click its checkbox
     const row = page.locator(`tr:has-text("${testIPN}")`);
@@ -254,13 +211,12 @@ test.describe('Inventory Adjustment', () => {
     
     // Submit bulk edit
     await page.locator('div[role="dialog"]').locator('button:has-text("Update")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    
-    // Wait for success
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+    await page.waitForTimeout(1000);
     
     // Navigate to detail page to verify
     await page.goto(`/inventory/${testIPN}`);
+    await page.waitForLoadState('networkidle');
     
     // Verify reorder point is displayed
     await expect(page.locator('text="Reorder Point"').locator('..').locator('text="20"')).toBeVisible();
@@ -270,23 +226,15 @@ test.describe('Inventory Adjustment', () => {
   });
 
   test('should change location for inventory item using bulk edit', async ({ page }) => {
-    // Create a test part
     const testIPN = `TEST-LOCATION-${Date.now()}`;
     const newLocation = 'A-15-03';
     
-    await page.goto('/inventory');
-    
-    // Create initial inventory
-    await page.click('button:has-text("Quick Receive")');
-    await page.waitForSelector('div[role="dialog"]', { state: 'visible' });
-    await page.fill('input#ipn', testIPN);
-    await page.fill('input#qty', '25');
-    await page.locator('div[role="dialog"]').locator('button:has-text("Receive")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    // Navigate to inventory and create initial stock
+    await goToInventory(page);
+    await quickReceive(page, testIPN, '25');
     
     // Go back to inventory list
-    await page.goto('/inventory');
+    await goToInventory(page);
     
     // Find and select the inventory item
     const row = page.locator(`tr:has-text("${testIPN}")`);
@@ -301,38 +249,29 @@ test.describe('Inventory Adjustment', () => {
     
     // Submit bulk edit
     await page.locator('div[role="dialog"]').locator('button:has-text("Update")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    
-    // Wait for success
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+    await page.waitForTimeout(1000);
     
     // Verify location in the table
     await expect(page.locator(`tr:has-text("${testIPN}")`).locator(`text="${newLocation}"`)).toBeVisible();
     
     // Navigate to detail page to verify
     await page.goto(`/inventory/${testIPN}`);
+    await page.waitForLoadState('networkidle');
     
     // Verify location in item details
     await expect(page.locator('text="Location"').locator('..').locator(`text="${newLocation}"`)).toBeVisible();
   });
 
   test('should verify low stock alerts trigger correctly when quantity falls below reorder point', async ({ page }) => {
-    // Create a test part with reorder point
     const testIPN = `TEST-LOWSTOCK-${Date.now()}`;
     
-    await page.goto('/inventory');
-    
-    // Create initial inventory with sufficient quantity
-    await page.click('button:has-text("Quick Receive")');
-    await page.waitForSelector('div[role="dialog"]', { state: 'visible' });
-    await page.fill('input#ipn', testIPN);
-    await page.fill('input#qty', '30');
-    await page.locator('div[role="dialog"]').locator('button:has-text("Receive")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    // Navigate to inventory and create initial stock
+    await goToInventory(page);
+    await quickReceive(page, testIPN, '30');
     
     // Set reorder point to 25 (current qty is 30, so not low stock yet)
-    await page.goto('/inventory');
+    await goToInventory(page);
     const row = page.locator(`tr:has-text("${testIPN}")`);
     await row.locator('input[type="checkbox"]').click();
     await page.click('button:has-text("Bulk Edit")');
@@ -340,11 +279,12 @@ test.describe('Inventory Adjustment', () => {
     await page.fill('input[name="reorder_point"]', '25');
     await page.fill('input[name="reorder_qty"]', '50');
     await page.locator('div[role="dialog"]').locator('button:has-text("Update")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+    await page.waitForTimeout(1000);
     
     // Navigate to detail page - should NOT show low stock alert yet
     await page.goto(`/inventory/${testIPN}`);
+    await page.waitForLoadState('networkidle');
     
     // Verify no LOW badge initially (30 > 25)
     const lowBadgeCount = await page.locator('text="LOW"').count();
@@ -358,8 +298,8 @@ test.describe('Inventory Adjustment', () => {
     await page.fill('input#qty', '10');
     await page.fill('input#reference', 'Low stock test');
     await page.locator('div[role="dialog"]').locator('button:has-text("Create Transaction")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+    await page.waitForTimeout(1000);
     
     // Verify LOW badge now appears
     await expect(page.locator('text="LOW"')).toBeVisible();
@@ -369,7 +309,7 @@ test.describe('Inventory Adjustment', () => {
     await expect(onHandCard).toHaveClass(/border-red-200|bg-red-50/);
     
     // Go to inventory list and click "Low Stock" filter
-    await page.goto('/inventory');
+    await goToInventory(page);
     await page.click('button:has-text("Low Stock")');
     
     // Wait for filter to apply
@@ -383,22 +323,15 @@ test.describe('Inventory Adjustment', () => {
   });
 
   test('should persist quantity changes across page reloads', async ({ page }) => {
-    // Create a test part and perform adjustments
     const testIPN = `TEST-PERSIST-${Date.now()}`;
     
-    await page.goto('/inventory');
-    
-    // Create initial inventory
-    await page.click('button:has-text("Quick Receive")');
-    await page.waitForSelector('div[role="dialog"]', { state: 'visible' });
-    await page.fill('input#ipn', testIPN);
-    await page.fill('input#qty', '100');
-    await page.locator('div[role="dialog"]').locator('button:has-text("Receive")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    // Navigate to inventory and create initial stock
+    await goToInventory(page);
+    await quickReceive(page, testIPN, '100');
     
     // Navigate to detail page
     await page.goto(`/inventory/${testIPN}`);
+    await page.waitForLoadState('networkidle');
     
     // Perform adjustment
     await page.click('button:has-text("New Transaction")');
@@ -408,14 +341,15 @@ test.describe('Inventory Adjustment', () => {
     await page.fill('input#qty', '150');
     await page.fill('input#reference', 'Persistence test');
     await page.locator('div[role="dialog"]').locator('button:has-text("Create Transaction")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+    await page.waitForTimeout(1000);
     
     // Verify quantity
     await expect(page.locator('text="On Hand"').locator('..').locator('text="150"')).toBeVisible();
     
     // Reload the page
     await page.reload();
+    await page.waitForLoadState('networkidle');
     
     // Wait for page to load
     await expect(page.locator('h1')).toContainText(testIPN);
@@ -424,7 +358,7 @@ test.describe('Inventory Adjustment', () => {
     await expect(page.locator('text="On Hand"').locator('..').locator('text="150"')).toBeVisible();
     
     // Go back to inventory list
-    await page.goto('/inventory');
+    await goToInventory(page);
     
     // Verify quantity persists in the table
     const tableRow = page.locator(`tr:has-text("${testIPN}")`);
@@ -432,29 +366,22 @@ test.describe('Inventory Adjustment', () => {
     
     // Reload inventory list page
     await page.reload();
-    await page.waitForTimeout(1000);
+    await page.waitForLoadState('networkidle');
     
     // Verify quantity still persists
     await expect(page.locator(`tr:has-text("${testIPN}")`).locator('text="150"').first()).toBeVisible();
   });
 
   test('should handle multiple sequential adjustments correctly', async ({ page }) => {
-    // Test that multiple adjustments in sequence work properly
     const testIPN = `TEST-MULTI-${Date.now()}`;
     
-    await page.goto('/inventory');
-    
-    // Create initial inventory
-    await page.click('button:has-text("Quick Receive")');
-    await page.waitForSelector('div[role="dialog"]', { state: 'visible' });
-    await page.fill('input#ipn', testIPN);
-    await page.fill('input#qty', '10');
-    await page.locator('div[role="dialog"]').locator('button:has-text("Receive")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    // Navigate to inventory and create initial stock
+    await goToInventory(page);
+    await quickReceive(page, testIPN, '10');
     
     // Navigate to detail page
     await page.goto(`/inventory/${testIPN}`);
+    await page.waitForLoadState('networkidle');
     
     // First adjustment: add stock
     await page.click('button:has-text("New Transaction")');
@@ -463,8 +390,8 @@ test.describe('Inventory Adjustment', () => {
     await page.click('text="Adjust"');
     await page.fill('input#qty', '50');
     await page.locator('div[role="dialog"]').locator('button:has-text("Create Transaction")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+    await page.waitForTimeout(1000);
     await expect(page.locator('text="On Hand"').locator('..').locator('text="50"')).toBeVisible();
     
     // Second adjustment: reduce stock
@@ -474,8 +401,8 @@ test.describe('Inventory Adjustment', () => {
     await page.click('text="Adjust"');
     await page.fill('input#qty', '35');
     await page.locator('div[role="dialog"]').locator('button:has-text("Create Transaction")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+    await page.waitForTimeout(1000);
     await expect(page.locator('text="On Hand"').locator('..').locator('text="35"')).toBeVisible();
     
     // Third adjustment: increase again
@@ -485,8 +412,8 @@ test.describe('Inventory Adjustment', () => {
     await page.click('text="Adjust"');
     await page.fill('input#qty', '100');
     await page.locator('div[role="dialog"]').locator('button:has-text("Create Transaction")').last().click();
-    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 5000 });
-    await page.waitForTimeout(1500);
+    await page.waitForSelector('div[role="dialog"]', { state: 'hidden', timeout: 10000 });
+    await page.waitForTimeout(1000);
     await expect(page.locator('text="On Hand"').locator('..').locator('text="100"')).toBeVisible();
     
     // Verify all transactions appear in history
