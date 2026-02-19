@@ -2,6 +2,19 @@
 
 All notable changes to ZRP are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased] - 2026-02-19
+
+### Added
+- **Authentication handler test coverage** — comprehensive test suite for handler_auth.go covering login, logout, session management, password changes, rate limiting, and security features
+  - 19 test cases covering all authentication endpoints
+  - Tests for login success, invalid credentials, inactive users, rate limiting (per-IP), expired sessions
+  - Password change validation (length requirements, current password verification)
+  - Session cookie handling (HttpOnly, SameSite, expiration)
+  - Token generation uniqueness and format verification
+  - Client IP extraction (direct connection and X-Forwarded-For proxy)
+  - Expired session cleanup verification
+  - All tests passing with isolated in-memory SQLite databases
+
 ## [0.5.2] - 2026-02-18
 
 ### Added
