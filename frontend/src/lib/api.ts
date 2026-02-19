@@ -296,6 +296,32 @@ export interface RMA {
   resolved_at?: string;
 }
 
+export interface CAPA {
+  id: string;
+  title: string;
+  type: string;
+  linked_ncr_id: string;
+  linked_rma_id: string;
+  root_cause: string;
+  action_plan: string;
+  owner: string;
+  due_date: string;
+  status: string;
+  effectiveness_check: string;
+  approved_by_qe: string;
+  approved_by_qe_at?: string;
+  approved_by_mgr: string;
+  approved_by_mgr_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CAPADashboard {
+  total_open: number;
+  total_overdue: number;
+  by_owner: { owner: string; count: number; overdue: number }[];
+}
+
 export interface Shipment {
   id: string;
   type: string;
@@ -1017,6 +1043,33 @@ class ApiClient {
   async createNCRFromFieldReport(id: string): Promise<{ id: string; title: string }> {
     return this.request(`/field-reports/${id}/create-ncr`, { method: 'POST' });
   }
+
+  // CAPAs
+  async getCAPAs(): Promise<CAPA[]> {
+    return this.request('/capas');
+  },
+
+  async getCAPA(id: string): Promise<CAPA> {
+    return this.request(`/capas/${id}`);
+  },
+
+  async createCAPA(capa: Partial<CAPA>): Promise<CAPA> {
+    return this.request('/capas', {
+      method: 'POST',
+      body: JSON.stringify(capa),
+    });
+  },
+
+  async updateCAPA(id: string, capa: Partial<CAPA>): Promise<CAPA> {
+    return this.request(`/capas/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(capa),
+    });
+  },
+
+  async getCAPADashboard(): Promise<CAPADashboard> {
+    return this.request('/capas/dashboard');
+  },
 
   // RMAs
   async getRMAs(): Promise<RMA[]> {

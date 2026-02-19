@@ -3,7 +3,7 @@ import type {
   Part, Category, ECO, WorkOrder, Vendor, PurchaseOrder,
   InventoryItem, NCR, RMA, Shipment, PackList, TestRecord, Device, FirmwareCampaign,
   Quote, DashboardStats, CalendarEvent, AuditLogEntry, User,
-  APIKey, EmailConfig, Document, RFQ,
+  APIKey, EmailConfig, Document, RFQ, CAPA, CAPADashboard,
 } from "../lib/api";
 
 export const mockDashboardStats: DashboardStats & Record<string, number> = {
@@ -63,6 +63,17 @@ export const mockNCRs: NCR[] = [
   { id: "NCR-001", title: "Defective resistor batch", description: "Out of tolerance", ipn: "IPN-001", serial_number: "SN-100", defect_type: "tolerance", severity: "major", status: "open", root_cause: "", corrective_action: "", created_at: "2024-01-18" },
   { id: "NCR-002", title: "Cracked capacitor", description: "Physical damage", ipn: "IPN-002", serial_number: "SN-200", defect_type: "physical", severity: "critical", status: "resolved", root_cause: "Shipping damage", corrective_action: "New packaging", created_at: "2024-01-10", resolved_at: "2024-01-15" },
 ];
+
+export const mockCAPAs: CAPA[] = [
+  { id: "CAPA-2024-001", title: "Fix solder defect", type: "corrective", linked_ncr_id: "NCR-001", linked_rma_id: "", root_cause: "Insufficient flux", action_plan: "Update solder profile", owner: "engineer1", due_date: "2024-03-01", status: "open", effectiveness_check: "", approved_by_qe: "", approved_by_mgr: "", created_at: "2024-01-20", updated_at: "2024-01-20" },
+  { id: "CAPA-2024-002", title: "Prevent shipping damage", type: "preventive", linked_ncr_id: "", linked_rma_id: "RMA-001", root_cause: "Inadequate packaging", action_plan: "New foam inserts", owner: "logistics1", due_date: "2024-02-15", status: "in-progress", effectiveness_check: "", approved_by_qe: "QE Approved", approved_by_qe_at: "2024-01-25", approved_by_mgr: "", created_at: "2024-01-18", updated_at: "2024-01-25" },
+];
+
+export const mockCAPADashboard: CAPADashboard = {
+  total_open: 2,
+  total_overdue: 1,
+  by_owner: [{ owner: "engineer1", count: 1, overdue: 0 }, { owner: "logistics1", count: 1, overdue: 1 }],
+};
 
 export const mockRMAs: RMA[] = [
   { id: "RMA-001", serial_number: "SN-500", customer: "Acme Inc", reason: "Device not working", status: "received", defect_description: "No power", resolution: "", created_at: "2024-01-22" },
@@ -183,6 +194,11 @@ export function createMockApi() {
     updatePurchaseOrder: vi.fn().mockResolvedValue(mockPOs[0]),
     receivePurchaseOrder: vi.fn().mockResolvedValue(mockPOs[0]),
     generatePOFromWorkOrder: vi.fn().mockResolvedValue({ po_id: "PO-003", lines: 3 }),
+    getCAPAs: vi.fn().mockResolvedValue(mockCAPAs),
+    getCAPA: vi.fn().mockResolvedValue(mockCAPAs[0]),
+    createCAPA: vi.fn().mockResolvedValue(mockCAPAs[0]),
+    updateCAPA: vi.fn().mockResolvedValue(mockCAPAs[0]),
+    getCAPADashboard: vi.fn().mockResolvedValue(mockCAPADashboard),
     getNCRs: vi.fn().mockResolvedValue(mockNCRs),
     getNCR: vi.fn().mockResolvedValue(mockNCRs[0]),
     createNCR: vi.fn().mockResolvedValue(mockNCRs[0]),

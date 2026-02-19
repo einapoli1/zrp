@@ -23,6 +23,9 @@ func setupTestDB(t *testing.T) func() {
 		t.Fatal(err)
 	}
 	seedDB()
+	if err := initPermissionsTable(); err != nil {
+		t.Fatal("initPermissionsTable:", err)
+	}
 	os.MkdirAll("uploads", 0755)
 	return func() {
 		if db != nil {
@@ -1769,6 +1772,7 @@ func TestAuditLogEmpty(t *testing.T) {
 // --- Additional RBAC Tests ---
 
 func TestRBACReadonlyAudit(t *testing.T) {
+	setupPermTestDB(t)
 	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
@@ -1783,6 +1787,7 @@ func TestRBACReadonlyAudit(t *testing.T) {
 }
 
 func TestRBACUserAudit(t *testing.T) {
+	setupPermTestDB(t)
 	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
@@ -1797,6 +1802,7 @@ func TestRBACUserAudit(t *testing.T) {
 }
 
 func TestRBACAdminDeleteUsers(t *testing.T) {
+	setupPermTestDB(t)
 	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
@@ -1811,6 +1817,7 @@ func TestRBACAdminDeleteUsers(t *testing.T) {
 }
 
 func TestRBACUserDeleteUsersDenied(t *testing.T) {
+	setupPermTestDB(t)
 	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})
@@ -1825,6 +1832,7 @@ func TestRBACUserDeleteUsersDenied(t *testing.T) {
 }
 
 func TestRBACReadonlyDeletePartsDenied(t *testing.T) {
+	setupPermTestDB(t)
 	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})

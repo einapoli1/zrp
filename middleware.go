@@ -116,20 +116,21 @@ func requireAuth(next http.Handler) http.Handler {
 }
 
 // isAdminOnly returns true if the API path (after /api/v1/) is restricted to admin role.
+// Kept for backward compatibility with tests; new code uses permission-based checks.
 func isAdminOnly(apiPath string) bool {
 	seg := strings.SplitN(apiPath, "/", 2)[0]
 	switch seg {
 	case "users", "apikeys", "api-keys":
 		return true
 	}
-	// email/config, email/test, settings/email — but NOT email-log
 	if strings.HasPrefix(apiPath, "email/") || strings.HasPrefix(apiPath, "settings/email") {
 		return true
 	}
 	return false
 }
 
-// requireRBAC enforces role-based access control on /api/v1/ routes.
+// requireRBAC enforces permission-based access control on /api/v1/ routes.
+// It uses the role_permissions table via the permission cache.
 func requireRBAC(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
@@ -145,34 +146,27 @@ func requireRBAC(next http.Handler) http.Handler {
 			return
 		}
 
-		// Admin: full access
-		if role == "admin" {
-			next.ServeHTTP(w, r)
-			return
-		}
-
 		method := r.Method
 		apiPath := strings.TrimPrefix(path, "/api/v1/")
 		apiPath = strings.TrimSuffix(apiPath, "/")
 
-		// Readonly: GET only
-		if role == "readonly" {
-			if method != "GET" {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(403)
-				json.NewEncoder(w).Encode(map[string]string{"error": "Read-only access", "code": "FORBIDDEN"})
-				return
-			}
-			// Readonly can still GET admin endpoints (view users list, etc.)
+		// Map the API path to a module+action
+		module, action := mapAPIPathToPermission(apiPath, method)
+
+		// If no mapping exists, allow (passthrough routes like dashboard, search, etc.)
+		if module == "" || action == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
 
-		// User role: no access to admin-only endpoints
-		if role == "user" && isAdminOnly(apiPath) {
+		// Check permission
+		if !HasPermission(role, module, action) {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(403)
-			json.NewEncoder(w).Encode(map[string]string{"error": "Admin access required", "code": "FORBIDDEN"})
+			json.NewEncoder(w).Encode(map[string]string{
+				"error": "Permission denied",
+				"code":  "FORBIDDEN",
+			})
 			return
 		}
 

@@ -343,6 +343,16 @@ function NCRDetail() {
                 <FileText className="h-4 w-4 mr-2" />
                 Create ECO from NCR
               </Button>
+              {(ncr.status === "resolved" || ncr.status === "closed") && (
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={() => navigate(`/capas?from_ncr=${ncr.id}&title=${encodeURIComponent("CAPA for NCR " + ncr.id + ": " + ncr.title)}`)}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Create CAPA from NCR
+                </Button>
+              )}
             </CardContent>
           </Card>
         </div>

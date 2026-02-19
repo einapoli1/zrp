@@ -29,6 +29,8 @@ const NCRs = React.lazy(() => import("./pages/NCRs"));
 const FieldReports = React.lazy(() => import("./pages/FieldReports"));
 const FieldReportDetail = React.lazy(() => import("./pages/FieldReportDetail"));
 const NCRDetail = React.lazy(() => import("./pages/NCRDetail"));
+const CAPAs = React.lazy(() => import("./pages/CAPAs"));
+const CAPADetail = React.lazy(() => import("./pages/CAPADetail"));
 const RMAs = React.lazy(() => import("./pages/RMAs"));
 const RMADetail = React.lazy(() => import("./pages/RMADetail"));
 const Testing = React.lazy(() => import("./pages/Testing"));
@@ -90,6 +92,8 @@ function App() {
             <Route path="/testing" element={<Testing />} />
             <Route path="/ncrs" element={<NCRs />} />
             <Route path="/ncrs/:id" element={<NCRDetail />} />
+            <Route path="/capas" element={<CAPAs />} />
+            <Route path="/capas/:id" element={<CAPADetail />} />
             <Route path="/rmas" element={<RMAs />} />
             <Route path="/rmas/:id" element={<RMADetail />} />
             <Route path="/devices" element={<Devices />} />

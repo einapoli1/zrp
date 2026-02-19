@@ -43,6 +43,9 @@ func main() {
 	}
 	seedDB()
 	initNotificationPrefsTable()
+	if err := initPermissionsTable(); err != nil {
+		log.Fatal("Permissions init failed:", err)
+	}
 
 	// Start auto-backup scheduler (default 2am, override with ZRP_BACKUP_TIME=HH:MM)
 	startAutoBackup(os.Getenv("ZRP_BACKUP_TIME"))
@@ -142,6 +145,8 @@ func main() {
 			handleListParts(w, r)
 		case parts[0] == "parts" && len(parts) == 1 && r.Method == "POST":
 			handleCreatePart(w, r)
+		case parts[0] == "parts" && len(parts) == 2 && parts[1] == "categories" && r.Method == "GET":
+			handleListCategories(w, r)
 		case parts[0] == "parts" && len(parts) == 2 && parts[1] == "check-ipn" && r.Method == "GET":
 			handleCheckIPN(w, r)
 		case parts[0] == "parts" && len(parts) == 2 && r.Method == "GET":
@@ -248,6 +253,8 @@ func main() {
 		// Inventory
 		case parts[0] == "inventory" && len(parts) == 2 && parts[1] == "bulk" && r.Method == "POST":
 			handleBulkInventory(w, r)
+		case parts[0] == "inventory" && len(parts) == 2 && parts[1] == "bulk-delete" && r.Method == "DELETE":
+			handleBulkDeleteInventory(w, r)
 		case parts[0] == "inventory" && len(parts) == 2 && parts[1] == "bulk-update" && r.Method == "POST":
 			handleBulkUpdateInventory(w, r)
 		case parts[0] == "inventory" && len(parts) == 1 && r.Method == "GET":
@@ -264,7 +271,7 @@ func main() {
 			handleListPOs(w, r)
 		case parts[0] == "pos" && len(parts) == 1 && r.Method == "POST":
 			handleCreatePO(w, r)
-		case parts[0] == "pos" && len(parts) == 2 && parts[1] == "generate-from-wo" && r.Method == "POST":
+		case parts[0] == "pos" && len(parts) == 2 && (parts[1] == "generate-from-wo" || parts[1] == "generate") && r.Method == "POST":
 			handleGeneratePOFromWO(w, r)
 		case parts[0] == "pos" && len(parts) == 2 && r.Method == "GET":
 			handleGetPO(w, r, parts[1])
@@ -303,7 +310,7 @@ func main() {
 		case parts[0] == "tests" && len(parts) == 1 && r.Method == "POST":
 			handleCreateTest(w, r)
 		case parts[0] == "tests" && len(parts) == 2 && r.Method == "GET":
-			handleGetTests(w, r, parts[1])
+			handleGetTestByID(w, r, parts[1])
 
 		// NCRs
 		case parts[0] == "ncrs" && len(parts) == 2 && parts[1] == "bulk" && r.Method == "POST":
@@ -357,6 +364,18 @@ func main() {
 		case parts[0] == "campaigns" && len(parts) == 5 && parts[2] == "devices" && parts[4] == "mark" && r.Method == "POST":
 			handleMarkCampaignDevice(w, r, parts[1], parts[3])
 
+		// Firmware (aliases for campaigns)
+		case parts[0] == "firmware" && len(parts) == 1 && r.Method == "GET":
+			handleListCampaigns(w, r)
+		case parts[0] == "firmware" && len(parts) == 1 && r.Method == "POST":
+			handleCreateCampaign(w, r)
+		case parts[0] == "firmware" && len(parts) == 2 && r.Method == "GET":
+			handleGetCampaign(w, r, parts[1])
+		case parts[0] == "firmware" && len(parts) == 2 && r.Method == "PUT":
+			handleUpdateCampaign(w, r, parts[1])
+		case parts[0] == "firmware" && len(parts) == 3 && parts[2] == "devices" && r.Method == "GET":
+			handleCampaignDevices(w, r, parts[1])
+
 		// Shipments
 		case parts[0] == "shipments" && len(parts) == 1 && r.Method == "GET":
 			handleListShipments(w, r)
@@ -372,6 +391,18 @@ func main() {
 			handleDeliverShipment(w, r, parts[1])
 		case parts[0] == "shipments" && len(parts) == 3 && parts[2] == "pack-list" && r.Method == "GET":
 			handleShipmentPackList(w, r, parts[1])
+
+		// CAPAs
+		case parts[0] == "capas" && len(parts) == 2 && parts[1] == "dashboard" && r.Method == "GET":
+			handleCAPADashboard(w, r)
+		case parts[0] == "capas" && len(parts) == 1 && r.Method == "GET":
+			handleListCAPAs(w, r)
+		case parts[0] == "capas" && len(parts) == 1 && r.Method == "POST":
+			handleCreateCAPA(w, r)
+		case parts[0] == "capas" && len(parts) == 2 && r.Method == "GET":
+			handleGetCAPA(w, r, parts[1])
+		case parts[0] == "capas" && len(parts) == 2 && r.Method == "PUT":
+			handleUpdateCAPA(w, r, parts[1])
 
 		// RMAs
 		case parts[0] == "rmas" && len(parts) == 2 && parts[1] == "bulk" && r.Method == "POST":
@@ -423,11 +454,23 @@ func main() {
 		case parts[0] == "users" && len(parts) == 3 && parts[2] == "password" && r.Method == "PUT":
 			handleResetPassword(w, r, parts[1])
 
+		// Permissions
+		case parts[0] == "permissions" && len(parts) == 1 && r.Method == "GET":
+			handleListPermissions(w, r)
+		case parts[0] == "permissions" && len(parts) == 2 && parts[1] == "modules" && r.Method == "GET":
+			handleListModules(w, r)
+		case parts[0] == "permissions" && len(parts) == 2 && parts[1] == "me" && r.Method == "GET":
+			handleMyPermissions(w, r)
+		case parts[0] == "permissions" && len(parts) == 2 && parts[1] != "modules" && parts[1] != "me" && r.Method == "PUT":
+			handleSetPermissions(w, r, parts[1])
+
 		// Attachments
 		case parts[0] == "attachments" && len(parts) == 1 && r.Method == "POST":
 			handleUploadAttachment(w, r)
 		case parts[0] == "attachments" && len(parts) == 1 && r.Method == "GET":
 			handleListAttachments(w, r)
+		case parts[0] == "attachments" && len(parts) == 3 && parts[2] == "download" && r.Method == "GET":
+			handleDownloadAttachment(w, r, parts[1])
 		case parts[0] == "attachments" && len(parts) == 2 && r.Method == "DELETE":
 			handleDeleteAttachment(w, r, parts[1])
 

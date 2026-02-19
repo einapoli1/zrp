@@ -19,6 +19,8 @@ func makeRequest(method, path, role string) *http.Request {
 }
 
 func TestRBAC(t *testing.T) {
+	setupPermTestDB(t)
+
 	okHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(200)
 	})

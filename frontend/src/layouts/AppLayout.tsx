@@ -30,6 +30,7 @@ import {
   RotateCcw,
   Clock,
   XCircle,
+  ShieldCheck,
 } from "lucide-react";
 
 import { Button } from "../components/ui/button";
@@ -102,6 +103,7 @@ const navigationItems = [
       { title: "Work Orders", url: "/work-orders", icon: Wrench },
       { title: "Inventory", url: "/inventory", icon: Package },
       { title: "NCRs", url: "/ncrs", icon: ClipboardList },
+      { title: "CAPAs", url: "/capas", icon: ShieldCheck },
       { title: "Scan", url: "/scan", icon: ScanLine },
     ],
   },

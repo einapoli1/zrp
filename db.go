@@ -436,6 +436,18 @@ func runMigrations() error {
 			UNIQUE(part_ipn, distributor)
 		)`,
 	}
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS capas (
+		id TEXT PRIMARY KEY, title TEXT NOT NULL, type TEXT DEFAULT 'corrective',
+		linked_ncr_id TEXT DEFAULT '', linked_rma_id TEXT DEFAULT '',
+		root_cause TEXT DEFAULT '', action_plan TEXT DEFAULT '',
+		owner TEXT DEFAULT '', due_date TEXT DEFAULT '',
+		status TEXT DEFAULT 'open', effectiveness_check TEXT DEFAULT '',
+		approved_by_qe TEXT DEFAULT '', approved_by_qe_at DATETIME,
+		approved_by_mgr TEXT DEFAULT '', approved_by_mgr_at DATETIME,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`)
+
 	tables = append(tables, `CREATE TABLE IF NOT EXISTS part_changes (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		part_ipn TEXT NOT NULL,

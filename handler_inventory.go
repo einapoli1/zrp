@@ -88,3 +88,27 @@ func handleInventoryHistory(w http.ResponseWriter, r *http.Request, ipn string) 
 	if items == nil { items = []InventoryTransaction{} }
 	jsonResp(w, items)
 }
+
+func handleBulkDeleteInventory(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		IPNs []string `json:"ipns"`
+	}
+	if err := decodeBody(r, &body); err != nil {
+		jsonErr(w, "invalid body", 400)
+		return
+	}
+	if len(body.IPNs) == 0 {
+		jsonErr(w, "ipns required", 400)
+		return
+	}
+	deleted := 0
+	for _, ipn := range body.IPNs {
+		res, err := db.Exec("DELETE FROM inventory WHERE ipn=?", ipn)
+		if err != nil {
+			continue
+		}
+		n, _ := res.RowsAffected()
+		deleted += int(n)
+	}
+	jsonResp(w, map[string]int{"deleted": deleted})
+}

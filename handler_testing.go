@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -45,5 +46,23 @@ func handleCreateTest(w http.ResponseWriter, r *http.Request) {
 	t.TestedAt = now
 	t.TestedBy = "operator"
 	logAudit(db, getUsername(r), "created", "test", t.SerialNumber, "Test "+t.Result+" for "+t.SerialNumber)
+	jsonResp(w, t)
+}
+
+func handleGetTestByID(w http.ResponseWriter, r *http.Request, idStr string) {
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		// Not a numeric ID, fall back to serial number lookup
+		handleGetTests(w, r, idStr)
+		return
+	}
+	var t TestRecord
+	err = db.QueryRow("SELECT id,serial_number,ipn,COALESCE(firmware_version,''),COALESCE(test_type,''),result,COALESCE(measurements,''),COALESCE(notes,''),tested_by,tested_at FROM test_records WHERE id=?", id).
+		Scan(&t.ID, &t.SerialNumber, &t.IPN, &t.FirmwareVersion, &t.TestType, &t.Result, &t.Measurements, &t.Notes, &t.TestedBy, &t.TestedAt)
+	if err != nil {
+		// Fall back to serial number lookup
+		handleGetTests(w, r, idStr)
+		return
+	}
 	jsonResp(w, t)
 }

@@ -1,0 +1,2326 @@
+openapi: 3.0.3
+info:
+  title: ZRP API
+  description: Zero-defect Resource Planning API
+  version: 1.0.0
+servers:
+  - url: /api/v1
+    description: Local development
+
+tags:
+  - name: Auth
+  - name: Dashboard
+  - name: Parts
+  - name: Categories
+  - name: ECOs
+  - name: Documents
+  - name: Vendors
+  - name: Inventory
+  - name: PurchaseOrders
+  - name: Receiving
+  - name: WorkOrders
+  - name: Tests
+  - name: NCRs
+  - name: Devices
+  - name: Firmware
+  - name: Shipments
+  - name: RMAs
+  - name: Quotes
+  - name: Attachments
+  - name: Users
+  - name: APIKeys
+  - name: Settings
+  - name: Email
+  - name: Notifications
+  - name: RFQs
+  - name: Pricing
+  - name: Reports
+  - name: Changes
+  - name: Undo
+  - name: Admin
+  - name: Calendar
+  - name: FieldReports
+
+paths:
+  # ── Dashboard ──
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard stats
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopeDashboardStats'
+
+  /dashboard/charts:
+    get:
+      tags: [Dashboard]
+      summary: Get dashboard chart data
+      responses:
+        '200':
+          description: Chart data
+
+  /dashboard/lowstock:
+    get:
+      tags: [Dashboard]
+      summary: Get low stock alerts
+      responses:
+        '200':
+          description: List of low-stock inventory items
+
+  /dashboard/widgets:
+    get:
+      tags: [Dashboard]
+      summary: Get user dashboard widget config
+      responses:
+        '200':
+          description: Widget configuration
+    put:
+      tags: [Dashboard]
+      summary: Update dashboard widget config
+      responses:
+        '200':
+          description: Updated config
+
+  # ── Search ──
+  /search:
+    get:
+      tags: [Dashboard]
+      summary: Global search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Search results
+
+  # ── Parts ──
+  /parts:
+    get:
+      tags: [Parts]
+      summary: List parts
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Paginated parts list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EnvelopePartsList'
+    post:
+      tags: [Parts]
+      summary: Create a part
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ipn:
+                  type: string
+                category:
+                  type: string
+                fields:
+                  type: object
+      responses:
+        '200':
+          description: Created part
+
+  /parts/categories:
+    get:
+      tags: [Parts]
+      summary: List categories (alias)
+      responses:
+        '200':
+          description: Category list
+
+  /parts/check-ipn:
+    get:
+      tags: [Parts]
+      summary: Check if IPN exists
+      parameters:
+        - name: ipn
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Existence check result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  exists:
+                    type: boolean
+
+  /parts/{ipn}:
+    get:
+      tags: [Parts]
+      summary: Get part by IPN
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Part details
+    put:
+      tags: [Parts]
+      summary: Update part
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated part
+    delete:
+      tags: [Parts]
+      summary: Delete part
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  /parts/{ipn}/bom:
+    get:
+      tags: [Parts]
+      summary: Get part BOM tree
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: BOM tree
+
+  /parts/{ipn}/cost:
+    get:
+      tags: [Parts]
+      summary: Get part cost info
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Cost breakdown
+
+  /parts/{ipn}/where-used:
+    get:
+      tags: [Parts]
+      summary: Where-used analysis
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Where-used entries
+
+  /parts/{ipn}/changes:
+    get:
+      tags: [Parts]
+      summary: List pending part changes
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Part changes
+    post:
+      tags: [Parts]
+      summary: Create part changes
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Created changes
+
+  /parts/{ipn}/changes/{changeId}:
+    delete:
+      tags: [Parts]
+      summary: Delete a part change
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: changeId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  /parts/{ipn}/changes/create-eco:
+    post:
+      tags: [Parts]
+      summary: Create ECO from pending part changes
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ECO created
+
+  /parts/{ipn}/gitplm-url:
+    get:
+      tags: [Parts]
+      summary: Get GitPLM URL for part
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: GitPLM URL
+
+  /parts/{ipn}/market-pricing:
+    get:
+      tags: [Parts]
+      summary: Get market pricing for part
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: refresh
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Market pricing results
+
+  /part-changes:
+    get:
+      tags: [Parts]
+      summary: List all part changes
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: All part changes
+
+  # ── Categories ──
+  /categories:
+    get:
+      tags: [Categories]
+      summary: List categories
+      responses:
+        '200':
+          description: Category list
+    post:
+      tags: [Categories]
+      summary: Create category
+      responses:
+        '200':
+          description: Created category
+
+  /categories/{id}/columns:
+    post:
+      tags: [Categories]
+      summary: Add column to category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Column added
+
+  /categories/{id}/columns/{col}:
+    delete:
+      tags: [Categories]
+      summary: Delete column from category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: col
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Column deleted
+
+  # ── ECOs ──
+  /ecos:
+    get:
+      tags: [ECOs]
+      summary: List ECOs
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ECO list
+    post:
+      tags: [ECOs]
+      summary: Create ECO
+      responses:
+        '200':
+          description: Created ECO
+
+  /ecos/{id}:
+    get:
+      tags: [ECOs]
+      summary: Get ECO
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: ECO details
+    put:
+      tags: [ECOs]
+      summary: Update ECO
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated ECO
+
+  /ecos/{id}/approve:
+    post:
+      tags: [ECOs]
+      summary: Approve ECO
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Approved
+
+  /ecos/{id}/implement:
+    post:
+      tags: [ECOs]
+      summary: Implement ECO
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Implemented
+
+  /ecos/{id}/part-changes:
+    get:
+      tags: [ECOs]
+      summary: Get part changes for ECO
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Part changes
+
+  /ecos/{id}/revisions:
+    get:
+      tags: [ECOs]
+      summary: List ECO revisions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Revision list
+    post:
+      tags: [ECOs]
+      summary: Create ECO revision
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Created revision
+
+  /ecos/{id}/revisions/{rev}:
+    get:
+      tags: [ECOs]
+      summary: Get specific ECO revision
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: rev
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Revision details
+
+  /ecos/{id}/create-pr:
+    post:
+      tags: [ECOs]
+      summary: Create PR for ECO
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PR created
+
+  # ── Documents ──
+  /docs:
+    get:
+      tags: [Documents]
+      summary: List documents
+      responses:
+        '200':
+          description: Document list
+    post:
+      tags: [Documents]
+      summary: Create document
+      responses:
+        '200':
+          description: Created document
+
+  /docs/{id}:
+    get:
+      tags: [Documents]
+      summary: Get document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document details
+    put:
+      tags: [Documents]
+      summary: Update document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated document
+
+  /docs/{id}/versions:
+    get:
+      tags: [Documents]
+      summary: List document versions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Version list
+
+  /docs/{id}/versions/{revision}:
+    get:
+      tags: [Documents]
+      summary: Get specific document version
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: revision
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Version details
+
+  /docs/{id}/diff:
+    get:
+      tags: [Documents]
+      summary: Diff between document versions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Diff result
+
+  /docs/{id}/release:
+    post:
+      tags: [Documents]
+      summary: Release document
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Released
+
+  /docs/{id}/revert/{revision}:
+    post:
+      tags: [Documents]
+      summary: Revert document to revision
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: revision
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Reverted
+
+  /docs/{id}/push:
+    post:
+      tags: [Documents]
+      summary: Push document to Git
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pushed
+
+  /docs/{id}/sync:
+    post:
+      tags: [Documents]
+      summary: Sync document from Git
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Synced
+
+  # ── Vendors ──
+  /vendors:
+    get:
+      tags: [Vendors]
+      summary: List vendors
+      responses:
+        '200':
+          description: Vendor list
+    post:
+      tags: [Vendors]
+      summary: Create vendor
+      responses:
+        '200':
+          description: Created vendor
+
+  /vendors/{id}:
+    get:
+      tags: [Vendors]
+      summary: Get vendor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Vendor details
+    put:
+      tags: [Vendors]
+      summary: Update vendor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated vendor
+    delete:
+      tags: [Vendors]
+      summary: Delete vendor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  # ── Inventory ──
+  /inventory:
+    get:
+      tags: [Inventory]
+      summary: List inventory
+      parameters:
+        - name: low_stock
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Inventory list
+
+  /inventory/transact:
+    post:
+      tags: [Inventory]
+      summary: Create inventory transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ipn:
+                  type: string
+                type:
+                  type: string
+                qty:
+                  type: integer
+                reference:
+                  type: string
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Transaction recorded
+
+  /inventory/bulk-delete:
+    delete:
+      tags: [Inventory]
+      summary: Bulk delete inventory items
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                ipns:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Deletion result
+
+  /inventory/bulk-update:
+    post:
+      tags: [Inventory]
+      summary: Bulk update inventory items
+      responses:
+        '200':
+          description: Update result
+
+  /inventory/{ipn}:
+    get:
+      tags: [Inventory]
+      summary: Get inventory item
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inventory item
+
+  /inventory/{ipn}/history:
+    get:
+      tags: [Inventory]
+      summary: Get inventory transaction history
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Transaction history
+
+  # ── Purchase Orders ──
+  /pos:
+    get:
+      tags: [PurchaseOrders]
+      summary: List purchase orders
+      responses:
+        '200':
+          description: PO list
+    post:
+      tags: [PurchaseOrders]
+      summary: Create purchase order
+      responses:
+        '200':
+          description: Created PO
+
+  /pos/generate:
+    post:
+      tags: [PurchaseOrders]
+      summary: Generate PO from work order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wo_id:
+                  type: string
+                vendor_id:
+                  type: string
+      responses:
+        '200':
+          description: Generated PO
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  po_id:
+                    type: string
+                  lines:
+                    type: integer
+
+  /pos/{id}:
+    get:
+      tags: [PurchaseOrders]
+      summary: Get purchase order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PO details
+    put:
+      tags: [PurchaseOrders]
+      summary: Update purchase order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated PO
+
+  /pos/{id}/receive:
+    post:
+      tags: [PurchaseOrders]
+      summary: Receive PO items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Received
+
+  # ── Receiving ──
+  /receiving:
+    get:
+      tags: [Receiving]
+      summary: List receiving inspections
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inspection list
+
+  /receiving/{id}/inspect:
+    post:
+      tags: [Receiving]
+      summary: Inspect received items
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Inspection result
+
+  # ── Work Orders ──
+  /workorders:
+    get:
+      tags: [WorkOrders]
+      summary: List work orders
+      responses:
+        '200':
+          description: Work order list
+    post:
+      tags: [WorkOrders]
+      summary: Create work order
+      responses:
+        '200':
+          description: Created work order
+
+  /workorders/bulk-update:
+    post:
+      tags: [WorkOrders]
+      summary: Bulk update work orders
+      responses:
+        '200':
+          description: Update result
+
+  /workorders/{id}:
+    get:
+      tags: [WorkOrders]
+      summary: Get work order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Work order details
+    put:
+      tags: [WorkOrders]
+      summary: Update work order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated work order
+
+  /workorders/{id}/bom:
+    get:
+      tags: [WorkOrders]
+      summary: Get work order BOM with shortage analysis
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: BOM analysis
+
+  /workorders/{id}/pdf:
+    get:
+      tags: [WorkOrders]
+      summary: Download work order PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PDF file
+
+  # ── Tests ──
+  /tests:
+    get:
+      tags: [Tests]
+      summary: List test records
+      responses:
+        '200':
+          description: Test record list
+    post:
+      tags: [Tests]
+      summary: Create test record
+      responses:
+        '200':
+          description: Created test record
+
+  /tests/{idOrSerial}:
+    get:
+      tags: [Tests]
+      summary: Get test record(s) by numeric ID or serial number
+      description: >
+        If the parameter is numeric, returns a single test record by ID.
+        If non-numeric, returns all test records for that serial number.
+      parameters:
+        - name: idOrSerial
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Test record(s)
+
+  # ── NCRs ──
+  /ncrs:
+    get:
+      tags: [NCRs]
+      summary: List NCRs
+      responses:
+        '200':
+          description: NCR list
+    post:
+      tags: [NCRs]
+      summary: Create NCR
+      responses:
+        '200':
+          description: Created NCR
+
+  /ncrs/{id}:
+    get:
+      tags: [NCRs]
+      summary: Get NCR
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: NCR details
+    put:
+      tags: [NCRs]
+      summary: Update NCR
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated NCR
+
+  # ── Devices ──
+  /devices:
+    get:
+      tags: [Devices]
+      summary: List devices
+      responses:
+        '200':
+          description: Device list
+    post:
+      tags: [Devices]
+      summary: Create device
+      responses:
+        '200':
+          description: Created device
+
+  /devices/bulk-update:
+    post:
+      tags: [Devices]
+      summary: Bulk update devices
+      responses:
+        '200':
+          description: Update result
+
+  /devices/import:
+    post:
+      tags: [Devices]
+      summary: Import devices from CSV
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import result
+
+  /devices/export:
+    get:
+      tags: [Devices]
+      summary: Export devices as CSV
+      responses:
+        '200':
+          description: CSV file
+
+  /devices/{serial}:
+    get:
+      tags: [Devices]
+      summary: Get device by serial number
+      parameters:
+        - name: serial
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Device details
+    put:
+      tags: [Devices]
+      summary: Update device
+      parameters:
+        - name: serial
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated device
+
+  /devices/{serial}/history:
+    get:
+      tags: [Devices]
+      summary: Get device history
+      parameters:
+        - name: serial
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Device history
+
+  # ── Firmware Campaigns ──
+  /firmware:
+    get:
+      tags: [Firmware]
+      summary: List firmware campaigns
+      responses:
+        '200':
+          description: Campaign list
+    post:
+      tags: [Firmware]
+      summary: Create firmware campaign
+      responses:
+        '200':
+          description: Created campaign
+
+  /firmware/{id}:
+    get:
+      tags: [Firmware]
+      summary: Get firmware campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Campaign details
+    put:
+      tags: [Firmware]
+      summary: Update firmware campaign
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated campaign
+
+  /firmware/{id}/devices:
+    get:
+      tags: [Firmware]
+      summary: Get campaign devices
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Campaign device list
+
+  # ── Shipments ──
+  /shipments:
+    get:
+      tags: [Shipments]
+      summary: List shipments
+      responses:
+        '200':
+          description: Shipment list
+    post:
+      tags: [Shipments]
+      summary: Create shipment
+      responses:
+        '200':
+          description: Created shipment
+
+  /shipments/{id}:
+    get:
+      tags: [Shipments]
+      summary: Get shipment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shipment details
+    put:
+      tags: [Shipments]
+      summary: Update shipment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated shipment
+
+  /shipments/{id}/ship:
+    post:
+      tags: [Shipments]
+      summary: Mark shipment as shipped
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Shipped
+
+  /shipments/{id}/deliver:
+    post:
+      tags: [Shipments]
+      summary: Mark shipment as delivered
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Delivered
+
+  /shipments/{id}/pack-list:
+    get:
+      tags: [Shipments]
+      summary: Get pack list for shipment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pack list
+
+  # ── RMAs ──
+  /rmas:
+    get:
+      tags: [RMAs]
+      summary: List RMAs
+      responses:
+        '200':
+          description: RMA list
+    post:
+      tags: [RMAs]
+      summary: Create RMA
+      responses:
+        '200':
+          description: Created RMA
+
+  /rmas/{id}:
+    get:
+      tags: [RMAs]
+      summary: Get RMA
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: RMA details
+    put:
+      tags: [RMAs]
+      summary: Update RMA
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated RMA
+
+  # ── Quotes ──
+  /quotes:
+    get:
+      tags: [Quotes]
+      summary: List quotes
+      responses:
+        '200':
+          description: Quote list
+    post:
+      tags: [Quotes]
+      summary: Create quote
+      responses:
+        '200':
+          description: Created quote
+
+  /quotes/{id}:
+    get:
+      tags: [Quotes]
+      summary: Get quote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Quote details
+    put:
+      tags: [Quotes]
+      summary: Update quote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated quote
+
+  /quotes/{id}/pdf:
+    get:
+      tags: [Quotes]
+      summary: Export quote as PDF
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: PDF file
+
+  # ── Attachments ──
+  /attachments:
+    post:
+      tags: [Attachments]
+      summary: Upload attachment
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+                module:
+                  type: string
+                record_id:
+                  type: string
+      responses:
+        '200':
+          description: Uploaded attachment
+    get:
+      tags: [Attachments]
+      summary: List attachments
+      responses:
+        '200':
+          description: Attachment list
+
+  /attachments/{id}/download:
+    get:
+      tags: [Attachments]
+      summary: Download attachment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: File content
+
+  # ── Users ──
+  /users:
+    get:
+      tags: [Users]
+      summary: List users
+      responses:
+        '200':
+          description: User list
+    post:
+      tags: [Users]
+      summary: Create user
+      responses:
+        '200':
+          description: Created user
+
+  /users/{id}:
+    put:
+      tags: [Users]
+      summary: Update user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated user
+    delete:
+      tags: [Users]
+      summary: Delete user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  # ── API Keys ──
+  /api-keys:
+    get:
+      tags: [APIKeys]
+      summary: List API keys
+      responses:
+        '200':
+          description: API key list
+    post:
+      tags: [APIKeys]
+      summary: Create API key
+      responses:
+        '200':
+          description: Created API key
+
+  /api-keys/{id}/revoke:
+    post:
+      tags: [APIKeys]
+      summary: Revoke API key
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Revoked
+
+  # ── Settings ──
+  /settings/general:
+    get:
+      tags: [Settings]
+      summary: Get general settings
+      responses:
+        '200':
+          description: Settings
+    put:
+      tags: [Settings]
+      summary: Update general settings
+      responses:
+        '200':
+          description: Updated
+
+  /settings/gitplm:
+    get:
+      tags: [Settings]
+      summary: Get GitPLM config
+      responses:
+        '200':
+          description: Config
+    put:
+      tags: [Settings]
+      summary: Update GitPLM config
+      responses:
+        '200':
+          description: Updated
+
+  /settings/git-docs:
+    get:
+      tags: [Settings]
+      summary: Get Git docs settings
+      responses:
+        '200':
+          description: Settings
+    put:
+      tags: [Settings]
+      summary: Update Git docs settings
+      responses:
+        '200':
+          description: Updated
+
+  /settings/digikey:
+    post:
+      tags: [Settings]
+      summary: Update DigiKey settings
+      responses:
+        '200':
+          description: Updated
+
+  /settings/mouser:
+    post:
+      tags: [Settings]
+      summary: Update Mouser settings
+      responses:
+        '200':
+          description: Updated
+
+  /settings/distributors:
+    get:
+      tags: [Settings]
+      summary: Get distributor settings
+      responses:
+        '200':
+          description: Distributor config
+
+  # ── Email ──
+  /email/config:
+    get:
+      tags: [Email]
+      summary: Get email config
+      responses:
+        '200':
+          description: Email configuration
+    put:
+      tags: [Email]
+      summary: Update email config
+      responses:
+        '200':
+          description: Updated
+
+  /email/test:
+    post:
+      tags: [Email]
+      summary: Send test email
+      responses:
+        '200':
+          description: Test result
+
+  /email/subscriptions:
+    get:
+      tags: [Email]
+      summary: Get email subscriptions
+      responses:
+        '200':
+          description: Subscriptions
+    put:
+      tags: [Email]
+      summary: Update email subscriptions
+      responses:
+        '200':
+          description: Updated
+
+  /email-log:
+    get:
+      tags: [Email]
+      summary: Get email log
+      responses:
+        '200':
+          description: Email log entries
+
+  # ── Notifications ──
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications
+      responses:
+        '200':
+          description: Notification list
+
+  /notifications/{id}/read:
+    post:
+      tags: [Notifications]
+      summary: Mark notification as read
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Marked
+
+  /notifications/types:
+    get:
+      tags: [Notifications]
+      summary: List notification types
+      responses:
+        '200':
+          description: Type list
+
+  /notifications/preferences:
+    get:
+      tags: [Notifications]
+      summary: Get notification preferences
+      responses:
+        '200':
+          description: Preferences
+    put:
+      tags: [Notifications]
+      summary: Update notification preferences
+      responses:
+        '200':
+          description: Updated
+
+  /notifications/preferences/{type}:
+    put:
+      tags: [Notifications]
+      summary: Update single notification preference
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated
+
+  # ── RFQs ──
+  /rfqs:
+    get:
+      tags: [RFQs]
+      summary: List RFQs
+      responses:
+        '200':
+          description: RFQ list
+    post:
+      tags: [RFQs]
+      summary: Create RFQ
+      responses:
+        '200':
+          description: Created RFQ
+
+  /rfqs/{id}:
+    get:
+      tags: [RFQs]
+      summary: Get RFQ
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: RFQ details
+    put:
+      tags: [RFQs]
+      summary: Update RFQ
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated RFQ
+    delete:
+      tags: [RFQs]
+      summary: Delete RFQ
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  /rfqs/{id}/send:
+    post:
+      tags: [RFQs]
+      summary: Send RFQ to vendors
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Sent
+
+  /rfqs/{id}/award:
+    post:
+      tags: [RFQs]
+      summary: Award RFQ to vendor
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Awarded
+
+  /rfqs/{id}/award-lines:
+    post:
+      tags: [RFQs]
+      summary: Award RFQ per line
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Awarded per line
+
+  /rfqs/{id}/compare:
+    get:
+      tags: [RFQs]
+      summary: Compare RFQ quotes
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Comparison matrix
+
+  /rfqs/{id}/quotes:
+    post:
+      tags: [RFQs]
+      summary: Create RFQ quote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Created quote
+
+  /rfqs/{id}/quotes/{quoteId}:
+    put:
+      tags: [RFQs]
+      summary: Update RFQ quote
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: quoteId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated
+
+  /rfqs/{id}/close:
+    post:
+      tags: [RFQs]
+      summary: Close RFQ
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Closed
+
+  /rfqs/{id}/email:
+    get:
+      tags: [RFQs]
+      summary: Get RFQ email body
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Email template
+
+  /rfq-dashboard:
+    get:
+      tags: [RFQs]
+      summary: Get RFQ dashboard
+      responses:
+        '200':
+          description: RFQ dashboard data
+
+  # ── Product Pricing ──
+  /pricing:
+    get:
+      tags: [Pricing]
+      summary: List product pricing
+      parameters:
+        - name: product_ipn
+          in: query
+          schema:
+            type: string
+        - name: pricing_tier
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pricing list
+    post:
+      tags: [Pricing]
+      summary: Create product pricing
+      responses:
+        '200':
+          description: Created pricing
+
+  /pricing/analysis:
+    get:
+      tags: [Pricing]
+      summary: Get cost analysis
+      responses:
+        '200':
+          description: Cost analysis list
+    post:
+      tags: [Pricing]
+      summary: Create cost analysis
+      responses:
+        '200':
+          description: Created analysis
+
+  /pricing/bulk-update:
+    post:
+      tags: [Pricing]
+      summary: Bulk update pricing
+      responses:
+        '200':
+          description: Update result
+
+  /pricing/history/{ipn}:
+    get:
+      tags: [Pricing]
+      summary: Get pricing history for product
+      parameters:
+        - name: ipn
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Pricing history
+
+  /pricing/{id}:
+    get:
+      tags: [Pricing]
+      summary: Get product pricing by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Pricing details
+    put:
+      tags: [Pricing]
+      summary: Update product pricing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Updated pricing
+    delete:
+      tags: [Pricing]
+      summary: Delete product pricing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Deleted
+
+  # ── Reports ──
+  /reports/inventory-valuation:
+    get:
+      tags: [Reports]
+      summary: Inventory valuation report
+      responses:
+        '200':
+          description: Report data
+
+  /reports/open-ecos:
+    get:
+      tags: [Reports]
+      summary: Open ECOs report
+      responses:
+        '200':
+          description: Report data
+
+  /reports/wo-throughput:
+    get:
+      tags: [Reports]
+      summary: Work order throughput report
+      responses:
+        '200':
+          description: Report data
+
+  /reports/low-stock:
+    get:
+      tags: [Reports]
+      summary: Low stock report
+      responses:
+        '200':
+          description: Report data
+
+  /reports/ncr-summary:
+    get:
+      tags: [Reports]
+      summary: NCR summary report
+      responses:
+        '200':
+          description: Report data
+
+  # ── Calendar ──
+  /calendar:
+    get:
+      tags: [Calendar]
+      summary: Get calendar events
+      parameters:
+        - name: year
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: month
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Calendar events
+
+  # ── Audit ──
+  /audit:
+    get:
+      tags: [Admin]
+      summary: Get audit log
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: entity_type
+          in: query
+          schema:
+            type: string
+        - name: user
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Audit entries
+
+  # ── Changes & Undo ──
+  /changes/recent:
+    get:
+      tags: [Changes]
+      summary: Get recent changes
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Recent changes
+
+  /changes/{id}:
+    post:
+      tags: [Changes]
+      summary: Undo a change
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Undo result
+
+  /undo:
+    get:
+      tags: [Undo]
+      summary: List undo entries
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Undo entries
+
+  /undo/{id}:
+    post:
+      tags: [Undo]
+      summary: Perform undo
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Undo result
+
+  # ── Admin/Backups ──
+  /admin/backup:
+    post:
+      tags: [Admin]
+      summary: Create backup
+      responses:
+        '200':
+          description: Backup created
+
+  /admin/backups:
+    get:
+      tags: [Admin]
+      summary: List backups
+      responses:
+        '200':
+          description: Backup list
+
+  /admin/backups/{filename}:
+    get:
+      tags: [Admin]
+      summary: Download backup
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Backup file
+    delete:
+      tags: [Admin]
+      summary: Delete backup
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  /admin/restore:
+    post:
+      tags: [Admin]
+      summary: Restore from backup
+      responses:
+        '200':
+          description: Restored
+
+  # ── Field Reports ──
+  /field-reports:
+    get:
+      tags: [FieldReports]
+      summary: List field reports
+      responses:
+        '200':
+          description: Field report list
+    post:
+      tags: [FieldReports]
+      summary: Create field report
+      responses:
+        '200':
+          description: Created field report
+
+  /field-reports/{id}:
+    get:
+      tags: [FieldReports]
+      summary: Get field report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Field report details
+    put:
+      tags: [FieldReports]
+      summary: Update field report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated field report
+    delete:
+      tags: [FieldReports]
+      summary: Delete field report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Deleted
+
+  /field-reports/{id}/create-ncr:
+    post:
+      tags: [FieldReports]
+      summary: Create NCR from field report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: NCR created
+
+components:
+  schemas:
+    EnvelopeDashboardStats:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/DashboardStats'
+
+    DashboardStats:
+      type: object
+      properties:
+        total_parts:
+          type: integer
+        low_stock_alerts:
+          type: integer
+        active_work_orders:
+          type: integer
+        pending_ecos:
+          type: integer
+        total_inventory_value:
+          type: number
+
+    EnvelopePartsList:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Part'
+        meta:
+          $ref: '#/components/schemas/PaginationMeta'
+
+    Part:
+      type: object
+      properties:
+        ipn:
+          type: string
+        category:
+          type: string
+        description:
+          type: string
+        fields:
+          type: object
+
+    PaginationMeta:
+      type: object
+      properties:
+        total:
+          type: integer
+        page:
+          type: integer
+        limit:
+          type: integer

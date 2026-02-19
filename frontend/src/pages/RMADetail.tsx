@@ -331,6 +331,14 @@ function RMADetail() {
                 >
                   View Device Details
                 </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full mt-2"
+                  onClick={() => navigate(`/capas?from_rma=${rma.id}&title=${encodeURIComponent("CAPA for RMA " + rma.id + ": " + rma.reason)}`)}
+                >
+                  Create CAPA from RMA
+                </Button>
               </div>
             </CardContent>
           </Card>

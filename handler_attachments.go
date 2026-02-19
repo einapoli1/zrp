@@ -142,3 +142,27 @@ func handleDeleteAttachment(w http.ResponseWriter, r *http.Request, idStr string
 	os.Remove(filepath.Join("uploads", filename))
 	jsonResp(w, map[string]string{"status": "deleted"})
 }
+
+func handleDownloadAttachment(w http.ResponseWriter, r *http.Request, idStr string) {
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		jsonErr(w, "Invalid ID", 400)
+		return
+	}
+	var filename, originalName, mimeType string
+	err = db.QueryRow("SELECT filename, original_name, mime_type FROM attachments WHERE id = ?", id).Scan(&filename, &originalName, &mimeType)
+	if err != nil {
+		jsonErr(w, "Attachment not found", 404)
+		return
+	}
+	filePath := filepath.Join("uploads", filename)
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		jsonErr(w, "File not found on disk", 404)
+		return
+	}
+	if mimeType != "" {
+		w.Header().Set("Content-Type", mimeType)
+	}
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", originalName))
+	http.ServeFile(w, r, filePath)
+}
