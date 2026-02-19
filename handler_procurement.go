@@ -218,3 +218,272 @@ func handleReceivePO(w http.ResponseWriter, r *http.Request, id string) {
 	go emailOnPOReceived(id)
 	handleGetPO(w, r, id)
 }
+
+// handleGeneratePOSuggestions analyzes BOM shortages and creates PO suggestions (not actual POs)
+func handleGeneratePOSuggestions(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		WOID        string `json:"wo_id"`
+		SuggestOnly bool   `json:"suggest_only"`
+	}
+	if err := decodeBody(r, &body); err != nil || body.WOID == "" {
+		jsonErr(w, "wo_id required", 400)
+		return
+	}
+
+	// Get work order details
+	var assemblyIPN string
+	var woQty int
+	err := db.QueryRow("SELECT assembly_ipn, qty FROM work_orders WHERE id=?", body.WOID).Scan(&assemblyIPN, &woQty)
+	if err != nil {
+		jsonErr(w, "work order not found", 404)
+		return
+	}
+
+	// Get BOM for the assembly
+	type BOMRequirement struct {
+		IPN      string
+		QtyPer   float64
+		Required float64
+		OnHand   float64
+		Shortage float64
+	}
+
+	bomRows, err := db.Query("SELECT child_ipn, qty_per FROM bom_items WHERE parent_ipn = ?", assemblyIPN)
+	if err != nil {
+		jsonErr(w, err.Error(), 500)
+		return
+	}
+	defer bomRows.Close()
+
+	var requirements []BOMRequirement
+	for bomRows.Next() {
+		var req BOMRequirement
+		bomRows.Scan(&req.IPN, &req.QtyPer)
+		req.Required = req.QtyPer * float64(woQty)
+
+		// Get current inventory
+		req.OnHand = 0.0
+		var onHand sql.NullFloat64
+		err := db.QueryRow("SELECT qty_on_hand FROM inventory WHERE ipn = ?", req.IPN).Scan(&onHand)
+		if err == nil && onHand.Valid {
+			req.OnHand = onHand.Float64
+		}
+		// Debug logging (will be visible in test output)
+		fmt.Printf("[DEBUG] IPN=%s, Required=%.0f, OnHand=%.0f, err=%v, valid=%v\n", 
+			req.IPN, req.Required, req.OnHand, err, onHand.Valid)
+
+		req.Shortage = req.Required - req.OnHand
+		if req.Shortage > 0 {
+			requirements = append(requirements, req)
+		}
+	}
+
+	if len(requirements) == 0 {
+		jsonResp(w, map[string]interface{}{"message": "No shortages found", "suggestions": []interface{}{}})
+		return
+	}
+
+	// Group shortages by preferred vendor
+	type VendorGroup struct {
+		VendorID string
+		Items    []struct {
+			IPN          string
+			MPN          string
+			Manufacturer string
+			Shortage     float64
+			UnitPrice    float64
+		}
+	}
+
+	vendorGroups := make(map[string]*VendorGroup)
+
+	for _, req := range requirements {
+		// Get preferred vendor for this part
+		var vendorID, mpn, manufacturer string
+		var unitPrice float64
+		err := db.QueryRow(`
+			SELECT vendor_id, COALESCE(mpn, ''), COALESCE(manufacturer, ''), COALESCE(unit_price, 0)
+			FROM part_vendors
+			WHERE ipn = ? AND is_preferred = 1
+			ORDER BY unit_price ASC
+			LIMIT 1
+		`, req.IPN).Scan(&vendorID, &mpn, &manufacturer, &unitPrice)
+
+		if err != nil {
+			// No preferred vendor found, skip or use default
+			continue
+		}
+
+		if vendorGroups[vendorID] == nil {
+			vendorGroups[vendorID] = &VendorGroup{VendorID: vendorID}
+		}
+
+		vendorGroups[vendorID].Items = append(vendorGroups[vendorID].Items, struct {
+			IPN          string
+			MPN          string
+			Manufacturer string
+			Shortage     float64
+			UnitPrice    float64
+		}{
+			IPN:          req.IPN,
+			MPN:          mpn,
+			Manufacturer: manufacturer,
+			Shortage:     req.Shortage,
+			UnitPrice:    unitPrice,
+		})
+	}
+
+	// Create PO suggestions for each vendor
+	now := time.Now().Format("2006-01-02 15:04:05")
+	createdBy := getUsername(r)
+	var suggestionIDs []int
+
+	for vendorID, group := range vendorGroups {
+		notes := fmt.Sprintf("Auto-generated from %s (BOM shortage analysis)", body.WOID)
+		result, err := db.Exec(`
+			INSERT INTO po_suggestions (wo_id, vendor_id, status, notes, created_at)
+			VALUES (?, ?, 'pending', ?, ?)
+		`, body.WOID, vendorID, notes, now)
+
+		if err != nil {
+			jsonErr(w, err.Error(), 500)
+			return
+		}
+
+		suggestionID, _ := result.LastInsertId()
+		suggestionIDs = append(suggestionIDs, int(suggestionID))
+
+		// Add lines to suggestion
+		for _, item := range group.Items {
+			db.Exec(`
+				INSERT INTO po_suggestion_lines 
+				(suggestion_id, ipn, mpn, manufacturer, qty_needed, estimated_unit_price)
+				VALUES (?, ?, ?, ?, ?, ?)
+			`, suggestionID, item.IPN, item.MPN, item.Manufacturer, item.Shortage, item.UnitPrice)
+		}
+	}
+
+	logAudit(db, createdBy, "created", "po_suggestion", body.WOID, fmt.Sprintf("Generated %d PO suggestions for %s", len(suggestionIDs), body.WOID))
+
+	jsonResp(w, map[string]interface{}{
+		"message":        fmt.Sprintf("Created %d PO suggestion(s)", len(suggestionIDs)),
+		"suggestion_ids": suggestionIDs,
+		"wo_id":          body.WOID,
+	})
+}
+
+// handleReviewPOSuggestion approves or rejects a PO suggestion, optionally creating the PO
+func handleReviewPOSuggestion(w http.ResponseWriter, r *http.Request, suggestionID int) {
+	var body struct {
+		Status   string `json:"status"`   // "approved" or "rejected"
+		Reason   string `json:"reason"`   // Optional reason for rejection
+		CreatePO bool   `json:"create_po"` // If true, create PO immediately upon approval
+	}
+	if err := decodeBody(r, &body); err != nil {
+		jsonErr(w, "invalid body", 400)
+		return
+	}
+
+	if body.Status != "approved" && body.Status != "rejected" {
+		jsonErr(w, "status must be 'approved' or 'rejected'", 400)
+		return
+	}
+
+	// Verify suggestion exists
+	var woID, vendorID, currentStatus string
+	err := db.QueryRow("SELECT wo_id, vendor_id, status FROM po_suggestions WHERE id = ?", suggestionID).
+		Scan(&woID, &vendorID, &currentStatus)
+	if err != nil {
+		jsonErr(w, "suggestion not found", 404)
+		return
+	}
+
+	if currentStatus != "pending" {
+		jsonErr(w, fmt.Sprintf("suggestion already %s", currentStatus), 400)
+		return
+	}
+
+	// Update suggestion status
+	now := time.Now().Format("2006-01-02 15:04:05")
+	reviewedBy := getUsername(r)
+	notes := body.Reason
+
+	_, err = db.Exec(`
+		UPDATE po_suggestions 
+		SET status = ?, reviewed_by = ?, reviewed_at = ?, notes = COALESCE(notes || '\nReview: ' || ?, notes)
+		WHERE id = ?
+	`, body.Status, reviewedBy, now, notes, suggestionID)
+
+	if err != nil {
+		jsonErr(w, err.Error(), 500)
+		return
+	}
+
+	logAudit(db, reviewedBy, body.Status, "po_suggestion", fmt.Sprintf("%d", suggestionID), 
+		fmt.Sprintf("%s PO suggestion #%d for WO %s", strings.Title(body.Status), suggestionID, woID))
+
+	var poID string
+
+	// If approved and create_po is true, create the actual PO
+	if body.Status == "approved" && body.CreatePO {
+		poID = nextID("PO", "purchase_orders", 4)
+		
+		// Create PO header
+		_, err = db.Exec(`
+			INSERT INTO purchase_orders (id, vendor_id, status, notes, created_at, created_by)
+			VALUES (?, ?, 'draft', ?, ?, ?)
+		`, poID, vendorID, fmt.Sprintf("Created from suggestion #%d for WO %s", suggestionID, woID), now, reviewedBy)
+
+		if err != nil {
+			jsonErr(w, err.Error(), 500)
+			return
+		}
+
+		// Copy suggestion lines to PO lines
+		rows, err := db.Query(`
+			SELECT ipn, mpn, manufacturer, qty_needed, estimated_unit_price, notes
+			FROM po_suggestion_lines
+			WHERE suggestion_id = ?
+		`, suggestionID)
+
+		if err != nil {
+			jsonErr(w, err.Error(), 500)
+			return
+		}
+		defer rows.Close()
+
+		for rows.Next() {
+			var ipn, mpn, manufacturer, notes string
+			var qtyNeeded, unitPrice float64
+			rows.Scan(&ipn, &mpn, &manufacturer, &qtyNeeded, &unitPrice, &notes)
+
+			_, err = db.Exec(`
+				INSERT INTO po_lines (po_id, ipn, mpn, manufacturer, qty_ordered, unit_price, notes)
+				VALUES (?, ?, ?, ?, ?, ?, ?)
+			`, poID, ipn, mpn, manufacturer, qtyNeeded, unitPrice, notes)
+
+			if err != nil {
+				jsonErr(w, err.Error(), 500)
+				return
+			}
+		}
+
+		// Link PO back to suggestion
+		db.Exec("UPDATE po_suggestions SET po_id = ? WHERE id = ?", poID, suggestionID)
+
+		logAudit(db, reviewedBy, "created", "po", poID, fmt.Sprintf("Created PO %s from approved suggestion #%d", poID, suggestionID))
+		recordChangeJSON(reviewedBy, "purchase_orders", poID, "create", nil, map[string]interface{}{
+			"id":        poID,
+			"vendor_id": vendorID,
+			"status":    "draft",
+			"source":    fmt.Sprintf("suggestion_%d", suggestionID),
+		})
+	}
+
+	jsonResp(w, map[string]interface{}{
+		"suggestion_id": suggestionID,
+		"status":        body.Status,
+		"po_id":         poID,
+		"message":       fmt.Sprintf("Suggestion %s", body.Status),
+	})
+}
