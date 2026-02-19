@@ -13,14 +13,7 @@ import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Checkbox } from "../components/ui/checkbox";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "../components/ui/table";
+// Table used via ConfigurableTable
 import {
   Dialog,
   DialogContent,
@@ -142,6 +135,99 @@ function Inventory() {
   const filteredParts = parts.filter(part => 
     part.ipn.toLowerCase().includes(receiveForm.ipn.toLowerCase())
   );
+
+  const inventoryColumns: ColumnDef<InventoryItem>[] = [
+    {
+      id: "ipn",
+      label: "IPN",
+      accessor: (item) => (
+        <Link to={`/inventory/${item.ipn}`} className="font-medium text-blue-600 hover:underline">
+          {item.ipn}
+        </Link>
+      ),
+      defaultVisible: true,
+    },
+    {
+      id: "description",
+      label: "Description",
+      accessor: (item) => item.description || "—",
+      defaultVisible: true,
+    },
+    {
+      id: "qty_on_hand",
+      label: "On Hand",
+      accessor: (item) => <span className="font-mono">{item.qty_on_hand}</span>,
+      className: "text-right",
+      headerClassName: "text-right",
+      defaultVisible: true,
+    },
+    {
+      id: "qty_reserved",
+      label: "Reserved",
+      accessor: (item) => <span className="font-mono">{item.qty_reserved}</span>,
+      className: "text-right",
+      headerClassName: "text-right",
+      defaultVisible: true,
+    },
+    {
+      id: "available",
+      label: "Available",
+      accessor: (item) => <span className="font-mono">{getAvailableQty(item)}</span>,
+      className: "text-right",
+      headerClassName: "text-right",
+      defaultVisible: true,
+    },
+    {
+      id: "location",
+      label: "Location",
+      accessor: (item) => item.location || "—",
+      defaultVisible: true,
+    },
+    {
+      id: "reorder_point",
+      label: "Reorder Point",
+      accessor: (item) => (
+        <div className="flex items-center justify-end gap-2 font-mono">
+          {item.reorder_point}
+          {isLowStock(item) && (
+            <Badge variant="destructive" className="text-xs">
+              <AlertTriangle className="h-3 w-3" />
+            </Badge>
+          )}
+        </div>
+      ),
+      className: "text-right",
+      headerClassName: "text-right",
+      defaultVisible: true,
+    },
+    {
+      id: "actions",
+      label: "",
+      accessor: (item) => (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link to={`/inventory/${item.ipn}`}>View Details</Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={() => {
+                setReceiveForm((prev) => ({ ...prev, ipn: item.ipn }));
+                setReceiveDialogOpen(true);
+              }}
+            >
+              Quick Receive
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ),
+      defaultVisible: true,
+    },
+  ];
 
   if (loading) {
     return (

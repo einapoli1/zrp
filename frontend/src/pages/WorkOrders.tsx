@@ -15,14 +15,7 @@ import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from "../components/ui/table";
+// Table used via ConfigurableTable
 import {
   Dialog,
   DialogContent,
@@ -39,6 +32,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { api, type WorkOrder, type Part } from "../lib/api";
+import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTable";
 
 function WorkOrders() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
@@ -182,6 +176,101 @@ function WorkOrders() {
   const filteredParts = parts.filter(part => 
     part.ipn.toLowerCase().includes(woForm.assembly_ipn.toLowerCase())
   );
+
+  const woColumns: ColumnDef<WorkOrder>[] = [
+    {
+      id: "id",
+      label: "WO ID",
+      accessor: (wo) => (
+        <Link to={`/work-orders/${wo.id}`} className="font-medium text-blue-600 hover:underline">
+          {wo.id}
+        </Link>
+      ),
+      defaultVisible: true,
+    },
+    {
+      id: "assembly",
+      label: "Assembly",
+      accessor: (wo) => (
+        <div>
+          <div className="font-medium">{wo.assembly_ipn}</div>
+          {parts.find((p) => p.ipn === wo.assembly_ipn)?.description && (
+            <div className="text-sm text-muted-foreground">
+              {parts.find((p) => p.ipn === wo.assembly_ipn)?.description}
+            </div>
+          )}
+        </div>
+      ),
+      defaultVisible: true,
+    },
+    {
+      id: "status",
+      label: "Status",
+      accessor: (wo) => (
+        <div className="flex items-center gap-2">
+          {getStatusIcon(wo.status)}
+          {getStatusBadge(wo.status)}
+        </div>
+      ),
+      defaultVisible: true,
+    },
+    {
+      id: "priority",
+      label: "Priority",
+      accessor: (wo) => getPriorityBadge(wo.priority),
+      defaultVisible: true,
+    },
+    {
+      id: "qty",
+      label: "Qty",
+      accessor: (wo) => <span className="font-mono">{wo.qty}</span>,
+      className: "text-right",
+      headerClassName: "text-right",
+      defaultVisible: true,
+    },
+    {
+      id: "created",
+      label: "Created",
+      accessor: (wo) => formatDate(wo.created_at),
+      defaultVisible: true,
+    },
+    {
+      id: "age",
+      label: "Age",
+      accessor: (wo) => (
+        <div className="flex items-center gap-1">
+          <Calendar className="h-3 w-3 text-muted-foreground" />
+          <span className="text-sm text-muted-foreground">{getDaysOld(wo.created_at)}d</span>
+        </div>
+      ),
+      defaultVisible: true,
+    },
+    {
+      id: "notes",
+      label: "Notes",
+      accessor: (wo) => (
+        <span className="text-sm text-muted-foreground truncate block max-w-[200px]">
+          {wo.notes || "—"}
+        </span>
+      ),
+      defaultVisible: false,
+    },
+    {
+      id: "actions",
+      label: "Actions",
+      accessor: (wo) => (
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/work-orders/${wo.id}`}>View Details</Link>
+          </Button>
+          <Button variant="outline" size="sm" asChild>
+            <Link to={`/work-orders/${wo.id}/bom`}>BOM</Link>
+          </Button>
+        </div>
+      ),
+      defaultVisible: true,
+    },
+  ];
 
   if (loading) {
     return (
@@ -365,82 +454,13 @@ function WorkOrders() {
           <CardTitle>Work Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>WO ID</TableHead>
-                <TableHead>Assembly</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead className="text-right">Qty</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Age</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {workOrders.map((wo) => (
-                <TableRow key={wo.id}>
-                  <TableCell>
-                    <Link 
-                      to={`/work-orders/${wo.id}`}
-                      className="font-medium text-blue-600 hover:underline"
-                    >
-                      {wo.id}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{wo.assembly_ipn}</div>
-                      {parts.find(p => p.ipn === wo.assembly_ipn)?.description && (
-                        <div className="text-sm text-muted-foreground">
-                          {parts.find(p => p.ipn === wo.assembly_ipn)?.description}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(wo.status)}
-                      {getStatusBadge(wo.status)}
-                    </div>
-                  </TableCell>
-                  <TableCell>{getPriorityBadge(wo.priority)}</TableCell>
-                  <TableCell className="text-right font-mono">{wo.qty}</TableCell>
-                  <TableCell>{formatDate(wo.created_at)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        {getDaysOld(wo.created_at)}d
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/work-orders/${wo.id}`}>
-                          View Details
-                        </Link>
-                      </Button>
-                      <Button variant="outline" size="sm" asChild>
-                        <Link to={`/work-orders/${wo.id}/bom`}>
-                          BOM
-                        </Link>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {workOrders.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No work orders found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <ConfigurableTable<WorkOrder>
+            tableName="work-orders"
+            columns={woColumns}
+            data={workOrders}
+            rowKey={(wo) => wo.id}
+            emptyMessage="No work orders found"
+          />
         </CardContent>
       </Card>
     </div>
