@@ -4,7 +4,6 @@ import {
   Plus,
   TrendingUp,
   TrendingDown,
-  BarChart3,
   Pencil,
   Trash2,
 } from "lucide-react";
@@ -504,8 +503,8 @@ function PricingForm({
   form,
   setForm,
 }: {
-  form: Record<string, string>;
-  setForm: (f: Record<string, string>) => void;
+  form: { product_ipn: string; pricing_tier: string; min_qty: string; max_qty: string; unit_price: string; currency: string; effective_date: string; expiry_date: string; notes: string };
+  setForm: React.Dispatch<React.SetStateAction<{ product_ipn: string; pricing_tier: string; min_qty: string; max_qty: string; unit_price: string; currency: string; effective_date: string; expiry_date: string; notes: string }>>;
 }) {
   const update = (field: string, value: string) =>
     setForm({ ...form, [field]: value });

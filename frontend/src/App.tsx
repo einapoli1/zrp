@@ -59,24 +59,7 @@ const RFQs = React.lazy(() => import("./pages/RFQs"));
 const RFQDetail = React.lazy(() => import("./pages/RFQDetail"));
 const Pricing = React.lazy(() => import("./pages/Pricing"));
 
-// Placeholder components for other pages
-const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="space-y-6">
-    <div>
-      <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-      <p className="text-muted-foreground">
-        This page is under construction. The React foundation is ready - 
-        individual module pages can be built on top of this structure.
-      </p>
-    </div>
-    <div className="rounded-lg border border-dashed p-8 text-center">
-      <h3 className="text-lg font-semibold">Coming Soon</h3>
-      <p className="text-sm text-muted-foreground mt-2">
-        This {title.toLowerCase()} interface will be implemented next.
-      </p>
-    </div>
-  </div>
-);
+// All pages now have real implementations
 
 function App() {
   return (
