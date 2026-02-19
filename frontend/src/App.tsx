@@ -25,6 +25,8 @@ const WorkOrderDetail = React.lazy(() => import("./pages/WorkOrderDetail"));
 const WorkOrderPrint = React.lazy(() => import("./pages/WorkOrderPrint"));
 const POPrint = React.lazy(() => import("./pages/POPrint"));
 const NCRs = React.lazy(() => import("./pages/NCRs"));
+const FieldReports = React.lazy(() => import("./pages/FieldReports"));
+const FieldReportDetail = React.lazy(() => import("./pages/FieldReportDetail"));
 const NCRDetail = React.lazy(() => import("./pages/NCRDetail"));
 const RMAs = React.lazy(() => import("./pages/RMAs"));
 const RMADetail = React.lazy(() => import("./pages/RMADetail"));
@@ -48,12 +50,14 @@ const EmailPreferences = React.lazy(() => import("./pages/EmailPreferences"));
 const EmailLog = React.lazy(() => import("./pages/EmailLog"));
 const GitPLMSettings = React.lazy(() => import("./pages/GitPLMSettings"));
 const DistributorSettings = React.lazy(() => import("./pages/DistributorSettings"));
+const Settings = React.lazy(() => import("./pages/Settings"));
 const Login = React.lazy(() => import("./pages/Login"));
 const Backups = React.lazy(() => import("./pages/Backups"));
 const UndoHistory = React.lazy(() => import("./pages/UndoHistory"));
 const Scan = React.lazy(() => import("./pages/Scan"));
 const RFQs = React.lazy(() => import("./pages/RFQs"));
 const RFQDetail = React.lazy(() => import("./pages/RFQDetail"));
+const Pricing = React.lazy(() => import("./pages/Pricing"));
 
 // Placeholder components for other pages
 const PlaceholderPage = ({ title }: { title: string }) => (
@@ -128,8 +132,9 @@ function App() {
             <Route path="/inventory/:ipn" element={<InventoryDetail />} />
             
             {/* Field & Service */}
-            <Route path="/field-reports" element={<PlaceholderPage title="Field Reports" />} />
-            <Route path="/pricing" element={<PlaceholderPage title="Pricing" />} />
+            <Route path="/field-reports" element={<FieldReports />} />
+            <Route path="/field-reports/:id" element={<FieldReportDetail />} />
+            <Route path="/pricing" element={<Pricing />} />
             
             {/* Reports */}
             <Route path="/reports" element={<Reports />} />
@@ -147,7 +152,7 @@ function App() {
             <Route path="/backups" element={<Backups />} />
             <Route path="/undo-history" element={<UndoHistory />} />
             <Route path="/scan" element={<Scan />} />
-            <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
+            <Route path="/settings" element={<Settings />} />
           </Route>
         </Routes>
       </Suspense>

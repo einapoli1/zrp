@@ -422,6 +422,12 @@ func main() {
 		case parts[0] == "email-log" && len(parts) == 1 && r.Method == "GET":
 			handleListEmailLog(w, r)
 
+		// Settings/General
+		case parts[0] == "settings" && len(parts) == 2 && parts[1] == "general" && r.Method == "GET":
+			handleGetGeneralSettings(w, r)
+		case parts[0] == "settings" && len(parts) == 2 && parts[1] == "general" && r.Method == "PUT":
+			handlePutGeneralSettings(w, r)
+
 		// Settings/GitPLM
 		case parts[0] == "settings" && len(parts) == 2 && parts[1] == "gitplm" && r.Method == "GET":
 			handleGetGitPLMConfig(w, r)
@@ -504,6 +510,26 @@ func main() {
 		case parts[0] == "rfq-dashboard" && len(parts) == 1 && r.Method == "GET":
 			handleRFQDashboard(w, r)
 
+		// Product Pricing
+		case parts[0] == "pricing" && len(parts) == 1 && r.Method == "GET":
+			handleListProductPricing(w, r)
+		case parts[0] == "pricing" && len(parts) == 1 && r.Method == "POST":
+			handleCreateProductPricing(w, r)
+		case parts[0] == "pricing" && len(parts) == 2 && parts[1] == "analysis" && r.Method == "GET":
+			handleListCostAnalysis(w, r)
+		case parts[0] == "pricing" && len(parts) == 2 && parts[1] == "analysis" && r.Method == "POST":
+			handleCreateCostAnalysis(w, r)
+		case parts[0] == "pricing" && len(parts) == 2 && parts[1] == "bulk-update" && r.Method == "POST":
+			handleBulkUpdateProductPricing(w, r)
+		case parts[0] == "pricing" && len(parts) == 3 && parts[1] == "history" && r.Method == "GET":
+			handleProductPricingHistory(w, r, parts[2])
+		case parts[0] == "pricing" && len(parts) == 2 && r.Method == "GET":
+			handleGetProductPricing(w, r, parts[1])
+		case parts[0] == "pricing" && len(parts) == 2 && r.Method == "PUT":
+			handleUpdateProductPricing(w, r, parts[1])
+		case parts[0] == "pricing" && len(parts) == 2 && r.Method == "DELETE":
+			handleDeleteProductPricing(w, r, parts[1])
+
 		// Change History & Undo
 		case parts[0] == "changes" && len(parts) == 2 && parts[1] == "recent" && r.Method == "GET":
 			handleRecentChanges(w, r)
@@ -527,6 +553,20 @@ func main() {
 			handleDeleteBackup(w, r, parts[2])
 		case parts[0] == "admin" && len(parts) == 2 && parts[1] == "restore" && r.Method == "POST":
 			handleRestoreBackup(w, r)
+
+		// Field Reports
+		case parts[0] == "field-reports" && len(parts) == 1 && r.Method == "GET":
+			handleListFieldReports(w, r)
+		case parts[0] == "field-reports" && len(parts) == 1 && r.Method == "POST":
+			handleCreateFieldReport(w, r)
+		case parts[0] == "field-reports" && len(parts) == 2 && r.Method == "GET":
+			handleGetFieldReport(w, r, parts[1])
+		case parts[0] == "field-reports" && len(parts) == 2 && r.Method == "PUT":
+			handleUpdateFieldReport(w, r, parts[1])
+		case parts[0] == "field-reports" && len(parts) == 2 && r.Method == "DELETE":
+			handleDeleteFieldReport(w, r, parts[1])
+		case parts[0] == "field-reports" && len(parts) == 3 && parts[2] == "create-ncr" && r.Method == "POST":
+			handleFieldReportCreateNCR(w, r, parts[1])
 
 		default:
 			w.WriteHeader(404)

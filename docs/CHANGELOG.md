@@ -179,3 +179,18 @@ All notable changes to ZRP are documented here. Format follows [Keep a Changelog
 - Request logging middleware
 - Seed data for all modules (demo-ready out of the box)
 - Auto-generated IDs with year prefix (ECO-2026-001, PO-2026-0001, etc.)
+
+## 2026-02-18
+
+### Added
+- **Pricing Management Page**: Centralized product pricing with cost analysis and margin tracking
+  - New DB tables: `product_pricing`, `cost_analysis`
+  - CRUD endpoints: GET/POST /api/v1/pricing, GET/PUT/DELETE /api/v1/pricing/:id
+  - Cost analysis: GET/POST /api/v1/pricing/analysis
+  - Price history: GET /api/v1/pricing/history/:ipn
+  - Bulk price update: POST /api/v1/pricing/bulk-update
+  - Frontend: Pricing list with color-coded margins (red <15%, yellow 15-30%, green >30%)
+  - Create/edit pricing tiers (standard, volume, distributor, OEM)
+  - Cost analysis tab with BOM cost breakdown vs selling price
+  - Bulk price update with percentage or absolute adjustments
+  - Replaced PlaceholderPage in App.tsx

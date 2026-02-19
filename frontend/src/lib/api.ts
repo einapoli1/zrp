@@ -219,6 +219,28 @@ export interface NCR {
   resolved_at?: string;
 }
 
+export interface FieldReport {
+  id: string;
+  title: string;
+  report_type: string;
+  status: string;
+  priority: string;
+  customer_name: string;
+  site_location: string;
+  device_ipn: string;
+  device_serial: string;
+  reported_by: string;
+  reported_at: string;
+  description: string;
+  root_cause: string;
+  resolution: string;
+  resolved_at?: string;
+  ncr_id?: string;
+  eco_id?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface RMA {
   id: string;
   serial_number: string;
@@ -879,6 +901,38 @@ class ApiClient {
     });
   }
 
+  // Field Reports
+  async getFieldReports(params?: Record<string, string>): Promise<FieldReport[]> {
+    const qs = params ? '?' + new URLSearchParams(params).toString() : '';
+    return this.request('/field-reports' + qs);
+  }
+
+  async getFieldReport(id: string): Promise<FieldReport> {
+    return this.request(`/field-reports/${id}`);
+  }
+
+  async createFieldReport(fr: Partial<FieldReport>): Promise<FieldReport> {
+    return this.request('/field-reports', {
+      method: 'POST',
+      body: JSON.stringify(fr),
+    });
+  }
+
+  async updateFieldReport(id: string, fr: Partial<FieldReport>): Promise<FieldReport> {
+    return this.request(`/field-reports/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(fr),
+    });
+  }
+
+  async deleteFieldReport(id: string): Promise<void> {
+    return this.request(`/field-reports/${id}`, { method: 'DELETE' });
+  }
+
+  async createNCRFromFieldReport(id: string): Promise<{ id: string; title: string }> {
+    return this.request(`/field-reports/${id}/create-ncr`, { method: 'POST' });
+  }
+
   // RMAs
   async getRMAs(): Promise<RMA[]> {
     return this.request('/rmas');
@@ -1196,6 +1250,18 @@ class ApiClient {
     });
   }
 
+  // General Settings
+  async getGeneralSettings(): Promise<{ app_name: string; company_name: string; company_address: string; currency: string; date_format: string }> {
+    return this.request('/settings/general');
+  }
+
+  async updateGeneralSettings(settings: { app_name: string; company_name: string; company_address: string; currency: string; date_format: string }): Promise<any> {
+    return this.request('/settings/general', {
+      method: 'PUT',
+      body: JSON.stringify(settings),
+    });
+  }
+
   // GitPLM Settings
   async getGitPLMConfig(): Promise<{ base_url: string }> {
     return this.request('/settings/gitplm');
@@ -1414,6 +1480,50 @@ class ApiClient {
     return this.request('/settings/digikey', { method: 'POST', body: JSON.stringify(settings) });
   }
 
+  // Product Pricing
+  async getProductPricing(params?: { product_ipn?: string; pricing_tier?: string }): Promise<ProductPricing[]> {
+    const search = new URLSearchParams();
+    if (params?.product_ipn) search.set('product_ipn', params.product_ipn);
+    if (params?.pricing_tier) search.set('pricing_tier', params.pricing_tier);
+    const qs = search.toString();
+    return this.request(`/pricing${qs ? '?' + qs : ''}`);
+  }
+
+  async getProductPricingById(id: number): Promise<ProductPricing> {
+    return this.request(`/pricing/${id}`);
+  }
+
+  async createProductPricing(pricing: Partial<ProductPricing>): Promise<ProductPricing> {
+    return this.request('/pricing', { method: 'POST', body: JSON.stringify(pricing) });
+  }
+
+  async updateProductPricing(id: number, pricing: Partial<ProductPricing>): Promise<ProductPricing> {
+    return this.request(`/pricing/${id}`, { method: 'PUT', body: JSON.stringify(pricing) });
+  }
+
+  async deleteProductPricing(id: number): Promise<{ status: string }> {
+    return this.request(`/pricing/${id}`, { method: 'DELETE' });
+  }
+
+  async getCostAnalysis(): Promise<CostAnalysis[]> {
+    return this.request('/pricing/analysis');
+  }
+
+  async createCostAnalysis(analysis: Partial<CostAnalysis>): Promise<CostAnalysis> {
+    return this.request('/pricing/analysis', { method: 'POST', body: JSON.stringify(analysis) });
+  }
+
+  async getProductPricingHistory(ipn: string): Promise<ProductPricing[]> {
+    return this.request(`/pricing/history/${encodeURIComponent(ipn)}`);
+  }
+
+  async bulkUpdateProductPricing(ids: number[], adjustmentType: string, adjustmentValue: number): Promise<BulkPriceUpdateResult> {
+    return this.request('/pricing/bulk-update', {
+      method: 'POST',
+      body: JSON.stringify({ ids, adjustment_type: adjustmentType, adjustment_value: adjustmentValue }),
+    });
+  }
+
   async updateMouserSettings(settings: { api_key: string }): Promise<{ status: string }> {
     return this.request('/settings/mouser', { method: 'POST', body: JSON.stringify(settings) });
   }
@@ -1458,6 +1568,40 @@ export interface MarketPricingResponse {
 export interface DistributorSettings {
   digikey: { client_id: string; client_secret: string };
   mouser: { api_key: string };
+}
+
+// Product Pricing types
+export interface ProductPricing {
+  id: number;
+  product_ipn: string;
+  pricing_tier: string;
+  min_qty: number;
+  max_qty: number;
+  unit_price: number;
+  currency: string;
+  effective_date: string;
+  expiry_date?: string;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CostAnalysis {
+  id: number;
+  product_ipn: string;
+  bom_cost: number;
+  labor_cost: number;
+  overhead_cost: number;
+  total_cost: number;
+  margin_pct: number;
+  selling_price: number;
+  last_calculated: string;
+  created_at: string;
+}
+
+export interface BulkPriceUpdateResult {
+  updated: number;
+  total: number;
 }
 
 // Export singleton instance

@@ -1914,3 +1914,49 @@ Body: `{"api_key": "..."}`
 Returns masked API keys for display. Keys are stored in the `app_settings` DB table, not environment variables.
 
 If no distributor keys are configured, market pricing endpoints return an error with `unconfigured` field listing which distributors need setup. Rate limiting and API errors are handled gracefully with per-distributor error reporting.
+
+---
+
+## Product Pricing
+
+### List Product Pricing
+`GET /api/v1/pricing`
+
+Query params: `product_ipn`, `pricing_tier`
+
+### Get Product Pricing
+`GET /api/v1/pricing/:id`
+
+### Create Product Pricing
+`POST /api/v1/pricing`
+
+Body: `{"product_ipn": "IPN-001", "pricing_tier": "standard|volume|distributor|oem", "min_qty": 1, "max_qty": 100, "unit_price": 10.50, "currency": "USD", "effective_date": "2024-01-01", "expiry_date": "", "notes": ""}`
+
+### Update Product Pricing
+`PUT /api/v1/pricing/:id`
+
+Partial update supported.
+
+### Delete Product Pricing
+`DELETE /api/v1/pricing/:id`
+
+### Cost Analysis
+`GET /api/v1/pricing/analysis`
+
+Returns cost analysis with selling price and margin calculation per product.
+
+`POST /api/v1/pricing/analysis`
+
+Body: `{"product_ipn": "IPN-001", "bom_cost": 5.00, "labor_cost": 2.00, "overhead_cost": 1.00}`
+
+Upserts cost analysis. Auto-calculates total_cost and margin_pct from standard pricing.
+
+### Price History
+`GET /api/v1/pricing/history/:ipn`
+
+Returns all pricing entries for a product, ordered by creation date descending.
+
+### Bulk Price Update
+`POST /api/v1/pricing/bulk-update`
+
+Body: `{"ids": [1, 2, 3], "adjustment_type": "percentage|absolute", "adjustment_value": 10}`

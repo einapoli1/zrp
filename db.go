@@ -52,6 +52,22 @@ func runMigrations() error {
 		}
 	}
 
+	fieldReportTable := `CREATE TABLE IF NOT EXISTS field_reports (
+		id TEXT PRIMARY KEY, title TEXT NOT NULL, report_type TEXT DEFAULT 'failure',
+		status TEXT DEFAULT 'open', priority TEXT DEFAULT 'medium',
+		customer_name TEXT DEFAULT '', site_location TEXT DEFAULT '',
+		device_ipn TEXT DEFAULT '', device_serial TEXT DEFAULT '',
+		reported_by TEXT DEFAULT '', reported_at DATETIME,
+		description TEXT DEFAULT '', root_cause TEXT DEFAULT '',
+		resolution TEXT DEFAULT '', resolved_at DATETIME,
+		ncr_id TEXT DEFAULT '', eco_id TEXT DEFAULT '',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`
+	if _, err := db.Exec(fieldReportTable); err != nil {
+		return fmt.Errorf("field_reports migration: %w", err)
+	}
+
 	tables := []string{
 		`CREATE TABLE IF NOT EXISTS ecos (
 			id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT,
@@ -351,6 +367,31 @@ func runMigrations() error {
 			lead_time_days INTEGER DEFAULT 0,
 			moq INTEGER DEFAULT 0,
 			notes TEXT
+		)`,
+		`CREATE TABLE IF NOT EXISTS product_pricing (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			product_ipn TEXT NOT NULL,
+			pricing_tier TEXT NOT NULL DEFAULT 'standard',
+			min_qty INTEGER DEFAULT 0,
+			max_qty INTEGER DEFAULT 0,
+			unit_price REAL NOT NULL DEFAULT 0,
+			currency TEXT DEFAULT 'USD',
+			effective_date TEXT DEFAULT '',
+			expiry_date TEXT DEFAULT '',
+			notes TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
+		`CREATE TABLE IF NOT EXISTS cost_analysis (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			product_ipn TEXT NOT NULL UNIQUE,
+			bom_cost REAL DEFAULT 0,
+			labor_cost REAL DEFAULT 0,
+			overhead_cost REAL DEFAULT 0,
+			total_cost REAL DEFAULT 0,
+			margin_pct REAL DEFAULT 0,
+			last_calculated DATETIME DEFAULT CURRENT_TIMESTAMP,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS app_settings (
 			key TEXT PRIMARY KEY,

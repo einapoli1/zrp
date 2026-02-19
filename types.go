@@ -149,6 +149,28 @@ type TestRecord struct {
 	TestedAt        string `json:"tested_at"`
 }
 
+type FieldReport struct {
+	ID           string  `json:"id"`
+	Title        string  `json:"title"`
+	ReportType   string  `json:"report_type"`
+	Status       string  `json:"status"`
+	Priority     string  `json:"priority"`
+	CustomerName string  `json:"customer_name"`
+	SiteLocation string  `json:"site_location"`
+	DeviceIPN    string  `json:"device_ipn"`
+	DeviceSerial string  `json:"device_serial"`
+	ReportedBy   string  `json:"reported_by"`
+	ReportedAt   string  `json:"reported_at"`
+	Description  string  `json:"description"`
+	RootCause    string  `json:"root_cause"`
+	Resolution   string  `json:"resolution"`
+	ResolvedAt   *string `json:"resolved_at"`
+	NcrID        string  `json:"ncr_id,omitempty"`
+	EcoID        string  `json:"eco_id,omitempty"`
+	CreatedAt    string  `json:"created_at"`
+	UpdatedAt    string  `json:"updated_at"`
+}
+
 type NCR struct {
 	ID              string  `json:"id"`
 	Title           string  `json:"title"`
