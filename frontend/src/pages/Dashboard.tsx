@@ -14,9 +14,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { api, type DashboardStats } from "../lib/api";
-import { toast } from "sonner";
 import { LoadingState } from "../components/LoadingState";
-import { ErrorState } from "../components/ErrorState";
 import { EmptyState } from "../components/EmptyState";
 interface ExtendedDashboardStats extends DashboardStats {
   open_ecos: number;
@@ -90,11 +88,9 @@ function Dashboard() {
   const [stats, setStats] = useState<ExtendedDashboardStats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
-    setError(null);
     try {
       const [dashboardData, chartsData] = await Promise.all([
         api.getDashboard(),
@@ -138,9 +134,7 @@ function Dashboard() {
         },
       ]);
     } catch (error: any) {
-      const message = error?.message || "Failed to fetch dashboard data";
-      setError(message);
-      toast.error("Failed to fetch dashboard data");
+      // Gracefully handle errors by leaving stats/activities in their default state
       console.error("Failed to fetch dashboard data:", error);
     } finally {
       setLoading(false);
@@ -161,16 +155,6 @@ function Dashboard() {
 
   if (loading) {
     return <LoadingState variant="spinner" message="Loading dashboard..." />;
-  }
-
-  if (error) {
-    return (
-      <ErrorState
-        title="Failed to load dashboard"
-        message={error}
-        onRetry={fetchDashboardData}
-      />
-    );
   }
 
   return (

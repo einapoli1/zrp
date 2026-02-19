@@ -23,6 +23,7 @@ vi.mock("../lib/api", () => ({
 // Mock sonner toast
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
+  Toaster: () => null,
 }));
 
 import Permissions from "./Permissions";

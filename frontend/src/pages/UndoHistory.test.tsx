@@ -20,6 +20,7 @@ vi.mock("sonner", () => ({
     success: vi.fn(),
     error: vi.fn(),
   }),
+  Toaster: () => null,
 }));
 
 import UndoHistory from "./UndoHistory";

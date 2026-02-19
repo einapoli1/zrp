@@ -13,6 +13,7 @@ vi.mock("../lib/api", () => ({
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
+  Toaster: () => null,
 }));
 
 import GitDocsSettings from "./GitDocsSettings";

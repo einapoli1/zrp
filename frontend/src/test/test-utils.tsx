@@ -1,6 +1,7 @@
 import React from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
+import { Toaster } from "sonner";
 import { WebSocketProvider } from "../contexts/WebSocketContext";
 import { PermissionsProvider } from "../contexts/PermissionsContext";
 
@@ -10,6 +11,7 @@ function AllProviders({ children }: { children: React.ReactNode }) {
       <WebSocketProvider>
         <PermissionsProvider>
           {children}
+          <Toaster />
         </PermissionsProvider>
       </WebSocketProvider>
     </BrowserRouter>

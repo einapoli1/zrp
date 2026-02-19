@@ -64,7 +64,7 @@ describe("DistributorSettings", () => {
   });
 
   it("shows error message on save failure", async () => {
-    mockUpdateDigikeySettings.mockRejectedValueOnce(new Error("fail"));
+    mockUpdateDigikeySettings.mockRejectedValueOnce(new Error("Failed to save Digikey settings"));
     render(<DistributorSettings />);
     await waitFor(() => screen.getByText("Digikey"));
     const saveButtons = screen.getAllByText(/save/i);

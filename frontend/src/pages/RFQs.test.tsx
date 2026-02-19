@@ -72,8 +72,9 @@ describe("RFQs", () => {
     render(<RFQs />);
     await waitFor(() => screen.getByText("Create RFQ"));
     fireEvent.click(screen.getByText("Create RFQ"));
-    await waitFor(() => screen.getByLabelText("Title"));
-    fireEvent.change(screen.getByLabelText("Title"), { target: { value: "New RFQ" } });
+    await waitFor(() => screen.getByText("New RFQ"));
+    const titleInput = screen.getByPlaceholderText("RFQ title");
+    fireEvent.change(titleInput, { target: { value: "New RFQ" } });
     fireEvent.click(screen.getByRole("button", { name: "Create" }));
     await waitFor(() => {
       expect(mockCreateRFQ).toHaveBeenCalledWith(expect.objectContaining({ title: "New RFQ" }));
