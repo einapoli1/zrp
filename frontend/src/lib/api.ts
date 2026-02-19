@@ -180,6 +180,8 @@ export interface WorkOrder {
   id: string;
   assembly_ipn: string;
   qty: number;
+  qty_good?: number;
+  qty_scrap?: number;
   status: string;
   priority: string;
   notes?: string;

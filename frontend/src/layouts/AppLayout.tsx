@@ -119,6 +119,7 @@ const navigationItems = [
     title: "Sales",
     items: [
       { title: "Quotes", url: "/quotes", icon: FileText },
+      { title: "Sales Orders", url: "/sales-orders", icon: FileText },
       { title: "Pricing", url: "/pricing", icon: TrendingUp },
     ],
   },

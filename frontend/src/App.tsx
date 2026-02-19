@@ -41,6 +41,8 @@ const Firmware = React.lazy(() => import("./pages/Firmware"));
 const FirmwareDetail = React.lazy(() => import("./pages/FirmwareDetail"));
 const Quotes = React.lazy(() => import("./pages/Quotes"));
 const QuoteDetail = React.lazy(() => import("./pages/QuoteDetail"));
+const SalesOrders = React.lazy(() => import("./pages/SalesOrders"));
+const SalesOrderDetail = React.lazy(() => import("./pages/SalesOrderDetail"));
 const Shipments = React.lazy(() => import("./pages/Shipments"));
 const ShipmentDetail = React.lazy(() => import("./pages/ShipmentDetail"));
 const ShipmentPrint = React.lazy(() => import("./pages/ShipmentPrint"));
@@ -105,6 +107,8 @@ function App() {
             <Route path="/firmware/:id" element={<FirmwareDetail />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/quotes/:id" element={<QuoteDetail />} />
+            <Route path="/sales-orders" element={<SalesOrders />} />
+            <Route path="/sales-orders/:id" element={<SalesOrderDetail />} />
             
             {/* Supply Chain */}
             <Route path="/vendors" element={<Vendors />} />

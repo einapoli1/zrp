@@ -248,11 +248,22 @@ function NCRDetail() {
               <div>
                 <Label>Defect Type</Label>
                 {editing ? (
-                  <Input
-                    value={formData.defect_type || ""}
-                    onChange={(e) => setFormData({ ...formData, defect_type: e.target.value })}
-                    placeholder="Type of defect"
-                  />
+                  <Select 
+                    value={formData.defect_type || ""} 
+                    onValueChange={(value) => setFormData({ ...formData, defect_type: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select defect type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="material">Material</SelectItem>
+                      <SelectItem value="dimensional">Dimensional</SelectItem>
+                      <SelectItem value="cosmetic">Cosmetic</SelectItem>
+                      <SelectItem value="functional">Functional</SelectItem>
+                      <SelectItem value="assembly">Assembly</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
                 ) : (
                   <p className="text-sm mt-1">{ncr.defect_type || "Not specified"}</p>
                 )}
@@ -337,8 +348,26 @@ function NCRDetail() {
             <CardContent>
               <Button 
                 variant="outline" 
-                className="w-full justify-start"
-                onClick={() => navigate("/ecos?from_ncr=" + ncr.id)}
+                className="w-full justify-start mb-2"
+                onClick={async () => {
+                  try {
+                    const response = await fetch(`/api/v1/ncrs/${ncr.id}/create-eco`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                    });
+                    
+                    if (response.ok) {
+                      const newECO = await response.json();
+                      toast.success(`ECO ${newECO.id} created successfully`);
+                      navigate(`/ecos/${newECO.id}`);
+                    } else {
+                      throw new Error('Failed to create ECO');
+                    }
+                  } catch (error) {
+                    toast.error("Failed to create ECO");
+                    console.error("Failed to create ECO:", error);
+                  }
+                }}
               >
                 <FileText className="h-4 w-4 mr-2" />
                 Create ECO from NCR
@@ -347,7 +376,29 @@ function NCRDetail() {
                 <Button
                   variant="outline"
                   className="w-full justify-start"
-                  onClick={() => navigate(`/capas?from_ncr=${ncr.id}&title=${encodeURIComponent("CAPA for NCR " + ncr.id + ": " + ncr.title)}`)}
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(`/api/v1/ncrs/${ncr.id}/create-capa`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          title: `CAPA for NCR ${ncr.id}: ${ncr.title}`,
+                          type: "corrective"
+                        }),
+                      });
+                      
+                      if (response.ok) {
+                        const newCAPA = await response.json();
+                        toast.success(`CAPA ${newCAPA.id} created successfully`);
+                        navigate(`/capas/${newCAPA.id}`);
+                      } else {
+                        throw new Error('Failed to create CAPA');
+                      }
+                    } catch (error) {
+                      toast.error("Failed to create CAPA");
+                      console.error("Failed to create CAPA:", error);
+                    }
+                  }}
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Create CAPA from NCR

@@ -601,6 +601,30 @@ function WorkOrderDetail() {
               <p className="text-sm font-medium text-muted-foreground">Quantity</p>
               <p className="text-2xl font-bold">{workOrder.qty}</p>
             </div>
+            {(workOrder.qty_good !== undefined || workOrder.qty_scrap !== undefined) && (
+              <>
+                {workOrder.qty_good !== undefined && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Good Units</p>
+                    <p className="text-lg font-semibold text-green-600">{workOrder.qty_good}</p>
+                  </div>
+                )}
+                {workOrder.qty_scrap !== undefined && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Scrap Units</p>
+                    <p className="text-lg font-semibold text-red-600">{workOrder.qty_scrap}</p>
+                  </div>
+                )}
+                {workOrder.qty_good !== undefined && (
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Yield</p>
+                    <p className="text-lg font-semibold">
+                      {Math.round((workOrder.qty_good / workOrder.qty) * 100)}%
+                    </p>
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -719,7 +743,6 @@ function WorkOrderDetail() {
           </CardContent>
         </Card>
       )}
-      </div>
 
       {workOrder.notes && (
         <Card>

@@ -95,6 +95,9 @@ func handleUpdateWorkOrder(w http.ResponseWriter, r *http.Request, id string) {
 		jsonErr(w, "work order not found", 404)
 		return
 	}
+	
+	if qtyGood.Valid { good := int(qtyGood.Int64); currentWO.QtyGood = &good }
+	if qtyScrap.Valid { scrap := int(qtyScrap.Int64); currentWO.QtyScrap = &scrap }
 
 	// Status transition validation
 	ve := &ValidationErrors{}
@@ -107,6 +110,8 @@ func handleUpdateWorkOrder(w http.ResponseWriter, r *http.Request, id string) {
 	}
 	if wo.Priority != "" { validateEnum(ve, "priority", wo.Priority, validWOPriorities) }
 	if wo.Qty < 0 { ve.Add("qty", "must be non-negative") }
+	if wo.QtyGood != nil && *wo.QtyGood < 0 { ve.Add("qty_good", "must be non-negative") }
+	if wo.QtyScrap != nil && *wo.QtyScrap < 0 { ve.Add("qty_scrap", "must be non-negative") }
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
 
 	now := time.Now().Format("2006-01-02 15:04:05")
@@ -120,8 +125,8 @@ func handleUpdateWorkOrder(w http.ResponseWriter, r *http.Request, id string) {
 	defer tx.Rollback()
 
 	// Update work order
-	_, err = tx.Exec("UPDATE work_orders SET assembly_ipn=?,qty=?,status=?,priority=?,notes=?,started_at=CASE WHEN ?='in_progress' AND started_at IS NULL THEN ? ELSE started_at END,completed_at=CASE WHEN ?='completed' THEN ? ELSE completed_at END WHERE id=?",
-		wo.AssemblyIPN, wo.Qty, wo.Status, wo.Priority, wo.Notes, wo.Status, now, wo.Status, now, id)
+	_, err = tx.Exec("UPDATE work_orders SET assembly_ipn=?,qty=?,qty_good=?,qty_scrap=?,status=?,priority=?,notes=?,started_at=CASE WHEN ?='in_progress' AND started_at IS NULL THEN ? ELSE started_at END,completed_at=CASE WHEN ?='completed' THEN ? ELSE completed_at END WHERE id=?",
+		wo.AssemblyIPN, wo.Qty, wo.QtyGood, wo.QtyScrap, wo.Status, wo.Priority, wo.Notes, wo.Status, now, wo.Status, now, id)
 	if err != nil {
 		jsonErr(w, err.Error(), 500)
 		return

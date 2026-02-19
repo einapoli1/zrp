@@ -52,11 +52,15 @@ function CAPADetail() {
     if (!id || !capa) return;
     setError("");
     try {
-      const updated = await api.updateCAPA(id, { ...formData, approved_by_qe: "QE Approved" });
+      // Send approval with user identity - backend will validate RBAC and set actual user ID
+      const updated = await api.updateCAPA(id, { ...formData, approved_by_qe: "approve" });
       setCAPA(updated);
       setFormData(updated);
+      toast.success("QE approval recorded successfully");
     } catch (err: any) {
-      setError(err?.message || "Failed to approve");
+      const errorMsg = err?.message || "Failed to approve";
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
@@ -64,11 +68,15 @@ function CAPADetail() {
     if (!id || !capa) return;
     setError("");
     try {
-      const updated = await api.updateCAPA(id, { ...formData, approved_by_mgr: "Manager Approved" });
+      // Send approval with user identity - backend will validate RBAC and set actual user ID
+      const updated = await api.updateCAPA(id, { ...formData, approved_by_mgr: "approve" });
       setCAPA(updated);
       setFormData(updated);
+      toast.success("Manager approval recorded successfully");
     } catch (err: any) {
-      setError(err?.message || "Failed to approve");
+      const errorMsg = err?.message || "Failed to approve";
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 

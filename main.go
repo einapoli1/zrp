@@ -666,6 +666,42 @@ func main() {
 		case parts[0] == "field-reports" && len(parts) == 3 && parts[2] == "create-ncr" && r.Method == "POST":
 			handleFieldReportCreateNCR(w, r, parts[1])
 
+		// Sales Orders
+		case parts[0] == "sales-orders" && len(parts) == 1 && r.Method == "GET":
+			handleListSalesOrders(w, r)
+		case parts[0] == "sales-orders" && len(parts) == 1 && r.Method == "POST":
+			handleCreateSalesOrder(w, r)
+		case parts[0] == "sales-orders" && len(parts) == 2 && r.Method == "GET":
+			handleGetSalesOrder(w, r, parts[1])
+		case parts[0] == "sales-orders" && len(parts) == 2 && r.Method == "PUT":
+			handleUpdateSalesOrder(w, r, parts[1])
+		case parts[0] == "sales-orders" && len(parts) == 3 && parts[2] == "confirm" && r.Method == "POST":
+			handleConfirmSalesOrder(w, r, parts[1])
+		case parts[0] == "sales-orders" && len(parts) == 3 && parts[2] == "allocate" && r.Method == "POST":
+			handleAllocateSalesOrder(w, r, parts[1])
+		case parts[0] == "sales-orders" && len(parts) == 3 && parts[2] == "pick" && r.Method == "POST":
+			handlePickSalesOrder(w, r, parts[1])
+		case parts[0] == "sales-orders" && len(parts) == 3 && parts[2] == "ship" && r.Method == "POST":
+			handleShipSalesOrder(w, r, parts[1])
+		case parts[0] == "sales-orders" && len(parts) == 3 && parts[2] == "create-invoice" && r.Method == "POST":
+			handleCreateInvoiceFromSalesOrder(w, r, parts[1])
+
+		// Invoices
+		case parts[0] == "invoices" && len(parts) == 1 && r.Method == "GET":
+			handleListInvoices(w, r)
+		case parts[0] == "invoices" && len(parts) == 1 && r.Method == "POST":
+			handleCreateInvoice(w, r)
+		case parts[0] == "invoices" && len(parts) == 2 && r.Method == "GET":
+			handleGetInvoice(w, r, parts[1])
+		case parts[0] == "invoices" && len(parts) == 2 && r.Method == "PUT":
+			handleUpdateInvoice(w, r, parts[1])
+		case parts[0] == "invoices" && len(parts) == 3 && parts[2] == "send" && r.Method == "POST":
+			handleSendInvoice(w, r, parts[1])
+		case parts[0] == "invoices" && len(parts) == 3 && parts[2] == "mark-paid" && r.Method == "POST":
+			handleMarkInvoicePaid(w, r, parts[1])
+		case parts[0] == "invoices" && len(parts) == 3 && parts[2] == "pdf" && r.Method == "GET":
+			handleGenerateInvoicePDF(w, r, parts[1])
+
 		default:
 			w.WriteHeader(404)
 			json.NewEncoder(w).Encode(map[string]string{"error": "not found"})

@@ -214,7 +214,93 @@ Global search across parts, documents, ECOs, etc.
 | PUT | `/workorders/{id}` | Update work order |
 | GET | `/workorders/{id}/bom` | BOM with shortage analysis |
 | GET | `/workorders/{id}/pdf` | Download PDF |
+| POST | `/workorders/{id}/kit` | Kit materials (reserve inventory) |
+| GET | `/workorders/{id}/serials` | List serial numbers |
+| POST | `/workorders/{id}/serials` | Add serial number |
 | POST | `/workorders/bulk-update` | Bulk update |
+
+### Work Order Object
+```json
+{
+  "id": "WO001",
+  "assembly_ipn": "ASY-001", 
+  "qty": 10,
+  "qty_good": 8,        // Optional - units that passed testing
+  "qty_scrap": 2,       // Optional - units that were scrapped
+  "status": "in_progress",
+  "priority": "normal",
+  "notes": "Special handling required",
+  "created_at": "2024-01-01T00:00:00Z",
+  "started_at": "2024-01-01T01:00:00Z",   // Optional
+  "completed_at": null                     // Optional
+}
+```
+
+### Valid Status Transitions
+- `draft` → `open`, `cancelled`
+- `open` → `in_progress`, `on_hold`, `cancelled`
+- `in_progress` → `completed`, `on_hold`, `cancelled`
+- `on_hold` → `in_progress`, `open`, `cancelled`
+- `completed`, `cancelled` → (terminal states)
+
+### POST /workorders/{id}/kit
+Kit (reserve) materials needed for the work order.
+
+```json
+// Response
+{
+  "wo_id": "WO001",
+  "status": "kitted",
+  "kitted_at": "2024-01-01T10:00:00Z",
+  "items": [
+    {
+      "ipn": "PART-001",
+      "required": 10.0,
+      "on_hand": 15.0, 
+      "reserved": 5.0,
+      "kitted": 10.0,
+      "status": "kitted"    // "kitted", "partial", "shortage", "error"
+    }
+  ]
+}
+```
+
+### GET /workorders/{id}/serials
+List serial numbers assigned to this work order.
+
+```json
+// Response
+[
+  {
+    "id": 1,
+    "wo_id": "WO001", 
+    "serial_number": "ASY123456789012",
+    "status": "assigned",     // "assigned", "in_progress", "testing", "completed", "failed", "scrapped"
+    "notes": ""
+  }
+]
+```
+
+### POST /workorders/{id}/serials
+Add a serial number to the work order. If `serial_number` is omitted, it will be auto-generated.
+
+```json
+// Request
+{
+  "serial_number": "TEST123",    // Optional - auto-generated if not provided
+  "status": "assigned",          // Optional - defaults to "assigned"
+  "notes": "Test unit"           // Optional
+}
+
+// Response
+{
+  "id": 2,
+  "wo_id": "WO001",
+  "serial_number": "TEST123", 
+  "status": "assigned",
+  "notes": "Test unit"
+}
+```
 
 ---
 

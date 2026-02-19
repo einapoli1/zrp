@@ -2,7 +2,7 @@ import { vi } from "vitest";
 import type {
   Part, Category, ECO, WorkOrder, Vendor, PurchaseOrder,
   InventoryItem, NCR, RMA, Shipment, PackList, TestRecord, Device, FirmwareCampaign,
-  Quote, DashboardStats, CalendarEvent, AuditLogEntry, User,
+  Quote, SalesOrder, SalesOrderLine, DashboardStats, CalendarEvent, AuditLogEntry, User,
   APIKey, EmailConfig, Document, RFQ, CAPA, CAPADashboard,
 } from "../lib/api";
 
@@ -103,6 +103,11 @@ export const mockDevices: Device[] = [
 export const mockFirmwareCampaigns: FirmwareCampaign[] = [
   { id: "FW-001", name: "Update to v1.1", version: "1.1.0", category: "ICs", status: "active", target_filter: "", notes: "", created_at: "2024-01-25", started_at: "2024-01-26" },
   { id: "FW-002", name: "Security patch", version: "1.0.1", category: "ICs", status: "completed", target_filter: "", notes: "", created_at: "2024-01-10", completed_at: "2024-01-20" },
+];
+
+export const mockSalesOrders: SalesOrder[] = [
+  { id: "SO-0001", quote_id: "Q-001", customer: "Acme Inc", status: "draft", notes: "", created_by: "admin", created_at: "2024-01-25", updated_at: "2024-01-25", lines: [{ id: 1, sales_order_id: "SO-0001", ipn: "IPN-001", description: "Widget", qty: 10, qty_allocated: 0, qty_picked: 0, qty_shipped: 0, unit_price: 25.50, notes: "" }] },
+  { id: "SO-0002", quote_id: "", customer: "Tech Co", status: "confirmed", notes: "Rush", created_by: "admin", created_at: "2024-01-20", updated_at: "2024-01-21" },
 ];
 
 export const mockQuotes: Quote[] = [

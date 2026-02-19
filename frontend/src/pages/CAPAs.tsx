@@ -14,6 +14,7 @@ import { api, type CAPA, type CAPADashboard } from "../lib/api";
 import { toast } from "sonner";
 function CAPAs() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [capas, setCAPAs] = useState<CAPA[]>([]);
   const [dashboard, setDashboard] = useState<CAPADashboard | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,6 +47,29 @@ function CAPAs() {
     };
     fetchData();
   }, []);
+
+  // Handle URL parameters for auto-populating CAPA creation (Gap 5.1 fix)
+  useEffect(() => {
+    const fromNCR = searchParams.get("from_ncr");
+    const prefilledTitle = searchParams.get("title");
+    
+    if (fromNCR) {
+      // Auto-populate form and open dialog
+      setFormData(prev => ({
+        ...prev,
+        linked_ncr_id: fromNCR,
+        title: prefilledTitle || `CAPA for NCR ${fromNCR}`,
+        type: "corrective"
+      }));
+      setCreateDialogOpen(true);
+      
+      // Clean up URL parameters
+      const newSearchParams = new URLSearchParams(searchParams);
+      newSearchParams.delete("from_ncr");
+      newSearchParams.delete("title");
+      navigate(`/capas?${newSearchParams.toString()}`, { replace: true });
+    }
+  }, [searchParams, navigate]);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -19,6 +19,22 @@ const mockGetWorkOrderBOM = vi.fn().mockResolvedValue(mockBOM);
 const mockGetVendors = vi.fn().mockResolvedValue(mockVendors);
 const mockUpdateWorkOrder = vi.fn().mockResolvedValue(mockWO);
 const mockGeneratePOFromWorkOrder = vi.fn().mockResolvedValue({ po_id: "PO-003", lines: 1 });
+const mockKitWorkOrderMaterials = vi.fn().mockResolvedValue({
+  wo_id: "WO-001",
+  status: "kitted",
+  items: [
+    { ipn: "IPN-001", required: 20, on_hand: 500, reserved: 0, kitted: 20, status: "kitted" },
+    { ipn: "IPN-002", required: 50, on_hand: 20, reserved: 0, kitted: 20, status: "partial" },
+  ],
+  kitted_at: "2024-01-01T10:00:00Z",
+});
+const mockGetWorkOrderSerials = vi.fn().mockResolvedValue([
+  { id: 1, wo_id: "WO-001", serial_number: "ASY123456789012", status: "assigned", notes: "" },
+  { id: 2, wo_id: "WO-001", serial_number: "ASY123456789013", status: "completed", notes: "Tested OK" },
+]);
+const mockAddWorkOrderSerial = vi.fn().mockResolvedValue({
+  id: 3, wo_id: "WO-001", serial_number: "TEST123", status: "assigned", notes: "",
+});
 
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
@@ -35,6 +51,9 @@ vi.mock("../lib/api", () => ({
     getVendors: (...args: any[]) => mockGetVendors(...args),
     updateWorkOrder: (...args: any[]) => mockUpdateWorkOrder(...args),
     generatePOFromWorkOrder: (...args: any[]) => mockGeneratePOFromWorkOrder(...args),
+    kitWorkOrderMaterials: (...args: any[]) => mockKitWorkOrderMaterials(...args),
+    getWorkOrderSerials: (...args: any[]) => mockGetWorkOrderSerials(...args),
+    addWorkOrderSerial: (...args: any[]) => mockAddWorkOrderSerial(...args),
   },
 }));
 
@@ -409,5 +428,203 @@ describe("WorkOrderDetail", () => {
     });
     const link = screen.getByText("Print Traveler").closest("a");
     expect(link).toHaveAttribute("href", "/work-orders/WO-001/print");
+  });
+
+  // New functionality tests
+  it("displays Kit Materials button", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Kit Materials")).toBeInTheDocument();
+    });
+  });
+
+  it("calls kitWorkOrderMaterials when Kit Materials button is clicked", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Kit Materials")).toBeInTheDocument();
+    });
+    
+    fireEvent.click(screen.getByText("Kit Materials"));
+    await waitFor(() => {
+      expect(mockKitWorkOrderMaterials).toHaveBeenCalledWith("WO-001");
+    });
+  });
+
+  it("displays Manage Serials button", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Manage Serials")).toBeInTheDocument();
+    });
+  });
+
+  it("opens serial management dialog", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Manage Serials")).toBeInTheDocument();
+    });
+    
+    fireEvent.click(screen.getByText("Manage Serials"));
+    await waitFor(() => {
+      expect(screen.getByText("Serial Number Management")).toBeInTheDocument();
+    });
+  });
+
+  it("displays current serials in management dialog", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Manage Serials")).toBeInTheDocument();
+    });
+    
+    fireEvent.click(screen.getByText("Manage Serials"));
+    await waitFor(() => {
+      expect(screen.getByText("ASY123456789012")).toBeInTheDocument();
+      expect(screen.getByText("ASY123456789013")).toBeInTheDocument();
+    });
+  });
+
+  it("displays serial numbers in main layout", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Serial Numbers (2)")).toBeInTheDocument();
+      expect(screen.getByText("ASY123456789012")).toBeInTheDocument();
+      expect(screen.getByText("ASY123456789013")).toBeInTheDocument();
+    });
+  });
+
+  it("adds new serial number", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Manage Serials")).toBeInTheDocument();
+    });
+    
+    fireEvent.click(screen.getByText("Manage Serials"));
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText("Enter serial number")).toBeInTheDocument();
+    });
+    
+    const input = screen.getByPlaceholderText("Enter serial number");
+    fireEvent.change(input, { target: { value: "TEST123" } });
+    
+    fireEvent.click(screen.getByText("Add"));
+    await waitFor(() => {
+      expect(mockAddWorkOrderSerial).toHaveBeenCalledWith("WO-001", {
+        serial_number: "TEST123",
+        status: "assigned",
+      });
+    });
+  });
+
+  it("generates auto serial number", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Manage Serials")).toBeInTheDocument();
+    });
+    
+    fireEvent.click(screen.getByText("Manage Serials"));
+    await waitFor(() => {
+      expect(screen.getByText("Auto-Generate Serial")).toBeInTheDocument();
+    });
+    
+    fireEvent.click(screen.getByText("Auto-Generate Serial"));
+    await waitFor(() => {
+      expect(mockAddWorkOrderSerial).toHaveBeenCalledWith("WO-001", {
+        status: "assigned",
+      });
+    });
+  });
+
+  it("displays Testing link", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Testing")).toBeInTheDocument();
+    });
+    const link = screen.getByText("Testing").closest("a");
+    expect(link).toHaveAttribute("href", "/testing?wo_id=WO-001");
+  });
+
+  it("shows kitting results after successful kitting", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Kit Materials")).toBeInTheDocument();
+    });
+    
+    fireEvent.click(screen.getByText("Kit Materials"));
+    await waitFor(() => {
+      expect(screen.getByText("Materials Kitted Successfully")).toBeInTheDocument();
+      expect(screen.getByText("IPN-001")).toBeInTheDocument();
+      expect(screen.getByText("IPN-002")).toBeInTheDocument();
+    });
+  });
+
+  it("displays yield tracking for work orders with qty_good and qty_scrap", async () => {
+    mockGetWorkOrder.mockResolvedValueOnce({
+      id: "WO-001", 
+      assembly_ipn: "IPN-003", 
+      qty: 10, 
+      qty_good: 8,
+      qty_scrap: 2,
+      status: "completed", 
+      priority: "medium", 
+      created_at: "2024-01-01",
+    });
+
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Good Units")).toBeInTheDocument();
+      expect(screen.getByText("Scrap Units")).toBeInTheDocument();
+      expect(screen.getByText("Yield")).toBeInTheDocument();
+      expect(screen.getByText("80%")).toBeInTheDocument(); // 8/10 * 100
+    });
+  });
+
+  it("disables Kit Materials and Manage Serials for completed work orders", async () => {
+    mockGetWorkOrder.mockResolvedValueOnce({
+      id: "WO-001", 
+      assembly_ipn: "IPN-003", 
+      qty: 10, 
+      status: "completed", 
+      priority: "medium", 
+      created_at: "2024-01-01",
+    });
+
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("WO-001")).toBeInTheDocument();
+    });
+    
+    expect(screen.queryByText("Kit Materials")).not.toBeInTheDocument();
+    expect(screen.getByText("Manage Serials")).toBeDisabled();
+  });
+
+  it("includes draft status in Change Status dialog", async () => {
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Change Status")).toBeInTheDocument();
+    });
+    
+    fireEvent.click(screen.getByText("Change Status"));
+    await waitFor(() => {
+      expect(screen.getByText("Select new status")).toBeInTheDocument();
+    });
+    
+    fireEvent.click(screen.getByText("Select new status"));
+    await waitFor(() => {
+      expect(screen.getByText("Draft")).toBeInTheDocument();
+      expect(screen.getByText("Open")).toBeInTheDocument();
+      expect(screen.getByText("In Progress")).toBeInTheDocument();
+      expect(screen.getByText("On Hold")).toBeInTheDocument();
+      expect(screen.getByText("Completed")).toBeInTheDocument();
+      expect(screen.getByText("Cancelled")).toBeInTheDocument();
+    });
+  });
+
+  it("shows empty state for serial numbers when none exist", async () => {
+    mockGetWorkOrderSerials.mockResolvedValueOnce([]);
+    
+    render(<WorkOrderDetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Serial Numbers (0)")).toBeInTheDocument();
+      expect(screen.getByText("No serial numbers assigned yet. Click \"Manage Serials\" to add some.")).toBeInTheDocument();
+    });
   });
 });

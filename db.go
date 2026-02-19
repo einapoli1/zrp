@@ -528,14 +528,29 @@ func runMigrations() error {
 
 	tables = append(tables, `CREATE TABLE IF NOT EXISTS invoices (
 		id TEXT PRIMARY KEY,
+		invoice_number TEXT NOT NULL UNIQUE,
 		sales_order_id TEXT NOT NULL,
 		customer TEXT NOT NULL,
+		issue_date DATE NOT NULL,
+		due_date DATE NOT NULL,
 		status TEXT DEFAULT 'draft' CHECK(status IN ('draft','sent','paid','overdue','cancelled')),
-		total_amount REAL DEFAULT 0,
+		total REAL DEFAULT 0,
+		tax REAL DEFAULT 0,
+		notes TEXT DEFAULT '',
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-		due_date DATE,
 		paid_at DATETIME,
 		FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE RESTRICT
+	)`)
+
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS invoice_lines (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		invoice_id TEXT NOT NULL,
+		ipn TEXT NOT NULL DEFAULT '',
+		description TEXT NOT NULL,
+		quantity INTEGER NOT NULL CHECK(quantity > 0),
+		unit_price REAL NOT NULL CHECK(unit_price >= 0),
+		total REAL NOT NULL CHECK(total >= 0),
+		FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
 	)`)
 
 	for _, t := range tables {
@@ -555,6 +570,12 @@ func runMigrations() error {
 		"ALTER TABLE email_log ADD COLUMN event_type TEXT DEFAULT ''",
 		"ALTER TABLE purchase_orders ADD COLUMN created_by TEXT DEFAULT ''",
 		"ALTER TABLE shipment_lines ADD COLUMN sales_order_id TEXT DEFAULT ''",
+		// Invoice table migrations for enhanced invoicing
+		"ALTER TABLE invoices ADD COLUMN invoice_number TEXT DEFAULT ''",
+		"ALTER TABLE invoices ADD COLUMN issue_date DATE",
+		"ALTER TABLE invoices ADD COLUMN tax REAL DEFAULT 0",
+		"ALTER TABLE invoices ADD COLUMN notes TEXT DEFAULT ''",
+		"ALTER TABLE invoices RENAME COLUMN total_amount TO total",
 	}
 	for _, s := range alterStmts {
 		db.Exec(s) // ignore errors (column already exists)
@@ -611,6 +632,11 @@ func runMigrations() error {
 		"CREATE INDEX IF NOT EXISTS idx_sales_orders_customer ON sales_orders(customer)",
 		"CREATE INDEX IF NOT EXISTS idx_sales_order_lines_order_id ON sales_order_lines(sales_order_id)",
 		"CREATE INDEX IF NOT EXISTS idx_invoices_sales_order_id ON invoices(sales_order_id)",
+		"CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)",
+		"CREATE INDEX IF NOT EXISTS idx_invoices_customer ON invoices(customer)",
+		"CREATE INDEX IF NOT EXISTS idx_invoices_due_date ON invoices(due_date)",
+		"CREATE INDEX IF NOT EXISTS idx_invoices_invoice_number ON invoices(invoice_number)",
+		"CREATE INDEX IF NOT EXISTS idx_invoice_lines_invoice_id ON invoice_lines(invoice_id)",
 		"CREATE INDEX IF NOT EXISTS idx_shipment_lines_sales_order_id ON shipment_lines(sales_order_id)",
 		"CREATE INDEX IF NOT EXISTS idx_receiving_inspections_po_id ON receiving_inspections(po_id)",
 		"CREATE INDEX IF NOT EXISTS idx_rfq_vendors_rfq_id ON rfq_vendors(rfq_id)",

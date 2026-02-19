@@ -402,14 +402,29 @@ type SalesOrderLine struct {
 }
 
 type Invoice struct {
-	ID           string  `json:"id"`
-	SalesOrderID string  `json:"sales_order_id"`
-	Customer     string  `json:"customer"`
-	Status       string  `json:"status"`
-	TotalAmount  float64 `json:"total_amount"`
-	CreatedAt    string  `json:"created_at"`
-	DueDate      string  `json:"due_date"`
-	PaidAt       *string `json:"paid_at,omitempty"`
+	ID            string        `json:"id"`
+	InvoiceNumber string        `json:"invoice_number"`
+	SalesOrderID  string        `json:"sales_order_id"`
+	Customer      string        `json:"customer"`
+	IssueDate     string        `json:"issue_date"`
+	DueDate       string        `json:"due_date"`
+	Status        string        `json:"status"`
+	Total         float64       `json:"total"`
+	Tax           float64       `json:"tax"`
+	Notes         string        `json:"notes"`
+	CreatedAt     string        `json:"created_at"`
+	PaidAt        *string       `json:"paid_at,omitempty"`
+	Lines         []InvoiceLine `json:"lines,omitempty"`
+}
+
+type InvoiceLine struct {
+	ID          int     `json:"id"`
+	InvoiceID   string  `json:"invoice_id"`
+	IPN         string  `json:"ipn"`
+	Description string  `json:"description"`
+	Quantity    int     `json:"quantity"`
+	UnitPrice   float64 `json:"unit_price"`
+	Total       float64 `json:"total"`
 }
 
 var _ = time.Now // keep time imported

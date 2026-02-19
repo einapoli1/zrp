@@ -8,7 +8,7 @@ import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { FileText, ArrowLeft, Save, Download, Plus, Trash2 } from "lucide-react";
+import { FileText, ArrowLeft, Save, Download, Plus, Trash2, ShoppingCart } from "lucide-react";
 import { api, type Quote, type QuoteLine, type Part } from "../lib/api";
 import { toast } from "sonner";
 function QuoteDetail() {
@@ -176,6 +176,21 @@ function QuoteDetail() {
             <Download className="h-4 w-4 mr-2" />
             Export PDF
           </Button>
+          {quote.status === "accepted" && (
+            <Button onClick={async () => {
+              try {
+                const order = await api.convertQuoteToOrder(quote.id);
+                toast.success(`Created sales order ${order.id}`);
+                navigate(`/sales-orders/${order.id}`);
+              } catch (error: unknown) {
+                const msg = error instanceof Error ? error.message : "Failed to convert";
+                toast.error(msg);
+              }
+            }}>
+              <ShoppingCart className="h-4 w-4 mr-2" />
+              Convert to Order
+            </Button>
+          )}
           {editing ? (
             <>
               <Button variant="outline" onClick={() => { setEditing(false); setFormData(quote); }}>
