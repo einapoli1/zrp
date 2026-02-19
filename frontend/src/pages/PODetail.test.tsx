@@ -337,4 +337,109 @@ describe("PODetail", () => {
 
     expect(screen.getByText("Update Status")).toBeDisabled();
   });
+
+  // --- New medium tests ---
+
+  it("Receive Items button disabled with no qty entered", async () => {
+    render(<PODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Receive Items")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Receive Items"));
+    await waitFor(() => {
+      expect(screen.getByText("Ordered")).toBeInTheDocument();
+    });
+
+    // Submit button should be disabled
+    const receiveButtons = screen.getAllByText("Receive Items");
+    const submitButton = receiveButtons[receiveButtons.length - 1];
+    expect(submitButton).toBeDisabled();
+  });
+
+  it("partial status shows Receive Items button", async () => {
+    mockGetPurchaseOrder.mockResolvedValueOnce({ ...mockPO, status: "partial" });
+    render(<PODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("PO-001")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Receive Items")).toBeInTheDocument();
+    expect(screen.getByText("PARTIAL")).toBeInTheDocument();
+  });
+
+  it("receive dialog only shows pending lines — fully received lines excluded", async () => {
+    // mockPO: line 1 has 50 pending (100-50), line 2 is fully received (50-50=0)
+    render(<PODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Receive Items")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Receive Items"));
+    await waitFor(() => {
+      expect(screen.getByText("Ordered")).toBeInTheDocument();
+    });
+
+    // In the receive dialog table, only line 1 (IPN-001) should appear
+    // The dialog filters lines with getPendingQty > 0
+    const dialogContent = screen.getByText("Receive Qty").closest("table")!;
+    expect(dialogContent).toHaveTextContent("IPN-001");
+    expect(dialogContent).not.toHaveTextContent("IPN-002");
+  });
+
+  it("status change error path — mock rejection", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockUpdatePurchaseOrder.mockRejectedValueOnce(new Error("Status update failed"));
+
+    render(<PODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Change Status")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Change Status"));
+    await waitFor(() => {
+      expect(screen.getByText("Change PO Status")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Select new status"));
+    await waitFor(() => {
+      expect(screen.getByText("Closed")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("Closed"));
+    fireEvent.click(screen.getByText("Update Status"));
+
+    await waitFor(() => {
+      expect(mockUpdatePurchaseOrder).toHaveBeenCalledWith("PO-001", { status: "closed" });
+    });
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to update status:", expect.any(Error));
+    });
+    consoleSpy.mockRestore();
+  });
+
+  it("receive items error path — mock rejection", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockReceivePurchaseOrder.mockRejectedValueOnce(new Error("Receive failed"));
+
+    render(<PODetail />);
+    await waitFor(() => {
+      expect(screen.getByText("Receive Items")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByText("Receive Items"));
+    await waitFor(() => {
+      expect(screen.getByText("Ordered")).toBeInTheDocument();
+    });
+
+    const receiveInputs = screen.getAllByPlaceholderText("0");
+    fireEvent.change(receiveInputs[0], { target: { value: "10" } });
+
+    const receiveButtons = screen.getAllByText("Receive Items");
+    fireEvent.click(receiveButtons[receiveButtons.length - 1]);
+
+    await waitFor(() => {
+      expect(mockReceivePurchaseOrder).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Failed to receive items:", expect.any(Error));
+    });
+    consoleSpy.mockRestore();
+  });
 });
