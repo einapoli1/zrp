@@ -68,12 +68,13 @@ func setupECOTestDB(t *testing.T) *sql.DB {
 	_, err = testDB.Exec(`
 		CREATE TABLE audit_log (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			user TEXT,
-			action TEXT,
-			entity_type TEXT,
-			entity_id TEXT,
-			details TEXT,
-			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+			user_id INTEGER,
+			username TEXT DEFAULT 'system',
+			action TEXT NOT NULL,
+			module TEXT NOT NULL,
+			record_id TEXT NOT NULL,
+			summary TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
@@ -149,17 +150,19 @@ func TestHandleListECOs_WithData(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var result []ECO
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response struct {
+		Data []ECO `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if len(result) != 2 {
-		t.Errorf("Expected 2 items, got %d", len(result))
+	if len(response.Data) != 2 {
+		t.Errorf("Expected 2 items, got %d", len(response.Data))
 	}
 
-	if result[0].Title != "Test ECO 2" {
-		t.Errorf("Expected first item to be ECO-002 (ordered by created_at DESC), got %s", result[0].ID)
+	if response.Data[0].Title != "Test ECO 2" {
+		t.Errorf("Expected first item to be ECO-002 (ordered by created_at DESC), got %s", response.Data[0].ID)
 	}
 }
 
@@ -182,14 +185,16 @@ func TestHandleListECOs_FilterByStatus(t *testing.T) {
 
 	handleListECOs(w, req)
 
-	var result []ECO
-	json.NewDecoder(w.Body).Decode(&result)
+	var response struct {
+		Data []ECO `json:"data"`
+	}
+	json.NewDecoder(w.Body).Decode(&response)
 
-	if len(result) != 2 {
-		t.Errorf("Expected 2 draft ECOs, got %d", len(result))
+	if len(response.Data) != 2 {
+		t.Errorf("Expected 2 draft ECOs, got %d", len(response.Data))
 	}
 
-	for _, eco := range result {
+	for _, eco := range response.Data {
 		if eco.Status != "draft" {
 			t.Errorf("Expected all ECOs to have draft status, got %s", eco.Status)
 		}
@@ -217,16 +222,18 @@ func TestHandleGetECO_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result map[string]interface{}
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response struct {
+		Data map[string]interface{} `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if result["id"] != "ECO-001" {
-		t.Errorf("Expected id ECO-001, got %v", result["id"])
+	if response.Data["id"] != "ECO-001" {
+		t.Errorf("Expected id ECO-001, got %v", response.Data["id"])
 	}
-	if result["title"] != "Test ECO" {
-		t.Errorf("Expected title 'Test ECO', got %v", result["title"])
+	if response.Data["title"] != "Test ECO" {
+		t.Errorf("Expected title 'Test ECO', got %v", response.Data["title"])
 	}
 }
 
@@ -269,11 +276,14 @@ func TestHandleCreateECO_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result ECO
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response struct {
+		Data ECO `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
+	result := response.Data
 	if result.ID == "" {
 		t.Error("Expected ID to be generated")
 	}
@@ -289,7 +299,7 @@ func TestHandleCreateECO_Success(t *testing.T) {
 
 	// Verify audit log
 	var auditCount int
-	db.QueryRow("SELECT COUNT(*) FROM audit_log WHERE entity_type='eco'").Scan(&auditCount)
+	db.QueryRow("SELECT COUNT(*) FROM audit_log WHERE module='eco'").Scan(&auditCount)
 	if auditCount != 1 {
 		t.Errorf("Expected 1 audit log entry, got %d", auditCount)
 	}
@@ -353,9 +363,12 @@ func TestHandleCreateECO_DefaultValues(t *testing.T) {
 
 	handleCreateECO(w, req)
 
-	var result ECO
-	json.NewDecoder(w.Body).Decode(&result)
+	var response struct {
+		Data ECO `json:"data"`
+	}
+	json.NewDecoder(w.Body).Decode(&response)
 
+	result := response.Data
 	if result.Status != "draft" {
 		t.Errorf("Expected default status 'draft', got %s", result.Status)
 	}
@@ -442,11 +455,26 @@ func TestHandleUpdateECO_ValidationError(t *testing.T) {
 
 func TestHandleApproveECO_Success(t *testing.T) {
 	oldDB := db
+	oldPartsDir := partsDir
 	db = setupECOTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	partsDir = "" // Set empty partsDir for test
+	defer func() { db.Close(); db = oldDB; partsDir = oldPartsDir }()
 
-	db.Exec(`INSERT INTO ecos (id, title, status) VALUES ('ECO-001', 'Test ECO', 'review')`)
-	db.Exec(`INSERT INTO eco_revisions (eco_id, revision, status) VALUES ('ECO-001', 'A', 'created')`)
+	_, err := db.Exec(`INSERT INTO ecos (id, title, description, status) VALUES ('ECO-001', 'Test ECO', 'Test Description', 'review')`)
+	if err != nil {
+		t.Fatalf("Failed to insert ECO: %v", err)
+	}
+	_, err = db.Exec(`INSERT INTO eco_revisions (eco_id, revision, status) VALUES ('ECO-001', 'A', 'created')`)
+	if err != nil {
+		t.Fatalf("Failed to insert revision: %v", err)
+	}
+
+	// Verify ECO exists before approval
+	var count int
+	db.QueryRow("SELECT COUNT(*) FROM ecos WHERE id='ECO-001'").Scan(&count)
+	if count != 1 {
+		t.Fatalf("ECO-001 not found in database before approval")
+	}
 
 	req := httptest.NewRequest("POST", "/api/v1/ecos/ECO-001/approve", nil)
 	w := httptest.NewRecorder()
@@ -454,7 +482,20 @@ func TestHandleApproveECO_Success(t *testing.T) {
 	handleApproveECO(w, req, "ECO-001")
 
 	if w.Code != 200 {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		// Debug: Check if ECO still exists after failed approval
+		var debugCount int
+		db.QueryRow("SELECT COUNT(*) FROM ecos WHERE id='ECO-001'").Scan(&debugCount)
+		t.Errorf("Expected status 200, got %d: %s (ECO count in DB: %d)", w.Code, w.Body.String(), debugCount)
+		
+		// Debug: Try to query the ECO directly to see what fails
+		var id, title string
+		err := db.QueryRow("SELECT id,title FROM ecos WHERE id='ECO-001'").Scan(&id, &title)
+		if err != nil {
+			t.Errorf("Direct SELECT failed: %v", err)
+		} else {
+			t.Errorf("Direct SELECT succeeded: id=%s, title=%s", id, title)
+		}
+		return
 	}
 
 	// Verify status was updated
@@ -482,8 +523,14 @@ func TestHandleImplementECO_Success(t *testing.T) {
 	db = setupECOTestDB(t)
 	defer func() { db.Close(); db = oldDB }()
 
-	db.Exec(`INSERT INTO ecos (id, title, status) VALUES ('ECO-001', 'Test ECO', 'approved')`)
-	db.Exec(`INSERT INTO eco_revisions (eco_id, revision, status) VALUES ('ECO-001', 'A', 'approved')`)
+	_, err := db.Exec(`INSERT INTO ecos (id, title, description, status) VALUES ('ECO-001', 'Test ECO', 'Test Description', 'approved')`)
+	if err != nil {
+		t.Fatalf("Failed to insert ECO: %v", err)
+	}
+	_, err = db.Exec(`INSERT INTO eco_revisions (eco_id, revision, status) VALUES ('ECO-001', 'A', 'approved')`)
+	if err != nil {
+		t.Fatalf("Failed to insert revision: %v", err)
+	}
 
 	req := httptest.NewRequest("POST", "/api/v1/ecos/ECO-001/implement", nil)
 	w := httptest.NewRecorder()
@@ -491,7 +538,7 @@ func TestHandleImplementECO_Success(t *testing.T) {
 	handleImplementECO(w, req, "ECO-001")
 
 	if w.Code != 200 {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
 	// Verify status was updated
@@ -526,11 +573,13 @@ func TestHandleListECORevisions_Empty(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var result []ECORevision
-	json.NewDecoder(w.Body).Decode(&result)
+	var response struct {
+		Data []ECORevision `json:"data"`
+	}
+	json.NewDecoder(w.Body).Decode(&response)
 
-	if len(result) != 0 {
-		t.Errorf("Expected empty list, got %d items", len(result))
+	if len(response.Data) != 0 {
+		t.Errorf("Expected empty list, got %d items", len(response.Data))
 	}
 }
 
@@ -550,18 +599,20 @@ func TestHandleListECORevisions_WithData(t *testing.T) {
 
 	handleListECORevisions(w, req, "ECO-001")
 
-	var result []ECORevision
-	json.NewDecoder(w.Body).Decode(&result)
+	var response struct {
+		Data []ECORevision `json:"data"`
+	}
+	json.NewDecoder(w.Body).Decode(&response)
 
-	if len(result) != 2 {
-		t.Errorf("Expected 2 revisions, got %d", len(result))
+	if len(response.Data) != 2 {
+		t.Errorf("Expected 2 revisions, got %d", len(response.Data))
 	}
 
-	if result[0].Revision != "A" {
-		t.Errorf("Expected first revision to be A, got %s", result[0].Revision)
+	if len(response.Data) > 0 && response.Data[0].Revision != "A" {
+		t.Errorf("Expected first revision to be A, got %s", response.Data[0].Revision)
 	}
-	if result[1].Revision != "B" {
-		t.Errorf("Expected second revision to be B, got %s", result[1].Revision)
+	if len(response.Data) > 1 && response.Data[1].Revision != "B" {
+		t.Errorf("Expected second revision to be B, got %s", response.Data[1].Revision)
 	}
 }
 

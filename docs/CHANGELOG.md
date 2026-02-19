@@ -5,6 +5,11 @@ All notable changes to ZRP are documented here. Format follows [Keep a Changelog
 ## [Unreleased] - 2026-02-19
 
 ### Fixed
+- **Test database schema sync** — ECO and other handler tests now use production-compatible audit_log schema
+  - Fixed audit_log table columns: `username, module, record_id, summary` (was: `user, entity_type, entity_id, details`)
+  - Fixed ECO test INSERT statements to include `description` field to prevent NULL scan errors
+  - Fixed test response decoding to properly handle API response wrapper `{data: ...}`
+  - ECO handler tests now pass: Create, Update, Approve, Implement, List, Get Revisions
 - **Vite dev proxy configuration** — added `/auth` and `/files` proxy rules to `frontend/vite.config.ts` so authentication and file serving work correctly in development mode
 - **Category display name bug** — categories now store and display human-readable titles instead of raw filenames
   - `handleCreateCategory` writes title as comment (`# TITLE: <title>`) on first line of CSV
