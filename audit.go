@@ -2,13 +2,20 @@ package main
 
 import (
 	"database/sql"
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
+const (
+	AuditActionUpdate = "update"
+)
+
+// logAudit is the legacy simple audit function - kept for backward compatibility
 func logAudit(db *sql.DB, username, action, module, recordID, summary string) {
 	_, err := db.Exec("INSERT INTO audit_log (username, action, module, record_id, summary) VALUES (?, ?, ?, ?, ?)",
 		username, action, module, recordID, summary)
@@ -37,13 +44,18 @@ func getUsername(r *http.Request) string {
 }
 
 type AuditEntry struct {
-	ID        int    `json:"id"`
-	Username  string `json:"username"`
-	Action    string `json:"action"`
-	Module    string `json:"module"`
-	RecordID  string `json:"record_id"`
-	Summary   string `json:"summary"`
-	CreatedAt string `json:"created_at"`
+	ID          int    `json:"id"`
+	UserID      int    `json:"user_id"`
+	Username    string `json:"username"`
+	Action      string `json:"action"`
+	Module      string `json:"module"`
+	RecordID    string `json:"record_id"`
+	Summary     string `json:"summary"`
+	BeforeValue string `json:"before_value,omitempty"`
+	AfterValue  string `json:"after_value,omitempty"`
+	IPAddress   string `json:"ip_address,omitempty"`
+	UserAgent   string `json:"user_agent,omitempty"`
+	CreatedAt   string `json:"created_at"`
 }
 
 func handleAuditLog(w http.ResponseWriter, r *http.Request) {
@@ -107,7 +119,10 @@ func handleAuditLog(w http.ResponseWriter, r *http.Request) {
 
 	// Get paginated results
 	offset := (page - 1) * limit
-	query := "SELECT id, COALESCE(username,'system'), action, module, record_id, COALESCE(summary,''), created_at FROM audit_log" + whereClause + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
+	query := `SELECT id, COALESCE(user_id, 0), COALESCE(username,'system'), action, module, record_id, 
+		COALESCE(summary,''), COALESCE(before_value,''), COALESCE(after_value,''), 
+		COALESCE(ip_address,''), COALESCE(user_agent,''), created_at 
+		FROM audit_log` + whereClause + " ORDER BY created_at DESC LIMIT ? OFFSET ?"
 	queryArgs := append(args, limit, offset)
 
 	rows, err := db.Query(query, queryArgs...)
@@ -120,7 +135,8 @@ func handleAuditLog(w http.ResponseWriter, r *http.Request) {
 	var items []AuditEntry
 	for rows.Next() {
 		var e AuditEntry
-		rows.Scan(&e.ID, &e.Username, &e.Action, &e.Module, &e.RecordID, &e.Summary, &e.CreatedAt)
+		rows.Scan(&e.ID, &e.UserID, &e.Username, &e.Action, &e.Module, &e.RecordID, 
+			&e.Summary, &e.BeforeValue, &e.AfterValue, &e.IPAddress, &e.UserAgent, &e.CreatedAt)
 		items = append(items, e)
 	}
 	if items == nil {
@@ -131,6 +147,161 @@ func handleAuditLog(w http.ResponseWriter, r *http.Request) {
 		"entries": items,
 		"total":   total,
 	})
+}
+
+// handleAuditExport exports audit logs to CSV
+func handleAuditExport(w http.ResponseWriter, r *http.Request) {
+	module := r.URL.Query().Get("module")
+	if module == "" {
+		module = r.URL.Query().Get("entity_type")
+	}
+	user := r.URL.Query().Get("user")
+	search := r.URL.Query().Get("search")
+	dateFrom := r.URL.Query().Get("from")
+	dateTo := r.URL.Query().Get("to")
+	action := r.URL.Query().Get("action")
+
+	var args []interface{}
+	var conditions []string
+	if module != "" {
+		conditions = append(conditions, "module = ?")
+		args = append(args, module)
+	}
+	if user != "" {
+		conditions = append(conditions, "username = ?")
+		args = append(args, user)
+	}
+	if action != "" {
+		conditions = append(conditions, "action = ?")
+		args = append(args, action)
+	}
+	if search != "" {
+		conditions = append(conditions, "(summary LIKE ? OR action LIKE ? OR module LIKE ? OR record_id LIKE ?)")
+		s := "%" + search + "%"
+		args = append(args, s, s, s, s)
+	}
+	if dateFrom != "" {
+		conditions = append(conditions, "created_at >= ?")
+		args = append(args, dateFrom)
+	}
+	if dateTo != "" {
+		conditions = append(conditions, "created_at <= ?")
+		args = append(args, dateTo+" 23:59:59")
+	}
+
+	whereClause := ""
+	if len(conditions) > 0 {
+		whereClause = " WHERE " + strings.Join(conditions, " AND ")
+	}
+
+	query := `SELECT id, COALESCE(username,'system'), action, module, record_id, 
+		COALESCE(summary,''), COALESCE(ip_address,''), COALESCE(user_agent,''), created_at 
+		FROM audit_log` + whereClause + " ORDER BY created_at DESC LIMIT 10000"
+
+	rows, err := db.Query(query, args...)
+	if err != nil {
+		jsonErr(w, err.Error(), 500)
+		return
+	}
+	defer rows.Close()
+
+	// Log the export action
+	LogDataExport(db, r, "audit_log", "CSV", 0)
+
+	// Set CSV headers
+	filename := fmt.Sprintf("audit_log_%s.csv", time.Now().Format("2006-01-02"))
+	w.Header().Set("Content-Type", "text/csv")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+
+	writer := csv.NewWriter(w)
+	defer writer.Flush()
+
+	// Write header
+	writer.Write([]string{"ID", "Username", "Action", "Module", "Record ID", "Summary", "IP Address", "User Agent", "Timestamp"})
+
+	// Write data
+	recordCount := 0
+	for rows.Next() {
+		var id int
+		var username, action, module, recordID, summary, ipAddr, userAgent, createdAt string
+		rows.Scan(&id, &username, &action, &module, &recordID, &summary, &ipAddr, &userAgent, &createdAt)
+		writer.Write([]string{
+			strconv.Itoa(id),
+			username,
+			action,
+			module,
+			recordID,
+			summary,
+			ipAddr,
+			userAgent,
+			createdAt,
+		})
+		recordCount++
+	}
+
+	// Update the export log with actual count
+	LogDataExport(db, r, "audit_log", "CSV", recordCount)
+}
+
+// handleAuditRetention manages audit log retention settings
+func handleAuditRetention(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		days := GetAuditRetentionDays(db)
+		jsonResp(w, map[string]interface{}{
+			"retention_days": days,
+		})
+		return
+	}
+
+	if r.Method == "PUT" {
+		var req struct {
+			RetentionDays int `json:"retention_days"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			jsonErr(w, err.Error(), 400)
+			return
+		}
+
+		if req.RetentionDays < 30 || req.RetentionDays > 3650 {
+			jsonErr(w, "Retention days must be between 30 and 3650 (10 years)", 400)
+			return
+		}
+
+		if err := SetAuditRetentionDays(db, req.RetentionDays); err != nil {
+			jsonErr(w, err.Error(), 500)
+			return
+		}
+
+		LogSimpleAudit(db, r, AuditActionUpdate, "settings", "audit_retention", 
+			fmt.Sprintf("Updated audit retention to %d days", req.RetentionDays))
+
+		jsonResp(w, map[string]interface{}{
+			"success":        true,
+			"retention_days": req.RetentionDays,
+		})
+		return
+	}
+
+	if r.Method == "POST" && r.URL.Path == "/api/audit/cleanup" {
+		days := GetAuditRetentionDays(db)
+		deleted, err := CleanupOldAuditLogs(db, days)
+		if err != nil {
+			jsonErr(w, err.Error(), 500)
+			return
+		}
+
+		LogSimpleAudit(db, r, "cleanup", "audit_log", "retention", 
+			fmt.Sprintf("Cleaned up %d old audit logs (retention: %d days)", deleted, days))
+
+		jsonResp(w, map[string]interface{}{
+			"success": true,
+			"deleted": deleted,
+			"message": fmt.Sprintf("Deleted %d audit log entries older than %d days", deleted, days),
+		})
+		return
+	}
+
+	http.Error(w, "Method not allowed", 405)
 }
 
 func handleDashboardCharts(w http.ResponseWriter, r *http.Request) {
@@ -212,4 +383,47 @@ func handleLowStockAlerts(w http.ResponseWriter, r *http.Request) {
 		items = []LowStockItem{}
 	}
 	jsonResp(w, items)
+}
+
+// Stub functions for audit enhancements
+func LogDataExport(db *sql.DB, r *http.Request, module, format string, recordCount int) {
+	// Log data export action
+	username := getUsername(r)
+	summary := fmt.Sprintf("Exported %d records from %s as %s", recordCount, module, format)
+	logAudit(db, username, "export", module, "", summary)
+}
+
+func GetAuditRetentionDays(db *sql.DB) int {
+	// Default retention: 365 days
+	var days int
+	err := db.QueryRow("SELECT COALESCE((SELECT value FROM settings WHERE key = 'audit_retention_days'), '365')").Scan(&days)
+	if err != nil {
+		return 365
+	}
+	return days
+}
+
+func SetAuditRetentionDays(db *sql.DB, days int) error {
+	_, err := db.Exec("INSERT OR REPLACE INTO settings (key, value) VALUES ('audit_retention_days', ?)", days)
+	return err
+}
+
+func LogSimpleAudit(db *sql.DB, r *http.Request, action, module, recordID, summary string) {
+	username := getUsername(r)
+	logAudit(db, username, action, module, recordID, summary)
+}
+
+func CleanupOldAuditLogs(db *sql.DB, retentionDays int) (int64, error) {
+	cutoffDate := time.Now().AddDate(0, 0, -retentionDays)
+	result, err := db.Exec("DELETE FROM audit_log WHERE created_at < ?", cutoffDate)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
+}
+
+func LogSensitiveDataAccess(db *sql.DB, r *http.Request, dataType, recordID, details string) {
+	username := getUsername(r)
+	summary := fmt.Sprintf("Accessed sensitive data: %s (%s) - %s", dataType, recordID, details)
+	logAudit(db, username, "access", dataType, recordID, summary)
 }

@@ -556,13 +556,22 @@ export interface CalendarEvent {
 
 export interface AuditLogEntry {
   id: string;
-  timestamp: string;
-  user: string;
+  user_id?: number;
+  user?: string;
+  username?: string;
+  timestamp?: string;
+  created_at?: string;
   action: string;
-  entity_type: string;
-  entity_id: string;
-  details: string;
+  entity_type?: string;
+  module?: string;
+  entity_id?: string;
+  record_id?: string;
+  details?: string;
+  summary?: string;
+  before_value?: string;
+  after_value?: string;
   ip_address?: string;
+  user_agent?: string;
 }
 
 export interface User {
@@ -702,6 +711,42 @@ class ApiClient {
   // Global search
   async globalSearch(query: string): Promise<any> {
     return this.request(`/search?q=${encodeURIComponent(query)}`);
+  }
+
+  // Advanced search
+  async advancedSearch(query: any): Promise<any> {
+    return this.request('/search/advanced', {
+      method: 'POST',
+      body: JSON.stringify(query),
+    });
+  }
+
+  async getQuickFilters(entityType: string): Promise<any[]> {
+    return this.request(`/search/quick-filters?entity_type=${entityType}`);
+  }
+
+  async getSearchHistory(entityType: string, limit: number = 10): Promise<any[]> {
+    return this.request(`/search/history?entity_type=${entityType}&limit=${limit}`);
+  }
+
+  async getSavedSearches(entityType?: string): Promise<any[]> {
+    const url = entityType 
+      ? `/saved-searches?entity_type=${entityType}` 
+      : '/saved-searches';
+    return this.request(url);
+  }
+
+  async saveSavedSearch(data: any): Promise<any> {
+    return this.request('/saved-searches', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteSavedSearch(id: string): Promise<any> {
+    return this.request(`/saved-searches?id=${id}`, {
+      method: 'DELETE',
+    });
   }
 
   // Parts

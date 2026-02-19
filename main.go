@@ -160,6 +160,12 @@ func main() {
 			if r.Method == "GET" {
 				handleAuditLog(w, r)
 			}
+		case parts[0] == "audit" && len(parts) == 2 && parts[1] == "export" && r.Method == "GET":
+			handleAuditExport(w, r)
+		case parts[0] == "audit" && len(parts) == 2 && parts[1] == "retention" && (r.Method == "GET" || r.Method == "PUT"):
+			handleAuditRetention(w, r)
+		case parts[0] == "audit" && len(parts) == 2 && parts[1] == "cleanup" && r.Method == "POST":
+			handleAuditRetention(w, r)
 
 		// Parts
 		case parts[0] == "parts" && len(parts) == 2 && parts[1] == "export" && r.Method == "GET":

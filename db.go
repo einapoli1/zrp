@@ -263,6 +263,10 @@ func runMigrations() error {
 			module TEXT NOT NULL,
 			record_id TEXT NOT NULL,
 			summary TEXT,
+			before_value TEXT,
+			after_value TEXT,
+			ip_address TEXT,
+			user_agent TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS api_keys (
@@ -635,6 +639,8 @@ func runMigrations() error {
 		"CREATE INDEX IF NOT EXISTS idx_audit_log_module ON audit_log(module)",
 		"CREATE INDEX IF NOT EXISTS idx_audit_log_record_id ON audit_log(record_id)",
 		"CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_audit_log_action ON audit_log(action)",
+		"CREATE INDEX IF NOT EXISTS idx_audit_log_ip_address ON audit_log(ip_address)",
 		"CREATE INDEX IF NOT EXISTS idx_attachments_module_record ON attachments(module, record_id)",
 		"CREATE INDEX IF NOT EXISTS idx_notifications_read_at ON notifications(read_at)",
 		"CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at)",
@@ -707,6 +713,23 @@ func runMigrations() error {
 			// Ignore "duplicate column" errors - column already exists
 			if !strings.Contains(err.Error(), "duplicate column") {
 				log.Printf("Quality migration warning: %v\nSQL: %s", err, migration)
+			}
+		}
+	}
+
+	// Enhanced audit logging migrations
+	auditMigrations := []string{
+		`ALTER TABLE audit_log ADD COLUMN before_value TEXT`,
+		`ALTER TABLE audit_log ADD COLUMN after_value TEXT`,
+		`ALTER TABLE audit_log ADD COLUMN ip_address TEXT`,
+		`ALTER TABLE audit_log ADD COLUMN user_agent TEXT`,
+	}
+	
+	for _, migration := range auditMigrations {
+		if _, err := db.Exec(migration); err != nil {
+			// Ignore "duplicate column" errors - column already exists
+			if !strings.Contains(err.Error(), "duplicate column") {
+				log.Printf("Audit migration warning: %v\nSQL: %s", err, migration)
 			}
 		}
 	}
