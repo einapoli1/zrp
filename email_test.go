@@ -96,7 +96,7 @@ func TestEmailOnECOApproved_WithLog(t *testing.T) {
 	defer restore()
 	enableEmailConfig(t)
 
-	db.Exec("INSERT INTO ecos (id, title, description, status, priority, created_by, created_at, updated_at) VALUES ('ECO-001', 'Test ECO', 'desc', 'approved', 'medium', 'admin', '2024-01-01', '2024-01-01')")
+	db.Exec("INSERT INTO ecos (id, title, description, status, priority, created_by, created_at, updated_at) VALUES ('ECO-001', 'Test ECO', 'desc', 'approved', 'normal', 'admin', '2024-01-01', '2024-01-01')")
 	db.Exec("UPDATE users SET email='admin@test.com' WHERE username='admin'")
 
 	emailOnECOApproved("ECO-001")
@@ -115,7 +115,7 @@ func TestEmailOnECOApproved_UnsubscribedUser(t *testing.T) {
 	defer restore()
 	enableEmailConfig(t)
 
-	db.Exec("INSERT INTO ecos (id, title, description, status, priority, created_by, created_at, updated_at) VALUES ('ECO-002', 'Test ECO', 'desc', 'approved', 'medium', 'admin', '2024-01-01', '2024-01-01')")
+	db.Exec("INSERT INTO ecos (id, title, description, status, priority, created_by, created_at, updated_at) VALUES ('ECO-002', 'Test ECO', 'desc', 'approved', 'normal', 'admin', '2024-01-01', '2024-01-01')")
 	db.Exec("UPDATE users SET email='admin@test.com' WHERE username='admin'")
 	db.Exec("INSERT INTO email_subscriptions (user_id, event_type, enabled) VALUES ('admin', 'eco_approved', 0)")
 

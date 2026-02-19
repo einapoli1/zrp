@@ -5,6 +5,10 @@ All notable changes to ZRP are documented here. Format follows [Keep a Changelog
 ## [Unreleased] - 2026-02-19
 
 ### Fixed
+- **Email notification test** — `TestEmailOnECOApproved_WithLog` now passes
+  - Fixed invalid ECO priority value 'medium' → 'normal' to match CHECK constraint: `priority IN ('low','normal','high','critical')`
+  - Applied same fix to `TestEmailOnECOApproved_UnsubscribedUser`
+  - Test was failing silently due to SQL constraint violation preventing ECO insert
 - **Test database schema sync** — ECO and other handler tests now use production-compatible audit_log schema
   - Fixed audit_log table columns: `username, module, record_id, summary` (was: `user, entity_type, entity_id, details`)
   - Fixed ECO test INSERT statements to include `description` field to prevent NULL scan errors
