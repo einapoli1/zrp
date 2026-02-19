@@ -9,6 +9,7 @@ import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { ArrowLeft, Search, FileWarning, Wrench } from "lucide-react";
 import { api, type FieldReport } from "../lib/api";
+import { toast } from "sonner";
 
 function FieldReportDetail() {
   const { id } = useParams<{ id: string }>();
@@ -20,31 +21,58 @@ function FieldReportDetail() {
 
   useEffect(() => {
     if (!id) return;
-    api.getFieldReport(id).then((data) => {
-      setReport(data);
-      setEditData(data);
-    }).catch(() => navigate("/field-reports")).finally(() => setLoading(false));
-  }, [id]);
+    const fetchReport = async () => {
+      try {
+        const data = await api.getFieldReport(id);
+        setReport(data);
+        setEditData(data);
+      } catch (error) {
+        toast.error("Failed to load field report");
+        console.error("Failed to load field report:", error);
+        navigate("/field-reports");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReport();
+  }, [id, navigate]);
 
   const handleSave = async () => {
     if (!id) return;
-    const updated = await api.updateFieldReport(id, editData);
-    setReport(updated);
-    setEditing(false);
+    try {
+      const updated = await api.updateFieldReport(id, editData);
+      setReport(updated);
+      setEditing(false);
+      toast.success("Field report updated successfully");
+    } catch (error) {
+      toast.error("Failed to update field report");
+      console.error("Failed to update field report:", error);
+    }
   };
 
   const handleStatusChange = async (newStatus: string) => {
     if (!id) return;
-    const updated = await api.updateFieldReport(id, { status: newStatus });
-    setReport(updated);
+    try {
+      const updated = await api.updateFieldReport(id, { status: newStatus });
+      setReport(updated);
+      toast.success(`Status updated to ${newStatus}`);
+    } catch (error) {
+      toast.error("Failed to update status");
+      console.error("Failed to update status:", error);
+    }
   };
 
   const handleCreateNCR = async () => {
     if (!id) return;
-    const ncr = await api.createNCRFromFieldReport(id);
-    const updated = await api.getFieldReport(id);
-    setReport(updated);
-    alert(`NCR ${ncr.id} created`);
+    try {
+      const ncr = await api.createNCRFromFieldReport(id);
+      const updated = await api.getFieldReport(id);
+      setReport(updated);
+      toast.success(`NCR ${ncr.id} created successfully`);
+    } catch (error) {
+      toast.error("Failed to create NCR");
+      console.error("Failed to create NCR:", error);
+    }
   };
 
   if (loading) {
