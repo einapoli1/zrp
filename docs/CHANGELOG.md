@@ -2,6 +2,27 @@
 
 All notable changes to ZRP are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [0.4.0] - 2026-02-18
+
+### Added
+- **Real Digikey API v4 integration** — OAuth2 client credentials flow, keyword search via POST /products/v4/search/keyword
+- **Real Mouser API v2 integration** — Part number search via POST /api/v2/search/partnumber
+- Separate `digikey.go` and `mouser.go` files with interface-based HTTP clients
+- Distributor settings now use Digikey client_id + client_secret (OAuth2) instead of API key
+- "Not configured" message on Market Pricing section when no API keys are set, with link to settings
+- `not_configured` field in market pricing API response
+- `hasDistributorKeys()` helper function
+- API error details returned per-distributor in `errors` response field
+- Helper text with links to developer portals on Distributor Settings page
+
+### Changed
+- Removed mock/demo distributor clients — no fallback to fake data when keys are missing
+- Digikey settings: replaced `api_key` field with `client_secret` for OAuth2 flow
+- Market pricing handler returns structured error info per distributor
+
+### Fixed
+- Market pricing no longer returns fake data when API keys are not configured
+
 ## [0.3.3] - 2026-02-18
 
 ### Added

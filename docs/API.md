@@ -1888,9 +1888,13 @@ Returns:
     "datasheet_url": "https://www.digikey.com/datasheet/STM32F401.pdf",
     "fetched_at": "2026-01-01T00:00:00Z"
   }],
-  "cached": false
+  "cached": false,
+  "not_configured": false,
+  "errors": []
 }
 ```
+
+When no distributor API keys are configured, the response includes `"not_configured": true` with a message directing the user to settings. No mock/demo data is returned.
 
 ### Update Digikey Settings
 `POST /api/v1/settings/digikey`
