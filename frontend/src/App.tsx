@@ -1,5 +1,6 @@
 import React, { Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { Toaster } from "sonner";
 import { AppLayout } from "./layouts/AppLayout";
 import { LoadingSpinner } from "./components/LoadingSpinner";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
@@ -47,6 +48,7 @@ const EmailLog = React.lazy(() => import("./pages/EmailLog"));
 const GitPLMSettings = React.lazy(() => import("./pages/GitPLMSettings"));
 const Login = React.lazy(() => import("./pages/Login"));
 const Backups = React.lazy(() => import("./pages/Backups"));
+const UndoHistory = React.lazy(() => import("./pages/UndoHistory"));
 const Scan = React.lazy(() => import("./pages/Scan"));
 
 // Placeholder components for other pages
@@ -71,6 +73,7 @@ const PlaceholderPage = ({ title }: { title: string }) => (
 function App() {
   return (
     <Router>
+      <Toaster position="bottom-right" richColors closeButton />
       <WebSocketProvider>
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
@@ -134,6 +137,7 @@ function App() {
             <Route path="/email-log" element={<EmailLog />} />
             <Route path="/gitplm-settings" element={<GitPLMSettings />} />
             <Route path="/backups" element={<Backups />} />
+            <Route path="/undo-history" element={<UndoHistory />} />
             <Route path="/scan" element={<Scan />} />
             <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
           </Route>

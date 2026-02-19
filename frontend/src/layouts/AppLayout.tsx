@@ -21,6 +21,7 @@ import {
   User,
   Bell,
   ScanLine,
+  RotateCcw,
 } from "lucide-react";
 
 import { Button } from "../components/ui/button";
@@ -245,6 +246,10 @@ export function AppLayout() {
                   <DropdownMenuItem>
                     <Cog className="mr-2 h-4 w-4" />
                     <span>Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate("/undo-history")}>
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    <span>Undo History</span>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>

@@ -1243,7 +1243,7 @@ Returns recent email log entries (up to 100), newest first.
 ```json
 {
   "data": [
-    { "id": 1, "to_address": "user@example.com", "subject": "ZRP Test Email", "body": "...", "status": "sent", "error": "", "sent_at": "2026-02-17 22:00:00" }
+    { "id": 1, "to_address": "user@example.com", "subject": "ZRP Test Email", "body": "...", "event_type": "eco_approved", "status": "sent", "error": "", "sent_at": "2026-02-17 22:00:00" }
   ]
 }
 ```
@@ -1260,13 +1260,59 @@ The following aliases are also available for the email configuration endpoints:
 - `PUT /api/v1/settings/email` → same as `PUT /api/v1/email/config`
 - `POST /api/v1/settings/email/test` → same as `POST /api/v1/email/test`
 
+### GET /api/v1/email/subscriptions
+
+Get current user's email notification subscriptions. Returns a map of event_type → enabled (boolean). All default to `true`.
+
+**Response:**
+
+```json
+{
+  "data": {
+    "eco_approved": true,
+    "eco_implemented": true,
+    "low_stock": true,
+    "overdue_work_order": true,
+    "po_received": true,
+    "ncr_created": true
+  }
+}
+```
+
+```bash
+curl http://localhost:9000/api/v1/email/subscriptions -b cookies.txt
+```
+
+### PUT /api/v1/email/subscriptions
+
+Update current user's email notification subscriptions. Send a partial or full map of event_type → enabled.
+
+**Request body:**
+
+```json
+{
+  "eco_approved": false,
+  "ncr_created": true
+}
+```
+
+```bash
+curl -X PUT http://localhost:9000/api/v1/email/subscriptions \
+  -H 'Content-Type: application/json' \
+  -d '{"eco_approved": false}' \
+  -b cookies.txt
+```
+
 ### Email Triggers
 
-When email is enabled, ZRP automatically sends emails on these events:
+When email is enabled, ZRP automatically sends emails on these events. Users can opt in/out per event type via subscriptions.
 
-- **ECO Approved** → Emails the ECO creator (or admin) when an ECO status changes to "approved"
-- **Low Stock** → Emails admin when an inventory item drops below its reorder point after a transaction
-- **Overdue Work Order** → Emails admin when a work order is updated and its due date has passed (status ≠ closed/completed)
+- **ECO Approved** (`eco_approved`) → Emails the ECO creator when approved
+- **ECO Implemented** (`eco_implemented`) → Emails admin when an ECO is implemented
+- **Low Stock** (`low_stock`) → Emails admin when inventory drops below reorder point
+- **Overdue Work Order** (`overdue_work_order`) → Emails admin when a WO is past due
+- **PO Received** (`po_received`) → Emails the PO creator when a PO is received
+- **NCR Created** (`ncr_created`) → Emails admin/quality team when a new NCR is created
 
 ---
 

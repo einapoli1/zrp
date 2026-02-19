@@ -312,6 +312,57 @@ export interface CampaignDevice {
   updated_at?: string;
 }
 
+// RFQ types
+export interface RFQ {
+  id: string;
+  title: string;
+  status: string;
+  created_by: string;
+  created_at: string;
+  updated_at: string;
+  due_date: string;
+  notes: string;
+  lines?: RFQLine[];
+  vendors?: RFQVendor[];
+  quotes?: RFQQuote[];
+}
+
+export interface RFQLine {
+  id: number;
+  rfq_id: string;
+  ipn: string;
+  description: string;
+  qty: number;
+  unit: string;
+}
+
+export interface RFQVendor {
+  id: number;
+  rfq_id: string;
+  vendor_id: string;
+  vendor_name?: string;
+  status: string;
+  quoted_at: string;
+  notes: string;
+}
+
+export interface RFQQuote {
+  id: number;
+  rfq_id: string;
+  rfq_vendor_id: number;
+  rfq_line_id: number;
+  unit_price: number;
+  lead_time_days: number;
+  moq: number;
+  notes: string;
+}
+
+export interface RFQCompare {
+  lines: RFQLine[];
+  vendors: RFQVendor[];
+  matrix: Record<number, Record<number, { unit_price: number; lead_time_days: number; moq: number; notes: string }>>;
+}
+
 export interface Quote {
   id: string;
   customer: string;
@@ -1208,6 +1259,60 @@ class ApiClient {
       const body = await response.json().catch(() => ({ error: 'Failed to change password' }));
       throw new Error(body.error || 'Failed to change password');
     }
+  }
+}
+
+  // RFQs
+  async getRFQs(): Promise<RFQ[]> {
+    return this.request('/rfqs');
+  }
+
+  async getRFQ(id: string): Promise<RFQ> {
+    return this.request(`/rfqs/${id}`);
+  }
+
+  async createRFQ(rfq: Partial<RFQ>): Promise<RFQ> {
+    return this.request('/rfqs', {
+      method: 'POST',
+      body: JSON.stringify(rfq),
+    });
+  }
+
+  async updateRFQ(id: string, rfq: Partial<RFQ>): Promise<RFQ> {
+    return this.request(`/rfqs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(rfq),
+    });
+  }
+
+  async deleteRFQ(id: string): Promise<void> {
+    return this.request(`/rfqs/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async sendRFQ(id: string): Promise<RFQ> {
+    return this.request(`/rfqs/${id}/send`, {
+      method: 'POST',
+    });
+  }
+
+  async awardRFQ(id: string, vendorId: string): Promise<{ status: string; po_id: string }> {
+    return this.request(`/rfqs/${id}/award`, {
+      method: 'POST',
+      body: JSON.stringify({ vendor_id: vendorId }),
+    });
+  }
+
+  async compareRFQ(id: string): Promise<RFQCompare> {
+    return this.request(`/rfqs/${id}/compare`);
+  }
+
+  async createRFQQuote(rfqId: string, quote: Partial<RFQQuote>): Promise<RFQQuote> {
+    return this.request(`/rfqs/${rfqId}/quotes`, {
+      method: 'POST',
+      body: JSON.stringify(quote),
+    });
   }
 }
 

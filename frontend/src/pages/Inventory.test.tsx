@@ -7,6 +7,7 @@ const mockGetInventory = vi.fn();
 const mockGetParts = vi.fn();
 const mockCreateInventoryTransaction = vi.fn();
 const mockBulkDeleteInventory = vi.fn();
+const mockBulkUpdateInventory = vi.fn();
 
 vi.mock("../lib/api", () => ({
   api: {
@@ -14,6 +15,7 @@ vi.mock("../lib/api", () => ({
     getParts: (...args: any[]) => mockGetParts(...args),
     createInventoryTransaction: (...args: any[]) => mockCreateInventoryTransaction(...args),
     bulkDeleteInventory: (...args: any[]) => mockBulkDeleteInventory(...args),
+    bulkUpdateInventory: (...args: any[]) => mockBulkUpdateInventory(...args),
   },
 }));
 
@@ -25,6 +27,7 @@ beforeEach(() => {
   mockGetParts.mockResolvedValue(mockParts);
   mockCreateInventoryTransaction.mockResolvedValue(undefined);
   mockBulkDeleteInventory.mockResolvedValue(undefined);
+  mockBulkUpdateInventory.mockResolvedValue({ success: 3, failed: 0, errors: [] });
 });
 
 const waitForLoad = () => waitFor(() => expect(screen.getByText("IPN-001")).toBeInTheDocument());
@@ -407,6 +410,34 @@ describe("Inventory", () => {
           reference: "PO-100",
         })
       );
+    });
+  });
+
+  it("shows Bulk Edit button when items are selected", async () => {
+    render(<Inventory />);
+    await waitForLoad();
+
+    // Select all
+    const checkboxes = screen.getAllByRole("checkbox");
+    fireEvent.click(checkboxes[1]); // table header select-all
+
+    await waitFor(() => {
+      expect(screen.getByText("Bulk Edit")).toBeInTheDocument();
+    });
+  });
+
+  it("opens bulk edit dialog when Bulk Edit is clicked", async () => {
+    render(<Inventory />);
+    await waitForLoad();
+
+    const checkboxes = screen.getAllByRole("checkbox");
+    fireEvent.click(checkboxes[1]);
+
+    await waitFor(() => expect(screen.getByText("Bulk Edit")).toBeInTheDocument());
+    fireEvent.click(screen.getByText("Bulk Edit"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Bulk Edit Inventory")).toBeInTheDocument();
     });
   });
 

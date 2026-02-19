@@ -463,7 +463,7 @@ describe("PartDetail - BOM (assembly IPN)", () => {
       await waitForLoad();
       const link = screen.getByText("Edit in gitplm");
       expect(link).toBeInTheDocument();
-      expect(link.closest("a")).toHaveAttribute("href", "https://plm.acme.com/parts/IPN-003");
+      expect(link.closest("a")).toHaveAttribute("href", "https://plm.acme.com/parts/PCA-100");
       expect(link.closest("a")).toHaveAttribute("target", "_blank");
     });
   });

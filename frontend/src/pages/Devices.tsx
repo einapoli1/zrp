@@ -493,6 +493,14 @@ function Devices() {
           </CardContent>
         </Card>
       </div>
+      <BulkEditDialog
+        open={bulkEditOpen}
+        onOpenChange={setBulkEditOpen}
+        fields={deviceBulkEditFields}
+        selectedCount={selectedItems.size}
+        onSubmit={handleBulkUpdate}
+        title="Bulk Edit Devices"
+      />
     </div>
   );
 }
