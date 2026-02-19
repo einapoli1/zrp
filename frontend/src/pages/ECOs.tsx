@@ -35,7 +35,7 @@ import { Skeleton } from "../components/ui/skeleton";
 import { FileText, Plus, Calendar, User } from "lucide-react";
 import { api, type ECO } from "../lib/api";
 import { useForm } from "react-hook-form";
-
+import { toast } from "sonner";
 interface CreateECOData {
   title: string;
   description: string;
@@ -79,7 +79,7 @@ function ECOs() {
       const data = await api.getECOs(statusFilter);
       setECOs(data);
     } catch (error) {
-      console.error('Failed to fetch ECOs:', error);
+      toast.error("Failed to fetch ECOs"); console.error('Failed to fetch ECOs:', error);
       setECOs([]);
     } finally {
       setLoading(false);
@@ -109,7 +109,7 @@ function ECOs() {
       // Navigate to the new ECO detail page
       navigate(`/ecos/${newECO.id}`);
     } catch (error) {
-      console.error('Failed to create ECO:', error);
+      toast.error("Failed to create ECO"); console.error('Failed to create ECO:', error);
     } finally {
       setCreating(false);
     }

@@ -13,7 +13,7 @@ import { Smartphone, Plus, Upload, Download, Pencil } from "lucide-react";
 import { Checkbox } from "../components/ui/checkbox";
 import { api, type Device } from "../lib/api";
 import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog";
-
+import { toast } from "sonner";
 function Devices() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -45,7 +45,7 @@ function Devices() {
       const data = await api.getDevices();
       setDevices(data);
     } catch (error) {
-      console.error("Failed to create device:", error);
+      toast.error("Failed to create device"); console.error("Failed to create device:", error);
     } finally {
       setCreating(false);
     }
@@ -57,7 +57,7 @@ function Devices() {
         const data = await api.getDevices();
         setDevices(data);
       } catch (error) {
-        console.error("Failed to fetch devices:", error);
+        toast.error("Failed to fetch devices"); console.error("Failed to fetch devices:", error);
       } finally {
         setLoading(false);
       }
@@ -78,7 +78,7 @@ function Devices() {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Failed to export devices:", error);
+      toast.error("Failed to export devices"); console.error("Failed to export devices:", error);
     }
   };
 
@@ -95,7 +95,7 @@ function Devices() {
         setDevices(data);
       }
     } catch (error) {
-      console.error("Failed to import devices:", error);
+      toast.error("Failed to import devices"); console.error("Failed to import devices:", error);
       setImportResult({ success: 0, errors: ["Import failed: " + (error as Error).message] });
     }
   };

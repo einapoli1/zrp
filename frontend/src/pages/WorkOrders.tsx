@@ -36,7 +36,7 @@ import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTab
 import { Checkbox } from "../components/ui/checkbox";
 import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog";
 import { Pencil, Trash2 } from "lucide-react";
-
+import { toast } from "sonner";
 function WorkOrders() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
@@ -64,7 +64,7 @@ function WorkOrders() {
       const data = await api.getWorkOrders();
       setWorkOrders(data);
     } catch (error) {
-      console.error("Failed to fetch work orders:", error);
+      toast.error("Failed to fetch work orders"); console.error("Failed to fetch work orders:", error);
     } finally {
       setLoading(false);
     }
@@ -77,7 +77,7 @@ function WorkOrders() {
       const partsArray = Array.isArray(data) ? data : [];
       setParts(partsArray);
     } catch (error) {
-      console.error("Failed to fetch parts:", error);
+      toast.error("Failed to fetch parts"); console.error("Failed to fetch parts:", error);
     }
   };
 
@@ -88,7 +88,7 @@ function WorkOrders() {
       resetForm();
       fetchWorkOrders();
     } catch (error) {
-      console.error("Failed to create work order:", error);
+      toast.error("Failed to create work order"); console.error("Failed to create work order:", error);
     }
   };
 
@@ -230,7 +230,7 @@ function WorkOrders() {
       setSelectedItems(new Set());
       fetchWorkOrders();
     } catch (error) {
-      console.error("Failed to delete work orders:", error);
+      toast.error("Failed to delete work orders"); console.error("Failed to delete work orders:", error);
     }
   };
 

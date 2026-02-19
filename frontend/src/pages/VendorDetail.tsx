@@ -24,7 +24,7 @@ import {
   TableRow 
 } from "../components/ui/table";
 import { api, type Vendor, type PurchaseOrder } from "../lib/api";
-
+import { toast } from "sonner";
 interface PriceCatalogItem {
   ipn: string;
   mpn: string;
@@ -56,7 +56,7 @@ function VendorDetail() {
       const data = await api.getVendor(id);
       setVendor(data);
     } catch (error) {
-      console.error("Failed to fetch vendor:", error);
+      toast.error("Failed to fetch vendor"); console.error("Failed to fetch vendor:", error);
     } finally {
       setLoading(false);
     }
@@ -71,7 +71,7 @@ function VendorDetail() {
       const vendorPOs = allPOs.filter(po => po.vendor_id === id);
       setPurchaseOrders(vendorPOs);
     } catch (error) {
-      console.error("Failed to fetch purchase orders:", error);
+      toast.error("Failed to fetch purchase orders"); console.error("Failed to fetch purchase orders:", error);
     }
   };
 
@@ -99,7 +99,7 @@ function VendorDetail() {
       ];
       setPriceCatalog(mockCatalog);
     } catch (error) {
-      console.error("Failed to fetch price catalog:", error);
+      toast.error("Failed to fetch price catalog"); console.error("Failed to fetch price catalog:", error);
     }
   };
 

@@ -8,7 +8,7 @@ import { Label } from "../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { 
-  Key, 
+import { toast } from "sonner";  Key, 
   Plus, 
   Copy, 
   Trash2, 
@@ -74,7 +74,7 @@ function APIKeys() {
         const data = await api.getAPIKeys();
         setApiKeys(data);
       } catch (error) {
-        console.error("Failed to fetch API keys:", error);
+        toast.error("Failed to fetch API keys"); console.error("Failed to fetch API keys:", error);
       } finally {
         setLoading(false);
       }
@@ -92,7 +92,7 @@ function APIKeys() {
       setCreateDialogOpen(false);
       setCreateForm({ name: '' });
     } catch (error) {
-      console.error("Failed to create API key:", error);
+      toast.error("Failed to create API key"); console.error("Failed to create API key:", error);
     }
   };
 
@@ -110,7 +110,7 @@ function APIKeys() {
       setRevokeDialogOpen(false);
       setKeyToRevoke(null);
     } catch (error) {
-      console.error("Failed to revoke API key:", error);
+      toast.error("Failed to revoke API key"); console.error("Failed to revoke API key:", error);
     }
   };
 
@@ -120,7 +120,7 @@ function APIKeys() {
       setCopiedKey(keyId);
       setTimeout(() => setCopiedKey(null), 2000);
     } catch (error) {
-      console.error("Failed to copy to clipboard:", error);
+      toast.error("Failed to copy to clipboard"); console.error("Failed to copy to clipboard:", error);
     }
   };
 

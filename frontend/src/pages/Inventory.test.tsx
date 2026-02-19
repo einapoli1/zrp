@@ -215,9 +215,6 @@ describe("Inventory", () => {
   });
 
   it("bulk delete with confirm dialog calls API", async () => {
-    // Mock window.confirm
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
-
     render(<Inventory />);
     await waitForLoad();
 
@@ -229,17 +226,21 @@ describe("Inventory", () => {
 
     fireEvent.click(screen.getByText("Delete Selected"));
 
+    // ConfirmDialog should appear
     await waitFor(() => {
-      expect(confirmSpy).toHaveBeenCalledWith("Delete 3 inventory items?");
-      expect(mockBulkDeleteInventory).toHaveBeenCalledWith(["IPN-001", "IPN-002", "IPN-003"]);
+      expect(screen.getByText("Delete Inventory Items")).toBeInTheDocument();
     });
 
-    confirmSpy.mockRestore();
+    // Click the Delete button in the confirm dialog
+    const deleteBtn = screen.getByRole("button", { name: "Delete" });
+    fireEvent.click(deleteBtn);
+
+    await waitFor(() => {
+      expect(mockBulkDeleteInventory).toHaveBeenCalledWith(["IPN-001", "IPN-002", "IPN-003"]);
+    });
   });
 
   it("bulk delete cancelled when confirm is dismissed", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
-
     render(<Inventory />);
     await waitForLoad();
 
@@ -249,10 +250,15 @@ describe("Inventory", () => {
 
     fireEvent.click(screen.getByText("Delete Selected"));
 
-    expect(confirmSpy).toHaveBeenCalled();
-    expect(mockBulkDeleteInventory).not.toHaveBeenCalled();
+    // ConfirmDialog should appear
+    await waitFor(() => {
+      expect(screen.getByText("Delete Inventory Items")).toBeInTheDocument();
+    });
 
-    confirmSpy.mockRestore();
+    // Click Cancel
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(mockBulkDeleteInventory).not.toHaveBeenCalled();
   });
 
   it("quick receive autocomplete dropdown filters by typed IPN", async () => {
@@ -345,12 +351,12 @@ describe("Inventory", () => {
     expect(screen.getByLabelText("IPN")).toHaveValue("IPN-001");
   });
 
-  it("highlights low stock items with bg-red-50 class", async () => {
+  it("highlights low stock items with bg-destructive/5 class", async () => {
     // IPN-002: qty_on_hand=20, reorder_point=50 → low stock
     render(<Inventory />);
     await waitForLoad();
     const ipn002Row = screen.getByText("IPN-002").closest("tr");
-    expect(ipn002Row).toHaveClass("bg-red-50");
+    expect(ipn002Row).toHaveClass("bg-destructive/5");
   });
 
   it("does not highlight items above reorder point", async () => {
@@ -358,7 +364,7 @@ describe("Inventory", () => {
     render(<Inventory />);
     await waitForLoad();
     const ipn001Row = screen.getByText("IPN-001").closest("tr");
-    expect(ipn001Row).not.toHaveClass("bg-red-50");
+    expect(ipn001Row).not.toHaveClass("bg-destructive/5");
   });
 
   it("quick receive autocomplete shows matching parts", async () => {

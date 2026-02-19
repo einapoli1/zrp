@@ -39,7 +39,7 @@ import {
 } from "../components/ui/select";
 // Tabs removed - not used in this component
 import { api, type WorkOrder, type Vendor } from "../lib/api";
-
+import { toast } from "sonner";
 interface BOMItem {
   ipn: string;
   description: string;
@@ -82,7 +82,7 @@ function WorkOrderDetail() {
       const data = await api.getWorkOrder(id);
       setWorkOrder(data);
     } catch (error) {
-      console.error("Failed to fetch work order:", error);
+      toast.error("Failed to fetch work order"); console.error("Failed to fetch work order:", error);
     } finally {
       setLoading(false);
     }
@@ -95,7 +95,7 @@ function WorkOrderDetail() {
       const data = await api.getWorkOrderBOM(id);
       setBomData(data);
     } catch (error) {
-      console.error("Failed to fetch BOM data:", error);
+      toast.error("Failed to fetch BOM data"); console.error("Failed to fetch BOM data:", error);
     }
   };
 
@@ -104,7 +104,7 @@ function WorkOrderDetail() {
       const data = await api.getVendors();
       setVendors(data.filter(v => v.status === 'active'));
     } catch (error) {
-      console.error("Failed to fetch vendors:", error);
+      toast.error("Failed to fetch vendors"); console.error("Failed to fetch vendors:", error);
     }
   };
 
@@ -117,7 +117,7 @@ function WorkOrderDetail() {
       setNewStatus("");
       fetchWorkOrderDetail();
     } catch (error) {
-      console.error("Failed to update status:", error);
+      toast.error("Failed to update status"); console.error("Failed to update status:", error);
     }
   };
 
@@ -131,7 +131,7 @@ function WorkOrderDetail() {
       // Navigate to the created PO or show success message
       console.log(`Generated PO ${result.po_id} with ${result.lines} line items`);
     } catch (error) {
-      console.error("Failed to generate PO:", error);
+      toast.error("Failed to generate PO"); console.error("Failed to generate PO:", error);
     }
   };
 

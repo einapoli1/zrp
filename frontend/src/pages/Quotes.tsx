@@ -10,7 +10,7 @@ import { Label } from "../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { FileText, Plus, Trash2 } from "lucide-react";
 import { api, type Quote, type QuoteLine } from "../lib/api";
-
+import { toast } from "sonner";
 function Quotes() {
   const navigate = useNavigate();
   const [quotes, setQuotes] = useState<Quote[]>([]);
@@ -29,7 +29,7 @@ function Quotes() {
         const data = await api.getQuotes();
         setQuotes(data);
       } catch (error) {
-        console.error("Failed to fetch quotes:", error);
+        toast.error("Failed to fetch quotes"); console.error("Failed to fetch quotes:", error);
       } finally {
         setLoading(false);
       }
@@ -51,7 +51,7 @@ function Quotes() {
       setCreateDialogOpen(false);
       resetForm();
     } catch (error) {
-      console.error("Failed to create quote:", error);
+      toast.error("Failed to create quote"); console.error("Failed to create quote:", error);
     }
   };
 

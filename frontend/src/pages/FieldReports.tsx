@@ -11,7 +11,7 @@ import { Label } from "../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { ClipboardList, Plus } from "lucide-react";
 import { api, type FieldReport } from "../lib/api";
-
+import { toast } from "sonner";
 function FieldReports() {
   const navigate = useNavigate();
   const [reports, setReports] = useState<FieldReport[]>([]);
@@ -42,7 +42,7 @@ function FieldReports() {
       const data = await api.getFieldReports(Object.keys(params).length > 0 ? params : undefined);
       setReports(data);
     } catch (error) {
-      console.error("Failed to fetch field reports:", error);
+      toast.error("Failed to fetch field reports"); console.error("Failed to fetch field reports:", error);
     } finally {
       setLoading(false);
     }
@@ -71,7 +71,7 @@ function FieldReports() {
         eco_id: "",
       });
     } catch (error) {
-      console.error("Failed to create field report:", error);
+      toast.error("Failed to create field report"); console.error("Failed to create field report:", error);
     }
   };
 

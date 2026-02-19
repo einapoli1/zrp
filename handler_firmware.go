@@ -36,6 +36,13 @@ func handleGetCampaign(w http.ResponseWriter, r *http.Request, id string) {
 func handleCreateCampaign(w http.ResponseWriter, r *http.Request) {
 	var f FirmwareCampaign
 	if err := decodeBody(r, &f); err != nil { jsonErr(w, "invalid body", 400); return }
+
+	ve := &ValidationErrors{}
+	requireField(ve, "name", f.Name)
+	requireField(ve, "version", f.Version)
+	if f.Status != "" { validateEnum(ve, "status", f.Status, validCampaignStatuses) }
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	f.ID = nextID("FW", "firmware_campaigns", 3)
 	if f.Status == "" { f.Status = "draft" }
 	if f.Category == "" { f.Category = "public" }

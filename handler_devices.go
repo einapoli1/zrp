@@ -39,6 +39,13 @@ func handleGetDevice(w http.ResponseWriter, r *http.Request, serial string) {
 func handleCreateDevice(w http.ResponseWriter, r *http.Request) {
 	var d Device
 	if err := decodeBody(r, &d); err != nil { jsonErr(w, "invalid body", 400); return }
+
+	ve := &ValidationErrors{}
+	requireField(ve, "serial_number", d.SerialNumber)
+	requireField(ve, "ipn", d.IPN)
+	if d.Status != "" { validateEnum(ve, "status", d.Status, validDeviceStatuses) }
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	if d.Status == "" { d.Status = "active" }
 	now := time.Now().Format("2006-01-02 15:04:05")
 	_, err := db.Exec("INSERT INTO devices (serial_number,ipn,firmware_version,customer,location,status,install_date,notes,created_at) VALUES (?,?,?,?,?,?,?,?,?)",

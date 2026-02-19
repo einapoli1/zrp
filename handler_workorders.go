@@ -46,6 +46,14 @@ func handleCreateWorkOrder(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "invalid body", 400)
 		return
 	}
+
+	ve := &ValidationErrors{}
+	requireField(ve, "assembly_ipn", wo.AssemblyIPN)
+	if wo.Status != "" { validateEnum(ve, "status", wo.Status, validWOStatuses) }
+	if wo.Priority != "" { validateEnum(ve, "priority", wo.Priority, validWOPriorities) }
+	if wo.Qty < 0 { ve.Add("qty", "must be non-negative") }
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	wo.ID = nextID("WO", "work_orders", 4)
 	if wo.Status == "" { wo.Status = "open" }
 	if wo.Priority == "" { wo.Priority = "normal" }

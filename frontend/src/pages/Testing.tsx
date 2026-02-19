@@ -10,7 +10,7 @@ import { Label } from "../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { TestTube, Plus, CheckCircle, XCircle } from "lucide-react";
 import { api, type TestRecord } from "../lib/api";
-
+import { toast } from "sonner";
 function Testing() {
   const [testRecords, setTestRecords] = useState<TestRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,7 +32,7 @@ function Testing() {
         const data = await api.getTestRecords();
         setTestRecords(data);
       } catch (error) {
-        console.error("Failed to fetch test records:", error);
+        toast.error("Failed to fetch test records"); console.error("Failed to fetch test records:", error);
       } finally {
         setLoading(false);
       }
@@ -61,7 +61,7 @@ function Testing() {
         tested_by: "",
       });
     } catch (error) {
-      console.error("Failed to create test record:", error);
+      toast.error("Failed to create test record"); console.error("Failed to create test record:", error);
     }
   };
 

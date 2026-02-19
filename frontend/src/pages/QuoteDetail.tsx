@@ -10,7 +10,7 @@ import { Separator } from "../components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { FileText, ArrowLeft, Save, Download, Plus, Trash2 } from "lucide-react";
 import { api, type Quote, type QuoteLine, type Part } from "../lib/api";
-
+import { toast } from "sonner";
 function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -34,7 +34,7 @@ function QuoteDetail() {
         setFormData(quoteData);
         setParts(partsResponse.data || []);
       } catch (error) {
-        console.error("Failed to fetch quote data:", error);
+        toast.error("Failed to fetch quote data"); console.error("Failed to fetch quote data:", error);
       } finally {
         setLoading(false);
       }
@@ -51,7 +51,7 @@ function QuoteDetail() {
       setQuote(updatedQuote);
       setEditing(false);
     } catch (error) {
-      console.error("Failed to update quote:", error);
+      toast.error("Failed to update quote"); console.error("Failed to update quote:", error);
     }
   };
 
@@ -69,7 +69,7 @@ function QuoteDetail() {
       a.click();
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Failed to export PDF:", error);
+      toast.error("Failed to export PDF"); console.error("Failed to export PDF:", error);
     }
   };
 

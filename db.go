@@ -24,9 +24,13 @@ func initDB(path string) error {
 	if strings.Contains(path, "?") {
 		sep = "&"
 	}
-	db, err = sql.Open("sqlite", path+sep+"_journal_mode=WAL&_busy_timeout=10000")
+	db, err = sql.Open("sqlite", path+sep+"_journal_mode=WAL&_busy_timeout=10000&_foreign_keys=1")
 	if err != nil {
 		return err
+	}
+	// Ensure foreign keys are enforced for every connection
+	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+		return fmt.Errorf("enable foreign keys: %w", err)
 	}
 	return runMigrations()
 }
@@ -34,8 +38,9 @@ func initDB(path string) error {
 func runMigrations() error {
 	shipmentTables := []string{
 		`CREATE TABLE IF NOT EXISTS shipments (
-			id TEXT PRIMARY KEY, type TEXT NOT NULL DEFAULT 'outbound',
-			status TEXT DEFAULT 'draft', tracking_number TEXT DEFAULT '',
+			id TEXT PRIMARY KEY, type TEXT NOT NULL DEFAULT 'outbound' CHECK(type IN ('inbound','outbound','transfer')),
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','packed','shipped','delivered','cancelled')),
+			tracking_number TEXT DEFAULT '',
 			carrier TEXT DEFAULT '', ship_date DATETIME, delivery_date DATETIME,
 			from_address TEXT DEFAULT '', to_address TEXT DEFAULT '',
 			notes TEXT DEFAULT '', created_by TEXT DEFAULT '',
@@ -44,14 +49,14 @@ func runMigrations() error {
 		)`,
 		`CREATE TABLE IF NOT EXISTS shipment_lines (
 			id INTEGER PRIMARY KEY AUTOINCREMENT, shipment_id TEXT NOT NULL,
-			ipn TEXT DEFAULT '', serial_number TEXT DEFAULT '', qty INTEGER DEFAULT 1,
+			ipn TEXT DEFAULT '', serial_number TEXT DEFAULT '', qty INTEGER DEFAULT 1 CHECK(qty > 0),
 			work_order_id TEXT DEFAULT '', rma_id TEXT DEFAULT '',
-			FOREIGN KEY (shipment_id) REFERENCES shipments(id)
+			FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE
 		)`,
 		`CREATE TABLE IF NOT EXISTS pack_lists (
 			id INTEGER PRIMARY KEY AUTOINCREMENT, shipment_id TEXT NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (shipment_id) REFERENCES shipments(id)
+			FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE
 		)`,
 	}
 	for _, t := range shipmentTables {
@@ -61,8 +66,10 @@ func runMigrations() error {
 	}
 
 	fieldReportTable := `CREATE TABLE IF NOT EXISTS field_reports (
-		id TEXT PRIMARY KEY, title TEXT NOT NULL, report_type TEXT DEFAULT 'failure',
-		status TEXT DEFAULT 'open', priority TEXT DEFAULT 'medium',
+		id TEXT PRIMARY KEY, title TEXT NOT NULL,
+		report_type TEXT DEFAULT 'failure' CHECK(report_type IN ('failure','performance','safety','other')),
+		status TEXT DEFAULT 'open' CHECK(status IN ('open','investigating','resolved','closed')),
+		priority TEXT DEFAULT 'medium' CHECK(priority IN ('low','medium','high','critical')),
 		customer_name TEXT DEFAULT '', site_location TEXT DEFAULT '',
 		device_ipn TEXT DEFAULT '', device_serial TEXT DEFAULT '',
 		reported_by TEXT DEFAULT '', reported_at DATETIME,
@@ -79,7 +86,8 @@ func runMigrations() error {
 	tables := []string{
 		`CREATE TABLE IF NOT EXISTS ecos (
 			id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT,
-			status TEXT DEFAULT 'draft', priority TEXT DEFAULT 'normal',
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','review','approved','implemented','rejected','cancelled')),
+			priority TEXT DEFAULT 'normal' CHECK(priority IN ('low','normal','high','critical')),
 			affected_ipns TEXT, created_by TEXT DEFAULT 'engineer',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -87,7 +95,7 @@ func runMigrations() error {
 		)`,
 		`CREATE TABLE IF NOT EXISTS documents (
 			id TEXT PRIMARY KEY, title TEXT NOT NULL, category TEXT, ipn TEXT,
-			revision TEXT DEFAULT 'A', status TEXT DEFAULT 'draft',
+			revision TEXT DEFAULT 'A', status TEXT DEFAULT 'draft' CHECK(status IN ('draft','review','approved','obsolete')),
 			content TEXT, file_path TEXT, created_by TEXT DEFAULT 'engineer',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -95,55 +103,69 @@ func runMigrations() error {
 		`CREATE TABLE IF NOT EXISTS vendors (
 			id TEXT PRIMARY KEY, name TEXT NOT NULL, website TEXT,
 			contact_name TEXT, contact_email TEXT, contact_phone TEXT,
-			notes TEXT, status TEXT DEFAULT 'active', lead_time_days INTEGER DEFAULT 0,
+			notes TEXT, status TEXT DEFAULT 'active' CHECK(status IN ('active','preferred','inactive','blocked')),
+			lead_time_days INTEGER DEFAULT 0 CHECK(lead_time_days >= 0),
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS inventory (
-			ipn TEXT PRIMARY KEY, qty_on_hand REAL DEFAULT 0,
-			qty_reserved REAL DEFAULT 0, location TEXT,
-			reorder_point REAL DEFAULT 0, reorder_qty REAL DEFAULT 0,
+			ipn TEXT PRIMARY KEY, qty_on_hand REAL DEFAULT 0 CHECK(qty_on_hand >= 0),
+			qty_reserved REAL DEFAULT 0 CHECK(qty_reserved >= 0), location TEXT,
+			reorder_point REAL DEFAULT 0 CHECK(reorder_point >= 0),
+			reorder_qty REAL DEFAULT 0 CHECK(reorder_qty >= 0),
 			description TEXT DEFAULT '', mpn TEXT DEFAULT '',
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS inventory_transactions (
 			id INTEGER PRIMARY KEY AUTOINCREMENT, ipn TEXT NOT NULL,
-			type TEXT NOT NULL, qty REAL NOT NULL, reference TEXT, notes TEXT,
+			type TEXT NOT NULL CHECK(type IN ('receive','issue','adjust','transfer','return','scrap')),
+			qty REAL NOT NULL, reference TEXT, notes TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS purchase_orders (
-			id TEXT PRIMARY KEY, vendor_id TEXT, status TEXT DEFAULT 'draft',
+			id TEXT PRIMARY KEY, vendor_id TEXT NOT NULL,
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','sent','confirmed','partial','received','cancelled')),
 			notes TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			expected_date DATE, received_at DATETIME
+			expected_date DATE, received_at DATETIME,
+			FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE RESTRICT
 		)`,
 		`CREATE TABLE IF NOT EXISTS po_lines (
 			id INTEGER PRIMARY KEY AUTOINCREMENT, po_id TEXT NOT NULL,
 			ipn TEXT NOT NULL, mpn TEXT, manufacturer TEXT,
-			qty_ordered REAL NOT NULL, qty_received REAL DEFAULT 0,
-			unit_price REAL, notes TEXT
+			qty_ordered REAL NOT NULL CHECK(qty_ordered > 0),
+			qty_received REAL DEFAULT 0 CHECK(qty_received >= 0),
+			unit_price REAL CHECK(unit_price >= 0), notes TEXT,
+			FOREIGN KEY (po_id) REFERENCES purchase_orders(id) ON DELETE CASCADE
 		)`,
 		`CREATE TABLE IF NOT EXISTS work_orders (
 			id TEXT PRIMARY KEY, assembly_ipn TEXT NOT NULL,
-			qty INTEGER NOT NULL DEFAULT 1, status TEXT DEFAULT 'open',
-			priority TEXT DEFAULT 'normal', notes TEXT,
+			qty INTEGER NOT NULL DEFAULT 1 CHECK(qty > 0),
+			status TEXT DEFAULT 'open' CHECK(status IN ('open','in_progress','complete','cancelled','on_hold')),
+			priority TEXT DEFAULT 'normal' CHECK(priority IN ('low','normal','high','critical')),
+			notes TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			started_at DATETIME, completed_at DATETIME
 		)`,
 		`CREATE TABLE IF NOT EXISTS wo_serials (
 			id INTEGER PRIMARY KEY AUTOINCREMENT, wo_id TEXT NOT NULL,
-			serial_number TEXT NOT NULL, status TEXT DEFAULT 'building',
-			notes TEXT, UNIQUE(serial_number)
+			serial_number TEXT NOT NULL,
+			status TEXT DEFAULT 'building' CHECK(status IN ('building','testing','complete','failed','scrapped')),
+			notes TEXT, UNIQUE(serial_number),
+			FOREIGN KEY (wo_id) REFERENCES work_orders(id) ON DELETE CASCADE
 		)`,
 		`CREATE TABLE IF NOT EXISTS test_records (
 			id INTEGER PRIMARY KEY AUTOINCREMENT, serial_number TEXT NOT NULL,
-			ipn TEXT NOT NULL, firmware_version TEXT, test_type TEXT,
-			result TEXT NOT NULL, measurements TEXT, notes TEXT,
+			ipn TEXT NOT NULL, firmware_version TEXT,
+			test_type TEXT CHECK(test_type IN ('factory','incoming','final','field','calibration')),
+			result TEXT NOT NULL CHECK(result IN ('pass','fail','conditional')),
+			measurements TEXT, notes TEXT,
 			tested_by TEXT DEFAULT 'operator',
 			tested_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS ncrs (
 			id TEXT PRIMARY KEY, title TEXT NOT NULL, description TEXT,
 			ipn TEXT, serial_number TEXT, defect_type TEXT,
-			severity TEXT DEFAULT 'minor', status TEXT DEFAULT 'open',
+			severity TEXT DEFAULT 'minor' CHECK(severity IN ('minor','major','critical')),
+			status TEXT DEFAULT 'open' CHECK(status IN ('open','investigating','resolved','closed')),
 			root_cause TEXT, corrective_action TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			resolved_at DATETIME
@@ -151,39 +173,47 @@ func runMigrations() error {
 		`CREATE TABLE IF NOT EXISTS devices (
 			serial_number TEXT PRIMARY KEY, ipn TEXT NOT NULL,
 			firmware_version TEXT, customer TEXT, location TEXT,
-			status TEXT DEFAULT 'active', install_date DATE,
+			status TEXT DEFAULT 'active' CHECK(status IN ('active','inactive','rma','decommissioned','maintenance')),
+			install_date DATE,
 			last_seen DATETIME, notes TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE IF NOT EXISTS firmware_campaigns (
 			id TEXT PRIMARY KEY, name TEXT NOT NULL, version TEXT NOT NULL,
-			category TEXT DEFAULT 'public', status TEXT DEFAULT 'draft',
+			category TEXT DEFAULT 'public' CHECK(category IN ('public','beta','internal')),
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','active','paused','completed','cancelled')),
 			target_filter TEXT, notes TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			started_at DATETIME, completed_at DATETIME
 		)`,
 		`CREATE TABLE IF NOT EXISTS campaign_devices (
 			campaign_id TEXT NOT NULL, serial_number TEXT NOT NULL,
-			status TEXT DEFAULT 'pending', updated_at DATETIME,
-			PRIMARY KEY(campaign_id, serial_number)
+			status TEXT DEFAULT 'pending' CHECK(status IN ('pending','in_progress','success','failed','skipped')),
+			updated_at DATETIME,
+			PRIMARY KEY(campaign_id, serial_number),
+			FOREIGN KEY (campaign_id) REFERENCES firmware_campaigns(id) ON DELETE CASCADE,
+			FOREIGN KEY (serial_number) REFERENCES devices(serial_number) ON DELETE CASCADE
 		)`,
 		`CREATE TABLE IF NOT EXISTS rmas (
 			id TEXT PRIMARY KEY, serial_number TEXT NOT NULL,
-			customer TEXT, reason TEXT, status TEXT DEFAULT 'open',
+			customer TEXT, reason TEXT,
+			status TEXT DEFAULT 'open' CHECK(status IN ('open','received','diagnosing','repairing','resolved','closed','scrapped')),
 			defect_description TEXT, resolution TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			received_at DATETIME, resolved_at DATETIME
 		)`,
 		`CREATE TABLE IF NOT EXISTS quotes (
 			id TEXT PRIMARY KEY, customer TEXT NOT NULL,
-			status TEXT DEFAULT 'draft', notes TEXT,
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','sent','accepted','rejected','expired','cancelled')),
+			notes TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			valid_until DATE, accepted_at DATETIME
 		)`,
 		`CREATE TABLE IF NOT EXISTS quote_lines (
 			id INTEGER PRIMARY KEY AUTOINCREMENT, quote_id TEXT NOT NULL,
-			ipn TEXT NOT NULL, description TEXT, qty INTEGER NOT NULL,
-			unit_price REAL, notes TEXT
+			ipn TEXT NOT NULL, description TEXT, qty INTEGER NOT NULL CHECK(qty > 0),
+			unit_price REAL CHECK(unit_price >= 0), notes TEXT,
+			FOREIGN KEY (quote_id) REFERENCES quotes(id) ON DELETE CASCADE
 		)`,
 		`CREATE TABLE IF NOT EXISTS change_history (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -219,7 +249,8 @@ func runMigrations() error {
 			token TEXT PRIMARY KEY,
 			user_id INTEGER NOT NULL,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			expires_at DATETIME NOT NULL
+			expires_at DATETIME NOT NULL,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 		)`,
 		`CREATE TABLE IF NOT EXISTS audit_log (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -331,19 +362,21 @@ func runMigrations() error {
 			po_id TEXT NOT NULL,
 			po_line_id INTEGER NOT NULL,
 			ipn TEXT NOT NULL,
-			qty_received REAL NOT NULL DEFAULT 0,
-			qty_passed REAL NOT NULL DEFAULT 0,
-			qty_failed REAL NOT NULL DEFAULT 0,
-			qty_on_hold REAL NOT NULL DEFAULT 0,
+			qty_received REAL NOT NULL DEFAULT 0 CHECK(qty_received >= 0),
+			qty_passed REAL NOT NULL DEFAULT 0 CHECK(qty_passed >= 0),
+			qty_failed REAL NOT NULL DEFAULT 0 CHECK(qty_failed >= 0),
+			qty_on_hold REAL NOT NULL DEFAULT 0 CHECK(qty_on_hold >= 0),
 			inspector TEXT,
 			inspected_at DATETIME,
 			notes TEXT,
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (po_id) REFERENCES purchase_orders(id) ON DELETE RESTRICT,
+			FOREIGN KEY (po_line_id) REFERENCES po_lines(id) ON DELETE RESTRICT
 		)`,
 		`CREATE TABLE IF NOT EXISTS rfqs (
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
-			status TEXT DEFAULT 'draft',
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','sent','quoting','awarded','cancelled')),
 			created_by TEXT DEFAULT 'system',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -354,35 +387,41 @@ func runMigrations() error {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			rfq_id TEXT NOT NULL,
 			vendor_id TEXT NOT NULL,
-			status TEXT DEFAULT 'pending',
+			status TEXT DEFAULT 'pending' CHECK(status IN ('pending','quoted','declined','awarded')),
 			quoted_at DATETIME,
-			notes TEXT
+			notes TEXT,
+			FOREIGN KEY (rfq_id) REFERENCES rfqs(id) ON DELETE CASCADE,
+			FOREIGN KEY (vendor_id) REFERENCES vendors(id) ON DELETE RESTRICT
 		)`,
 		`CREATE TABLE IF NOT EXISTS rfq_lines (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			rfq_id TEXT NOT NULL,
 			ipn TEXT NOT NULL,
 			description TEXT,
-			qty REAL NOT NULL DEFAULT 0,
-			unit TEXT DEFAULT 'ea'
+			qty REAL NOT NULL DEFAULT 0 CHECK(qty >= 0),
+			unit TEXT DEFAULT 'ea',
+			FOREIGN KEY (rfq_id) REFERENCES rfqs(id) ON DELETE CASCADE
 		)`,
 		`CREATE TABLE IF NOT EXISTS rfq_quotes (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			rfq_id TEXT NOT NULL,
 			rfq_vendor_id INTEGER NOT NULL,
 			rfq_line_id INTEGER NOT NULL,
-			unit_price REAL DEFAULT 0,
-			lead_time_days INTEGER DEFAULT 0,
-			moq INTEGER DEFAULT 0,
-			notes TEXT
+			unit_price REAL DEFAULT 0 CHECK(unit_price >= 0),
+			lead_time_days INTEGER DEFAULT 0 CHECK(lead_time_days >= 0),
+			moq INTEGER DEFAULT 0 CHECK(moq >= 0),
+			notes TEXT,
+			FOREIGN KEY (rfq_id) REFERENCES rfqs(id) ON DELETE CASCADE,
+			FOREIGN KEY (rfq_vendor_id) REFERENCES rfq_vendors(id) ON DELETE CASCADE,
+			FOREIGN KEY (rfq_line_id) REFERENCES rfq_lines(id) ON DELETE CASCADE
 		)`,
 		`CREATE TABLE IF NOT EXISTS product_pricing (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			product_ipn TEXT NOT NULL,
-			pricing_tier TEXT NOT NULL DEFAULT 'standard',
-			min_qty INTEGER DEFAULT 0,
-			max_qty INTEGER DEFAULT 0,
-			unit_price REAL NOT NULL DEFAULT 0,
+			pricing_tier TEXT NOT NULL DEFAULT 'standard' CHECK(pricing_tier IN ('standard','volume','distributor','oem')),
+			min_qty INTEGER DEFAULT 0 CHECK(min_qty >= 0),
+			max_qty INTEGER DEFAULT 0 CHECK(max_qty >= 0),
+			unit_price REAL NOT NULL DEFAULT 0 CHECK(unit_price >= 0),
 			currency TEXT DEFAULT 'USD',
 			effective_date TEXT DEFAULT '',
 			expiry_date TEXT DEFAULT '',
@@ -437,11 +476,13 @@ func runMigrations() error {
 		)`,
 	}
 	tables = append(tables, `CREATE TABLE IF NOT EXISTS capas (
-		id TEXT PRIMARY KEY, title TEXT NOT NULL, type TEXT DEFAULT 'corrective',
+		id TEXT PRIMARY KEY, title TEXT NOT NULL,
+		type TEXT DEFAULT 'corrective' CHECK(type IN ('corrective','preventive')),
 		linked_ncr_id TEXT DEFAULT '', linked_rma_id TEXT DEFAULT '',
 		root_cause TEXT DEFAULT '', action_plan TEXT DEFAULT '',
 		owner TEXT DEFAULT '', due_date TEXT DEFAULT '',
-		status TEXT DEFAULT 'open', effectiveness_check TEXT DEFAULT '',
+		status TEXT DEFAULT 'open' CHECK(status IN ('open','in_progress','pending_review','closed','cancelled')),
+		effectiveness_check TEXT DEFAULT '',
 		approved_by_qe TEXT DEFAULT '', approved_by_qe_at DATETIME,
 		approved_by_mgr TEXT DEFAULT '', approved_by_mgr_at DATETIME,
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -480,6 +521,73 @@ func runMigrations() error {
 	for _, s := range alterStmts {
 		db.Exec(s) // ignore errors (column already exists)
 	}
+
+	// Create indexes on frequently queried columns
+	indexes := []string{
+		"CREATE INDEX IF NOT EXISTS idx_ecos_status ON ecos(status)",
+		"CREATE INDEX IF NOT EXISTS idx_ecos_created_at ON ecos(created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_documents_category ON documents(category)",
+		"CREATE INDEX IF NOT EXISTS idx_documents_ipn ON documents(ipn)",
+		"CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status)",
+		"CREATE INDEX IF NOT EXISTS idx_vendors_status ON vendors(status)",
+		"CREATE INDEX IF NOT EXISTS idx_inventory_location ON inventory(location)",
+		"CREATE INDEX IF NOT EXISTS idx_inventory_transactions_ipn ON inventory_transactions(ipn)",
+		"CREATE INDEX IF NOT EXISTS idx_inventory_transactions_created_at ON inventory_transactions(created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_purchase_orders_vendor_id ON purchase_orders(vendor_id)",
+		"CREATE INDEX IF NOT EXISTS idx_purchase_orders_status ON purchase_orders(status)",
+		"CREATE INDEX IF NOT EXISTS idx_po_lines_po_id ON po_lines(po_id)",
+		"CREATE INDEX IF NOT EXISTS idx_po_lines_ipn ON po_lines(ipn)",
+		"CREATE INDEX IF NOT EXISTS idx_work_orders_status ON work_orders(status)",
+		"CREATE INDEX IF NOT EXISTS idx_work_orders_assembly_ipn ON work_orders(assembly_ipn)",
+		"CREATE INDEX IF NOT EXISTS idx_wo_serials_wo_id ON wo_serials(wo_id)",
+		"CREATE INDEX IF NOT EXISTS idx_test_records_serial_number ON test_records(serial_number)",
+		"CREATE INDEX IF NOT EXISTS idx_test_records_ipn ON test_records(ipn)",
+		"CREATE INDEX IF NOT EXISTS idx_test_records_result ON test_records(result)",
+		"CREATE INDEX IF NOT EXISTS idx_ncrs_status ON ncrs(status)",
+		"CREATE INDEX IF NOT EXISTS idx_ncrs_ipn ON ncrs(ipn)",
+		"CREATE INDEX IF NOT EXISTS idx_devices_ipn ON devices(ipn)",
+		"CREATE INDEX IF NOT EXISTS idx_devices_status ON devices(status)",
+		"CREATE INDEX IF NOT EXISTS idx_devices_customer ON devices(customer)",
+		"CREATE INDEX IF NOT EXISTS idx_campaign_devices_campaign_id ON campaign_devices(campaign_id)",
+		"CREATE INDEX IF NOT EXISTS idx_rmas_status ON rmas(status)",
+		"CREATE INDEX IF NOT EXISTS idx_rmas_serial_number ON rmas(serial_number)",
+		"CREATE INDEX IF NOT EXISTS idx_quotes_status ON quotes(status)",
+		"CREATE INDEX IF NOT EXISTS idx_quote_lines_quote_id ON quote_lines(quote_id)",
+		"CREATE INDEX IF NOT EXISTS idx_change_history_table_record ON change_history(table_name, record_id)",
+		"CREATE INDEX IF NOT EXISTS idx_change_history_created_at ON change_history(created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_undo_log_user_id ON undo_log(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_undo_log_expires_at ON undo_log(expires_at)",
+		"CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)",
+		"CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)",
+		"CREATE INDEX IF NOT EXISTS idx_audit_log_module ON audit_log(module)",
+		"CREATE INDEX IF NOT EXISTS idx_audit_log_record_id ON audit_log(record_id)",
+		"CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON audit_log(created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_attachments_module_record ON attachments(module, record_id)",
+		"CREATE INDEX IF NOT EXISTS idx_notifications_read_at ON notifications(read_at)",
+		"CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_price_history_ipn ON price_history(ipn)",
+		"CREATE INDEX IF NOT EXISTS idx_price_history_vendor_id ON price_history(vendor_id)",
+		"CREATE INDEX IF NOT EXISTS idx_eco_revisions_eco_id ON eco_revisions(eco_id)",
+		"CREATE INDEX IF NOT EXISTS idx_receiving_inspections_po_id ON receiving_inspections(po_id)",
+		"CREATE INDEX IF NOT EXISTS idx_rfq_vendors_rfq_id ON rfq_vendors(rfq_id)",
+		"CREATE INDEX IF NOT EXISTS idx_rfq_lines_rfq_id ON rfq_lines(rfq_id)",
+		"CREATE INDEX IF NOT EXISTS idx_rfq_quotes_rfq_id ON rfq_quotes(rfq_id)",
+		"CREATE INDEX IF NOT EXISTS idx_product_pricing_product_ipn ON product_pricing(product_ipn)",
+		"CREATE INDEX IF NOT EXISTS idx_document_versions_document_id ON document_versions(document_id)",
+		"CREATE INDEX IF NOT EXISTS idx_market_pricing_part_ipn ON market_pricing(part_ipn)",
+		"CREATE INDEX IF NOT EXISTS idx_capas_status ON capas(status)",
+		"CREATE INDEX IF NOT EXISTS idx_part_changes_part_ipn ON part_changes(part_ipn)",
+		"CREATE INDEX IF NOT EXISTS idx_part_changes_eco_id ON part_changes(eco_id)",
+		"CREATE INDEX IF NOT EXISTS idx_shipment_lines_shipment_id ON shipment_lines(shipment_id)",
+		"CREATE INDEX IF NOT EXISTS idx_field_reports_status ON field_reports(status)",
+		"CREATE INDEX IF NOT EXISTS idx_email_log_sent_at ON email_log(sent_at)",
+	}
+	for _, idx := range indexes {
+		if _, err := db.Exec(idx); err != nil {
+			return fmt.Errorf("index creation: %w\nSQL: %s", err, idx)
+		}
+	}
+
 	return nil
 }
 

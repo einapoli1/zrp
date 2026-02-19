@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Truck, Plus } from "lucide-react";
 import { api, type Shipment } from "../lib/api";
-
+import { toast } from "sonner";
 function Shipments() {
   const navigate = useNavigate();
   const [shipments, setShipments] = useState<Shipment[]>([]);
@@ -32,7 +32,7 @@ function Shipments() {
         const data = await api.getShipments();
         setShipments(data);
       } catch (error) {
-        console.error("Failed to fetch shipments:", error);
+        toast.error("Failed to fetch shipments"); console.error("Failed to fetch shipments:", error);
       } finally {
         setLoading(false);
       }
@@ -48,7 +48,7 @@ function Shipments() {
       setCreateDialogOpen(false);
       setFormData({ type: "outbound", carrier: "", tracking_number: "", from_address: "", to_address: "", notes: "" });
     } catch (error) {
-      console.error("Failed to create shipment:", error);
+      toast.error("Failed to create shipment"); console.error("Failed to create shipment:", error);
     }
   };
 

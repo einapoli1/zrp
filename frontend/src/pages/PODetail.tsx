@@ -38,7 +38,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { api, type PurchaseOrder, type Vendor } from "../lib/api";
-
+import { toast } from "sonner";
 function PODetail() {
   const { id } = useParams<{ id: string }>();
   const [po, setPO] = useState<PurchaseOrder | null>(null);
@@ -70,11 +70,11 @@ function PODetail() {
           const vendorData = await api.getVendor(data.vendor_id);
           setVendor(vendorData);
         } catch (error) {
-          console.error("Failed to fetch vendor:", error);
+          toast.error("Failed to fetch vendor"); console.error("Failed to fetch vendor:", error);
         }
       }
     } catch (error) {
-      console.error("Failed to fetch purchase order:", error);
+      toast.error("Failed to fetch purchase order"); console.error("Failed to fetch purchase order:", error);
     } finally {
       setLoading(false);
     }
@@ -98,7 +98,7 @@ function PODetail() {
       setReceiveForm({});
       fetchPODetail();
     } catch (error) {
-      console.error("Failed to receive items:", error);
+      toast.error("Failed to receive items"); console.error("Failed to receive items:", error);
     }
   };
 
@@ -111,7 +111,7 @@ function PODetail() {
       setNewStatus("");
       fetchPODetail();
     } catch (error) {
-      console.error("Failed to update status:", error);
+      toast.error("Failed to update status"); console.error("Failed to update status:", error);
     }
   };
 

@@ -10,7 +10,7 @@ import { Label } from "../components/ui/label";
 import { Checkbox } from "../components/ui/checkbox";
 import { AlertTriangle, ArrowLeft, FileText, Save } from "lucide-react";
 import { api, type NCR } from "../lib/api";
-
+import { toast } from "sonner";
 function NCRDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ function NCRDetail() {
         setNCR(data);
         setFormData(data);
       } catch (error) {
-        console.error("Failed to fetch NCR:", error);
+        toast.error("Failed to fetch NCR"); console.error("Failed to fetch NCR:", error);
       } finally {
         setLoading(false);
       }
@@ -45,7 +45,7 @@ function NCRDetail() {
       setNCR(updatedNCR);
       setEditing(false);
     } catch (error) {
-      console.error("Failed to update NCR:", error);
+      toast.error("Failed to update NCR"); console.error("Failed to update NCR:", error);
     }
   };
 

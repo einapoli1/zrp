@@ -35,6 +35,13 @@ func handleGetRMA(w http.ResponseWriter, r *http.Request, id string) {
 func handleCreateRMA(w http.ResponseWriter, r *http.Request) {
 	var rm RMA
 	if err := decodeBody(r, &rm); err != nil { jsonErr(w, "invalid body", 400); return }
+
+	ve := &ValidationErrors{}
+	requireField(ve, "serial_number", rm.SerialNumber)
+	requireField(ve, "reason", rm.Reason)
+	if rm.Status != "" { validateEnum(ve, "status", rm.Status, validRMAStatuses) }
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	rm.ID = nextID("RMA", "rmas", 3)
 	if rm.Status == "" { rm.Status = "open" }
 	now := time.Now().Format("2006-01-02 15:04:05")

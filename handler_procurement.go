@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -48,6 +49,17 @@ func handleGetPO(w http.ResponseWriter, r *http.Request, id string) {
 func handleCreatePO(w http.ResponseWriter, r *http.Request) {
 	var p PurchaseOrder
 	if err := decodeBody(r, &p); err != nil { jsonErr(w, "invalid body", 400); return }
+
+	ve := &ValidationErrors{}
+	if p.VendorID != "" { validateForeignKey(ve, "vendor_id", "vendors", p.VendorID) }
+	if p.Status != "" { validateEnum(ve, "status", p.Status, validPOStatuses) }
+	validateDate(ve, "expected_date", p.ExpectedDate)
+	for i, l := range p.Lines {
+		if l.QtyOrdered <= 0 { ve.Add(fmt.Sprintf("lines[%d].qty_ordered", i), "must be positive") }
+		if l.UnitPrice < 0 { ve.Add(fmt.Sprintf("lines[%d].unit_price", i), "must be non-negative") }
+	}
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	p.ID = nextID("PO", "purchase_orders", 4)
 	if p.Status == "" { p.Status = "draft" }
 	now := time.Now().Format("2006-01-02 15:04:05")

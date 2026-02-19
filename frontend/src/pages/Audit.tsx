@@ -7,7 +7,7 @@ import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Search, Filter, ChevronLeft, ChevronRight, Shield } from "lucide-react";
-
+import { toast } from "sonner";
 const entityTypes = [
   { value: 'all', label: 'All Types' },
   { value: 'part', label: 'Parts' },
@@ -79,7 +79,7 @@ function Audit() {
         const uniqueUsers = Array.from(new Set(result.entries.map(log => log.user)));
         setUsers(uniqueUsers);
       } catch (error) {
-        console.error("Failed to fetch audit logs:", error);
+        toast.error("Failed to fetch audit logs"); console.error("Failed to fetch audit logs:", error);
       } finally {
         setLoading(false);
       }

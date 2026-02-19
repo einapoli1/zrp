@@ -13,7 +13,7 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { api, type DashboardStats } from "../lib/api";
-
+import { toast } from "sonner";
 interface ExtendedDashboardStats extends DashboardStats {
   open_ecos: number;
   open_pos: number;
@@ -130,7 +130,7 @@ function Dashboard() {
         },
       ]);
     } catch (error) {
-      console.error("Failed to fetch dashboard data:", error);
+      toast.error("Failed to fetch dashboard data"); console.error("Failed to fetch dashboard data:", error);
     } finally {
       setLoading(false);
     }

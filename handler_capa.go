@@ -84,6 +84,14 @@ func handleCreateCAPA(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "invalid body", 400)
 		return
 	}
+
+	ve := &ValidationErrors{}
+	requireField(ve, "title", c.Title)
+	if c.Type != "" { validateEnum(ve, "type", c.Type, validCAPATypes) }
+	if c.Status != "" { validateEnum(ve, "status", c.Status, validCAPAStatuses) }
+	validateDate(ve, "due_date", c.DueDate)
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	c.ID = nextID("CAPA", "capas", 3)
 	if c.Status == "" {
 		c.Status = "open"

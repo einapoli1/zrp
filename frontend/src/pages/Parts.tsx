@@ -37,7 +37,7 @@ import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTab
 import { BarcodeScanner } from "../components/BarcodeScanner";
 import { useGitPLM } from "../hooks/useGitPLM";
 import { ExternalLink } from "lucide-react";
-
+import { toast } from "sonner";
 interface PartWithFields extends Part {
   category?: string;
   description?: string;
@@ -101,7 +101,7 @@ function Parts() {
       const data = await api.getCategories();
       setCategories(data);
     } catch (error) {
-      console.error("Failed to fetch categories:", error);
+      toast.error("Failed to fetch categories"); console.error("Failed to fetch categories:", error);
     }
   };
 
@@ -125,7 +125,7 @@ function Parts() {
       setParts(response.data || []);
       setTotalParts(response.meta?.total || 0);
     } catch (error) {
-      console.error("Failed to fetch parts:", error);
+      toast.error("Failed to fetch parts"); console.error("Failed to fetch parts:", error);
       setParts([]);
       setTotalParts(0);
     } finally {
@@ -200,7 +200,7 @@ function Parts() {
       setNewCatData({ title: "", prefix: "" });
       await fetchCategories();
     } catch (error: any) {
-      console.error("Failed to create category:", error);
+      toast.error("Failed to create category"); console.error("Failed to create category:", error);
     } finally {
       setCreatingCategory(false);
     }

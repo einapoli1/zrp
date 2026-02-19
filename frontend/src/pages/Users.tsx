@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { 
-  Users as UsersIcon, 
+import { toast } from "sonner";  Users as UsersIcon, 
   Plus, 
   Edit, 
   Shield, 
@@ -121,7 +121,7 @@ function Users() {
         const data = await api.getUsers();
         setUsers(data);
       } catch (error) {
-        console.error("Failed to fetch users:", error);
+        toast.error("Failed to fetch users"); console.error("Failed to fetch users:", error);
       } finally {
         setLoading(false);
       }
@@ -148,7 +148,7 @@ function Users() {
         role: 'user'
       });
     } catch (error) {
-      console.error("Failed to create user:", error);
+      toast.error("Failed to create user"); console.error("Failed to create user:", error);
     }
   };
 
@@ -168,7 +168,7 @@ function Users() {
       setEditDialogOpen(false);
       setSelectedUser(null);
     } catch (error) {
-      console.error("Failed to update user:", error);
+      toast.error("Failed to update user"); console.error("Failed to update user:", error);
     }
   };
 

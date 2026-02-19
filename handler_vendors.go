@@ -39,6 +39,15 @@ func handleCreateVendor(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "invalid body", 400)
 		return
 	}
+
+	ve := &ValidationErrors{}
+	requireField(ve, "name", v.Name)
+	validateMaxLength(ve, "name", v.Name, 255)
+	validateEmail(ve, "contact_email", v.ContactEmail)
+	if v.Status != "" { validateEnum(ve, "status", v.Status, validVendorStatuses) }
+	if v.LeadTimeDays < 0 { ve.Add("lead_time_days", "must be non-negative") }
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	var maxNum int
 	db.QueryRow("SELECT COALESCE(MAX(CAST(SUBSTR(id,3) AS INTEGER)),0) FROM vendors WHERE id LIKE 'V-%'").Scan(&maxNum)
 	v.ID = fmt.Sprintf("V-%03d", maxNum+1)
@@ -76,6 +85,20 @@ func handleUpdateVendor(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 func handleDeleteVendor(w http.ResponseWriter, r *http.Request, id string) {
+	// Check for referencing records
+	var poCount int
+	db.QueryRow("SELECT COUNT(*) FROM purchase_orders WHERE vendor_id=?", id).Scan(&poCount)
+	if poCount > 0 {
+		jsonErr(w, fmt.Sprintf("cannot delete vendor: %d purchase orders reference it", poCount), 409)
+		return
+	}
+	var rfqCount int
+	db.QueryRow("SELECT COUNT(*) FROM rfq_vendors WHERE vendor_id=?", id).Scan(&rfqCount)
+	if rfqCount > 0 {
+		jsonErr(w, fmt.Sprintf("cannot delete vendor: %d RFQs reference it", rfqCount), 409)
+		return
+	}
+
 	// Snapshot for change_history
 	oldSnap, _ := getVendorSnapshot(id)
 

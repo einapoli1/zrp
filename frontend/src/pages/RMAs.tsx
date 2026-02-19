@@ -10,7 +10,7 @@ import { Label } from "../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { RotateCcw, Plus } from "lucide-react";
 import { api, type RMA } from "../lib/api";
-
+import { toast } from "sonner";
 function RMAs() {
   const navigate = useNavigate();
   const [rmas, setRMAs] = useState<RMA[]>([]);
@@ -29,7 +29,7 @@ function RMAs() {
         const data = await api.getRMAs();
         setRMAs(data);
       } catch (error) {
-        console.error("Failed to fetch RMAs:", error);
+        toast.error("Failed to fetch RMAs"); console.error("Failed to fetch RMAs:", error);
       } finally {
         setLoading(false);
       }
@@ -46,7 +46,7 @@ function RMAs() {
       setCreateDialogOpen(false);
       setFormData({ serial_number: "", customer: "", reason: "", defect_description: "" });
     } catch (error) {
-      console.error("Failed to create RMA:", error);
+      toast.error("Failed to create RMA"); console.error("Failed to create RMA:", error);
     }
   };
 

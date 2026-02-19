@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { api, type Shipment, type PackList } from "../lib/api";
-
+import { toast } from "sonner";
 function ShipmentPrint() {
   const { id } = useParams<{ id: string }>();
   const [shipment, setShipment] = useState<Shipment | null>(null);
@@ -19,7 +19,7 @@ function ShipmentPrint() {
         setShipment(s);
         setPackList(pl);
       } catch (error) {
-        console.error("Failed to load pack list:", error);
+        toast.error("Failed to load pack list"); console.error("Failed to load pack list:", error);
       } finally {
         setLoading(false);
       }

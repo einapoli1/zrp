@@ -9,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { Truck, Package, Printer, ArrowLeft } from "lucide-react";
 import { api, type Shipment } from "../lib/api";
-
+import { toast } from "sonner";
 function ShipmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -26,7 +26,7 @@ function ShipmentDetail() {
         const data = await api.getShipment(id);
         setShipment(data);
       } catch (error) {
-        console.error("Failed to fetch shipment:", error);
+        toast.error("Failed to fetch shipment"); console.error("Failed to fetch shipment:", error);
       } finally {
         setLoading(false);
       }
@@ -41,7 +41,7 @@ function ShipmentDetail() {
       setShipment(updated);
       setShipDialogOpen(false);
     } catch (error) {
-      console.error("Failed to ship:", error);
+      toast.error("Failed to ship"); console.error("Failed to ship:", error);
     }
   };
 
@@ -51,7 +51,7 @@ function ShipmentDetail() {
       const updated = await api.deliverShipment(id);
       setShipment(updated);
     } catch (error) {
-      console.error("Failed to deliver:", error);
+      toast.error("Failed to deliver"); console.error("Failed to deliver:", error);
     }
   };
 

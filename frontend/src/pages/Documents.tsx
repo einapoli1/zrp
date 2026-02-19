@@ -49,7 +49,7 @@ import {
 import { api, type Document } from "../lib/api";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
-
+import { toast } from "sonner";
 interface DocumentWithAttachments extends Document {
   attachment_count?: number;
 }
@@ -110,7 +110,7 @@ function Documents() {
       const data = await api.getDocuments();
       setDocuments(data);
     } catch (error) {
-      console.error('Failed to fetch documents:', error);
+      toast.error("Failed to fetch documents"); console.error('Failed to fetch documents:', error);
       setDocuments([]);
     } finally {
       setLoading(false);
@@ -133,7 +133,7 @@ function Documents() {
       form.reset();
       await fetchDocuments();
     } catch (error) {
-      console.error('Failed to create document:', error);
+      toast.error("Failed to create document"); console.error('Failed to create document:', error);
     } finally {
       setCreating(false);
     }
@@ -162,7 +162,7 @@ function Documents() {
       setSelectedFiles([]);
       await fetchDocuments();
     } catch (error) {
-      console.error('Failed to upload files:', error);
+      toast.error("Failed to upload files"); console.error('Failed to upload files:', error);
     } finally {
       setUploading(false);
     }

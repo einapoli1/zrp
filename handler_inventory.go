@@ -37,6 +37,14 @@ func handleGetInventory(w http.ResponseWriter, r *http.Request, ipn string) {
 func handleInventoryTransact(w http.ResponseWriter, r *http.Request) {
 	var t InventoryTransaction
 	if err := decodeBody(r, &t); err != nil { jsonErr(w, "invalid body", 400); return }
+
+	ve := &ValidationErrors{}
+	requireField(ve, "ipn", t.IPN)
+	requireField(ve, "type", t.Type)
+	validateEnum(ve, "type", t.Type, validInventoryTypes)
+	if t.Type != "adjust" && t.Qty <= 0 { ve.Add("qty", "must be positive") }
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	now := time.Now().Format("2006-01-02 15:04:05")
 
 	// Ensure inventory record exists, enriching with parts DB data

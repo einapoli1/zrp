@@ -1,6 +1,41 @@
-import { describe, it, expect } from "vitest";
+import React from "react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../test/test-utils";
+
+vi.mock("../lib/api", () => ({
+  api: {
+    getMe: vi.fn().mockResolvedValue(null),
+    logout: vi.fn().mockResolvedValue(undefined),
+    changePassword: vi.fn().mockResolvedValue(undefined),
+    getNotifications: vi.fn().mockResolvedValue([]),
+    globalSearch: vi.fn().mockResolvedValue({ results: [] }),
+  },
+}));
+
+// Mock useIsMobile to return false (desktop mode) so sidebar renders inline
+vi.mock("../hooks/use-mobile", () => ({
+  useIsMobile: () => false,
+}));
+
+// Mock permissions to allow all views
+vi.mock("../contexts/PermissionsContext", () => ({
+  usePermissions: () => ({
+    permissions: [],
+    loading: false,
+    hasPermission: () => true,
+    canView: () => true,
+    canCreate: () => true,
+    canEdit: () => true,
+    canDelete: () => true,
+    canApprove: () => true,
+    refresh: vi.fn(),
+  }),
+  PermissionsProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
 import { AppLayout } from "./AppLayout";
+
+beforeEach(() => vi.clearAllMocks());
 
 describe("AppLayout", () => {
   it("renders sidebar with ZRP branding", () => {

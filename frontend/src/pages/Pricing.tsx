@@ -37,7 +37,7 @@ import {
 } from "../components/ui/table";
 import { Checkbox } from "../components/ui/checkbox";
 import { api, type ProductPricing, type CostAnalysis } from "../lib/api";
-
+import { toast } from "sonner";
 function marginColor(pct: number): string {
   if (pct < 15) return "text-red-600 bg-red-50";
   if (pct <= 30) return "text-yellow-600 bg-yellow-50";
@@ -95,7 +95,7 @@ export default function Pricing() {
       setPricing(pricingData);
       setAnalysis(analysisData);
     } catch (err) {
-      console.error("Failed to load pricing data:", err);
+      toast.error("Failed to load pricing data"); console.error("Failed to load pricing data:", error);
     } finally {
       setLoading(false);
     }
@@ -141,7 +141,7 @@ export default function Pricing() {
       resetForm();
       loadData();
     } catch (err) {
-      console.error("Failed to create:", err);
+      toast.error("Failed to create"); console.error("Failed to create:", error);
     }
   }
 
@@ -164,7 +164,7 @@ export default function Pricing() {
       resetForm();
       loadData();
     } catch (err) {
-      console.error("Failed to update:", err);
+      toast.error("Failed to update"); console.error("Failed to update:", error);
     }
   }
 
@@ -173,7 +173,7 @@ export default function Pricing() {
       await api.deleteProductPricing(id);
       loadData();
     } catch (err) {
-      console.error("Failed to delete:", err);
+      toast.error("Failed to delete"); console.error("Failed to delete:", error);
     }
   }
 
@@ -186,7 +186,7 @@ export default function Pricing() {
       setBulkValue("");
       loadData();
     } catch (err) {
-      console.error("Failed to bulk update:", err);
+      toast.error("Failed to bulk update"); console.error("Failed to bulk update:", error);
     }
   }
 

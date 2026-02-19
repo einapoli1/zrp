@@ -39,7 +39,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { api, type InventoryItem, type InventoryTransaction } from "../lib/api";
-
+import { toast } from "sonner";
 function InventoryDetail() {
   const { ipn } = useParams<{ ipn: string }>();
   const [item, setItem] = useState<InventoryItem | null>(null);
@@ -69,7 +69,7 @@ function InventoryDetail() {
       const data = await api.getInventoryItem(ipn);
       setItem(data);
     } catch (error) {
-      console.error("Failed to fetch inventory item:", error);
+      toast.error("Failed to fetch inventory item"); console.error("Failed to fetch inventory item:", error);
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,7 @@ function InventoryDetail() {
       const data = await api.getInventoryHistory(ipn);
       setTransactions(data);
     } catch (error) {
-      console.error("Failed to fetch transaction history:", error);
+      toast.error("Failed to fetch transaction history"); console.error("Failed to fetch transaction history:", error);
     }
   };
 
@@ -103,7 +103,7 @@ function InventoryDetail() {
       fetchInventoryDetail();
       fetchTransactionHistory();
     } catch (error) {
-      console.error("Failed to create transaction:", error);
+      toast.error("Failed to create transaction"); console.error("Failed to create transaction:", error);
     }
   };
 

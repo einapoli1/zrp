@@ -84,6 +84,15 @@ func handleGetECO(w http.ResponseWriter, r *http.Request, id string) {
 func handleCreateECO(w http.ResponseWriter, r *http.Request) {
 	var e ECO
 	if err := decodeBody(r, &e); err != nil { jsonErr(w, "invalid body", 400); return }
+
+	// Validation
+	ve := &ValidationErrors{}
+	requireField(ve, "title", e.Title)
+	validateMaxLength(ve, "title", e.Title, 500)
+	if e.Status != "" { validateEnum(ve, "status", e.Status, validECOStatuses) }
+	if e.Priority != "" { validateEnum(ve, "priority", e.Priority, validECOPriorities) }
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	e.ID = nextID("ECO", "ecos", 3)
 	if e.Status == "" { e.Status = "draft" }
 	if e.Priority == "" { e.Priority = "normal" }
@@ -99,9 +108,21 @@ func handleCreateECO(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUpdateECO(w http.ResponseWriter, r *http.Request, id string) {
+	// Verify exists
+	var exists int
+	db.QueryRow("SELECT COUNT(*) FROM ecos WHERE id=?", id).Scan(&exists)
+	if exists == 0 { jsonErr(w, "not found", 404); return }
+
 	oldSnap, _ := getECOSnapshot(id)
 	var e ECO
 	if err := decodeBody(r, &e); err != nil { jsonErr(w, "invalid body", 400); return }
+
+	ve := &ValidationErrors{}
+	requireField(ve, "title", e.Title)
+	validateEnum(ve, "status", e.Status, validECOStatuses)
+	validateEnum(ve, "priority", e.Priority, validECOPriorities)
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	now := time.Now().Format("2006-01-02 15:04:05")
 	_, err := db.Exec("UPDATE ecos SET title=?,description=?,status=?,priority=?,affected_ipns=?,updated_at=? WHERE id=?",
 		e.Title, e.Description, e.Status, e.Priority, e.AffectedIPNs, now, id)

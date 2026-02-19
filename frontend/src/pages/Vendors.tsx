@@ -46,13 +46,15 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { api, type Vendor } from "../lib/api";
-
+import { toast } from "sonner";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 function Vendors() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const [vendorForm, setVendorForm] = useState({
     name: "",
@@ -75,7 +77,7 @@ function Vendors() {
       const data = await api.getVendors();
       setVendors(data);
     } catch (error) {
-      console.error("Failed to fetch vendors:", error);
+      toast.error("Failed to fetch vendors"); console.error("Failed to fetch vendors:", error);
     } finally {
       setLoading(false);
     }
@@ -88,7 +90,7 @@ function Vendors() {
       resetForm();
       fetchVendors();
     } catch (error) {
-      console.error("Failed to create vendor:", error);
+      toast.error("Failed to create vendor"); console.error("Failed to create vendor:", error);
     }
   };
 
@@ -102,20 +104,24 @@ function Vendors() {
       resetForm();
       fetchVendors();
     } catch (error) {
-      console.error("Failed to update vendor:", error);
+      toast.error("Failed to update vendor"); console.error("Failed to update vendor:", error);
     }
   };
 
-  const handleDeleteVendor = async (vendorId: string, vendorName: string) => {
-    if (!confirm(`Delete vendor "${vendorName}"? This action cannot be undone.`)) {
-      return;
-    }
-    
+  const handleDeleteVendor = (vendorId: string, vendorName: string) => {
+    setDeleteTarget({ id: vendorId, name: vendorName });
+  };
+
+  const confirmDeleteVendor = async () => {
+    if (!deleteTarget) return;
     try {
-      await api.deleteVendor(vendorId);
+      await api.deleteVendor(deleteTarget.id);
+      toast.success(`Vendor "${deleteTarget.name}" deleted`);
       fetchVendors();
     } catch (error) {
-      console.error("Failed to delete vendor:", error);
+      toast.error("Failed to delete vendor"); console.error("Failed to delete vendor:", error);
+    } finally {
+      setDeleteTarget(null);
     }
   };
 
@@ -564,6 +570,16 @@ function Vendors() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Delete Vendor"
+        description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={confirmDeleteVendor}
+      />
     </div>
   );
 }

@@ -24,7 +24,7 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { api, type ECO, type ECORevision, type PartChange } from "../lib/api";
-
+import { toast } from "sonner";
 interface ECOWithDetails extends ECO {
   affected_parts?: Array<{
     ipn: string;
@@ -93,7 +93,7 @@ function ECODetail() {
       const data = await api.getECO(id);
       setECO(data as ECOWithDetails);
     } catch (error) {
-      console.error("Failed to fetch ECO details:", error);
+      toast.error("Failed to fetch ECO details"); console.error("Failed to fetch ECO details:", error);
     } finally {
       setLoading(false);
     }
@@ -105,7 +105,7 @@ function ECODetail() {
       const data = await api.getECORevisions(id);
       setRevisions(data);
     } catch (error) {
-      console.error("Failed to fetch revisions:", error);
+      toast.error("Failed to fetch revisions"); console.error("Failed to fetch revisions:", error);
     }
   };
 

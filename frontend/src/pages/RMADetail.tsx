@@ -10,7 +10,7 @@ import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
 import { RotateCcw, ArrowLeft, Save, Truck, CheckCircle } from "lucide-react";
 import { api, type RMA } from "../lib/api";
-
+import { toast } from "sonner";
 function RMADetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -28,7 +28,7 @@ function RMADetail() {
         setRMA(data);
         setFormData(data);
       } catch (error) {
-        console.error("Failed to fetch RMA:", error);
+        toast.error("Failed to fetch RMA"); console.error("Failed to fetch RMA:", error);
       } finally {
         setLoading(false);
       }
@@ -45,7 +45,7 @@ function RMADetail() {
       setRMA(updatedRMA);
       setEditing(false);
     } catch (error) {
-      console.error("Failed to update RMA:", error);
+      toast.error("Failed to update RMA"); console.error("Failed to update RMA:", error);
     }
   };
 

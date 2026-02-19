@@ -68,6 +68,15 @@ func handleCreateShipment(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "invalid body", 400)
 		return
 	}
+
+	ve := &ValidationErrors{}
+	if s.Type != "" { validateEnum(ve, "type", s.Type, validShipmentTypes) }
+	if s.Status != "" { validateEnum(ve, "status", s.Status, validShipmentStatuses) }
+	for i, line := range s.Lines {
+		if line.Qty <= 0 { ve.Add(fmt.Sprintf("lines[%d].qty", i), "must be positive") }
+	}
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	s.ID = nextID("SHP", "shipments", 4)
 	if s.Type == "" {
 		s.Type = "outbound"

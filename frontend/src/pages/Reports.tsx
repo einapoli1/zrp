@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { 
-  BarChart, 
+import { toast } from "sonner";  BarChart, 
   FileText, 
   Download, 
   DollarSign, 
@@ -168,7 +168,7 @@ function Reports() {
       setReportData(mockData);
       
     } catch (error) {
-      console.error("Failed to generate report:", error);
+      toast.error("Failed to generate report"); console.error("Failed to generate report:", error);
     } finally {
       setLoading(false);
     }

@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "../components/ui/select";
 import { api, type PurchaseOrder, type Vendor } from "../lib/api";
-
+import { toast } from "sonner";
 function Procurement() {
   const [purchaseOrders, setPurchaseOrders] = useState<PurchaseOrder[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -73,7 +73,7 @@ function Procurement() {
       const data = await api.getPurchaseOrders();
       setPurchaseOrders(data);
     } catch (error) {
-      console.error("Failed to fetch purchase orders:", error);
+      toast.error("Failed to fetch purchase orders"); console.error("Failed to fetch purchase orders:", error);
     } finally {
       setLoading(false);
     }
@@ -84,7 +84,7 @@ function Procurement() {
       const data = await api.getVendors();
       setVendors(data.filter(v => v.status === 'active'));
     } catch (error) {
-      console.error("Failed to fetch vendors:", error);
+      toast.error("Failed to fetch vendors"); console.error("Failed to fetch vendors:", error);
     }
   };
 
@@ -94,7 +94,7 @@ function Procurement() {
       const partsArray = Array.isArray(response) ? response : (response?.data || []);
       setParts(partsArray.map(p => ({ ipn: p.ipn, description: p.description })));
     } catch (error) {
-      console.error("Failed to fetch parts:", error);
+      toast.error("Failed to fetch parts"); console.error("Failed to fetch parts:", error);
     }
   };
 
@@ -124,7 +124,7 @@ function Procurement() {
       resetForm();
       fetchPurchaseOrders();
     } catch (error) {
-      console.error("Failed to create purchase order:", error);
+      toast.error("Failed to create purchase order"); console.error("Failed to create purchase order:", error);
     }
   };
 

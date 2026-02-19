@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Label } from "../components/ui/label";
 import { ArrowLeft, Save, ShieldCheck, CheckCircle } from "lucide-react";
 import { api, type CAPA } from "../lib/api";
-
+import { toast } from "sonner";
 function CAPADetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -27,7 +27,7 @@ function CAPADetail() {
         setCAPA(data);
         setFormData(data);
       } catch (err) {
-        console.error("Failed to fetch CAPA:", err);
+        toast.error("Failed to fetch CAPA"); console.error("Failed to fetch CAPA:", error);
       } finally {
         setLoading(false);
       }

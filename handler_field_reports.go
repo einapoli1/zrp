@@ -90,10 +90,13 @@ func handleCreateFieldReport(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "invalid body", 400)
 		return
 	}
-	if strings.TrimSpace(fr.Title) == "" {
-		jsonErr(w, "title is required", 400)
-		return
-	}
+	ve := &ValidationErrors{}
+	requireField(ve, "title", fr.Title)
+	if fr.ReportType != "" { validateEnum(ve, "report_type", fr.ReportType, validFieldReportTypes) }
+	if fr.Status != "" { validateEnum(ve, "status", fr.Status, validFieldReportStatuses) }
+	if fr.Priority != "" { validateEnum(ve, "priority", fr.Priority, validFieldReportPriorities) }
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	fr.ID = nextID("FR", "field_reports", 3)
 	if fr.Status == "" {
 		fr.Status = "open"

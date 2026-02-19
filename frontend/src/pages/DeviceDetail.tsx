@@ -11,7 +11,7 @@ import { Separator } from "../components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Smartphone, ArrowLeft, Save, History, RotateCcw } from "lucide-react";
 import { api, type Device, type RMA } from "../lib/api";
-
+import { toast } from "sonner";
 function DeviceDetail() {
   const { serialNumber } = useParams<{ serialNumber: string }>();
   const navigate = useNavigate();
@@ -39,7 +39,7 @@ function DeviceDetail() {
         setRelatedRMAs(deviceRMAs);
         
       } catch (error) {
-        console.error("Failed to fetch device data:", error);
+        toast.error("Failed to fetch device data"); console.error("Failed to fetch device data:", error);
       } finally {
         setLoading(false);
       }
@@ -56,7 +56,7 @@ function DeviceDetail() {
       setDevice(updatedDevice);
       setEditing(false);
     } catch (error) {
-      console.error("Failed to update device:", error);
+      toast.error("Failed to update device"); console.error("Failed to update device:", error);
     }
   };
 

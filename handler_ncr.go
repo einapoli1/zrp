@@ -36,6 +36,14 @@ func handleGetNCR(w http.ResponseWriter, r *http.Request, id string) {
 func handleCreateNCR(w http.ResponseWriter, r *http.Request) {
 	var n NCR
 	if err := decodeBody(r, &n); err != nil { jsonErr(w, "invalid body", 400); return }
+
+	ve := &ValidationErrors{}
+	requireField(ve, "title", n.Title)
+	validateMaxLength(ve, "title", n.Title, 500)
+	if n.Severity != "" { validateEnum(ve, "severity", n.Severity, validNCRSeverities) }
+	if n.Status != "" { validateEnum(ve, "status", n.Status, validNCRStatuses) }
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	n.ID = nextID("NCR", "ncrs", 3)
 	if n.Status == "" { n.Status = "open" }
 	if n.Severity == "" { n.Severity = "minor" }

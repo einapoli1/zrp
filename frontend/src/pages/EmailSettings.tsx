@@ -9,7 +9,7 @@ import { Checkbox } from "../components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Separator } from "../components/ui/separator";
 import { 
-  Mail, 
+import { toast } from "sonner";  Mail, 
   Send, 
   CheckCircle2, 
   AlertTriangle, 
@@ -78,7 +78,7 @@ function EmailSettings() {
         setConfig(configData);
         setOriginalConfig(configData);
       } catch (error) {
-        console.error("Failed to fetch email configuration:", error);
+        toast.error("Failed to fetch email configuration"); console.error("Failed to fetch email configuration:", error);
       } finally {
         setLoading(false);
       }
@@ -118,7 +118,7 @@ function EmailSettings() {
       setOriginalConfig(config);
       setTestResult(null);
     } catch (error) {
-      console.error("Failed to save email configuration:", error);
+      toast.error("Failed to save email configuration"); console.error("Failed to save email configuration:", error);
     } finally {
       setSaving(false);
     }

@@ -12,7 +12,7 @@ import { Progress } from "../components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Cpu, Plus, Play, Pause } from "lucide-react";
 import { api, type FirmwareCampaign } from "../lib/api";
-
+import { toast } from "sonner";
 function Firmware() {
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState<FirmwareCampaign[]>([]);
@@ -32,7 +32,7 @@ function Firmware() {
         const data = await api.getFirmwareCampaigns();
         setCampaigns(data);
       } catch (error) {
-        console.error("Failed to fetch firmware campaigns:", error);
+        toast.error("Failed to fetch firmware campaigns"); console.error("Failed to fetch firmware campaigns:", error);
       } finally {
         setLoading(false);
       }
@@ -55,7 +55,7 @@ function Firmware() {
         notes: "",
       });
     } catch (error) {
-      console.error("Failed to create firmware campaign:", error);
+      toast.error("Failed to create firmware campaign"); console.error("Failed to create firmware campaign:", error);
     }
   };
 
@@ -275,7 +275,7 @@ function Firmware() {
                                 const updated = await api.updateFirmwareCampaign(campaign.id, { status: "paused" });
                                 setCampaigns(campaigns.map(c => c.id === campaign.id ? updated : c));
                               } catch (error) {
-                                console.error("Failed to pause campaign:", error);
+                                toast.error("Failed to pause campaign"); console.error("Failed to pause campaign:", error);
                               }
                             }}>
                               <Pause className="h-3 w-3" />
@@ -287,7 +287,7 @@ function Firmware() {
                                 const updated = await api.updateFirmwareCampaign(campaign.id, { status: "running" });
                                 setCampaigns(campaigns.map(c => c.id === campaign.id ? updated : c));
                               } catch (error) {
-                                console.error("Failed to start campaign:", error);
+                                toast.error("Failed to start campaign"); console.error("Failed to start campaign:", error);
                               }
                             }}>
                               <Play className="h-3 w-3" />

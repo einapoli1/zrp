@@ -4,7 +4,7 @@ import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { api, type CalendarEvent } from "../lib/api";
-
+import { toast } from "sonner";
 const months = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
@@ -50,7 +50,7 @@ function Calendar() {
         const data = await api.getCalendarEvents(currentYear, currentMonth + 1);
         setEvents(data);
       } catch (error) {
-        console.error("Failed to fetch calendar data:", error);
+        toast.error("Failed to fetch calendar data"); console.error("Failed to fetch calendar data:", error);
       } finally {
         setLoading(false);
       }

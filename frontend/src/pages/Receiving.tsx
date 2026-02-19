@@ -24,7 +24,7 @@ import {
 } from "../components/ui/dialog";
 import { api, type ReceivingInspection } from "../lib/api";
 import { BarcodeScanner } from "../components/BarcodeScanner";
-
+import { toast } from "sonner";
 function Receiving() {
   const [inspections, setInspections] = useState<ReceivingInspection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,7 @@ function Receiving() {
       const data = await api.getReceivingInspections(filter || undefined);
       setInspections(data);
     } catch (error) {
-      console.error("Failed to fetch inspections:", error);
+      toast.error("Failed to fetch inspections"); console.error("Failed to fetch inspections:", error);
     } finally {
       setLoading(false);
     }
@@ -82,7 +82,7 @@ function Receiving() {
       setInspectDialogOpen(false);
       fetchInspections();
     } catch (error) {
-      console.error("Failed to inspect:", error);
+      toast.error("Failed to inspect"); console.error("Failed to inspect:", error);
     }
   };
 

@@ -48,6 +48,17 @@ func handleGetQuote(w http.ResponseWriter, r *http.Request, id string) {
 func handleCreateQuote(w http.ResponseWriter, r *http.Request) {
 	var q Quote
 	if err := decodeBody(r, &q); err != nil { jsonErr(w, "invalid body", 400); return }
+
+	ve := &ValidationErrors{}
+	requireField(ve, "customer", q.Customer)
+	if q.Status != "" { validateEnum(ve, "status", q.Status, validQuoteStatuses) }
+	validateDate(ve, "valid_until", q.ValidUntil)
+	for i, l := range q.Lines {
+		if l.Qty <= 0 { ve.Add(fmt.Sprintf("lines[%d].qty", i), "must be positive") }
+		if l.UnitPrice < 0 { ve.Add(fmt.Sprintf("lines[%d].unit_price", i), "must be non-negative") }
+	}
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	q.ID = nextID("Q", "quotes", 3)
 	if q.Status == "" { q.Status = "draft" }
 	now := time.Now().Format("2006-01-02 15:04:05")

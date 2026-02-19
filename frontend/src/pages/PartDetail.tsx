@@ -30,7 +30,7 @@ import { Input } from "../components/ui/input";
 import { api, type Part, type BOMNode, type PartCost, type WhereUsedEntry, type MarketPricingResult, type PartChange } from "../lib/api";
 import { useGitPLM } from "../hooks/useGitPLM";
 import { ExternalLink, Edit, Trash2, FilePlus } from "lucide-react";
-
+import { toast } from "sonner";
 interface PartWithDetails extends Part {
   category?: string;
   description?: string;
@@ -215,7 +215,7 @@ function PartDetail() {
       setEditing(false);
       fetchPendingChanges();
     } catch (error) {
-      console.error("Failed to save changes:", error);
+      toast.error("Failed to save changes"); console.error("Failed to save changes:", error);
     } finally {
       setSavingChanges(false);
     }
@@ -227,7 +227,7 @@ function PartDetail() {
       await api.deletePartChange(decodeURIComponent(ipn), changeId);
       fetchPendingChanges();
     } catch (error) {
-      console.error("Failed to delete change:", error);
+      toast.error("Failed to delete change"); console.error("Failed to delete change:", error);
     }
   };
 
@@ -240,7 +240,7 @@ function PartDetail() {
       });
       navigate(`/ecos/${result.eco_id}`);
     } catch (error) {
-      console.error("Failed to create ECO:", error);
+      toast.error("Failed to create ECO"); console.error("Failed to create ECO:", error);
     } finally {
       setCreatingECO(false);
     }
@@ -296,7 +296,7 @@ function PartDetail() {
         fetchMarketPricing(false);
       }
     } catch (error) {
-      console.error("Failed to fetch part details:", error);
+      toast.error("Failed to fetch part details"); console.error("Failed to fetch part details:", error);
     } finally {
       setLoading(false);
     }
@@ -310,7 +310,7 @@ function PartDetail() {
       const bomData = await api.getPartBOM(decodeURIComponent(ipn));
       setBom(bomData);
     } catch (error) {
-      console.error("Failed to fetch BOM:", error);
+      toast.error("Failed to fetch BOM"); console.error("Failed to fetch BOM:", error);
     } finally {
       setBomLoading(false);
     }
@@ -324,7 +324,7 @@ function PartDetail() {
       const costData = await api.getPartCost(decodeURIComponent(ipn));
       setCost(costData);
     } catch (error) {
-      console.error("Failed to fetch cost data:", error);
+      toast.error("Failed to fetch cost data"); console.error("Failed to fetch cost data:", error);
     } finally {
       setCostLoading(false);
     }
@@ -337,7 +337,7 @@ function PartDetail() {
       const data = await api.getPartWhereUsed(decodeURIComponent(ipn));
       setWhereUsed(data);
     } catch (error) {
-      console.error("Failed to fetch where-used:", error);
+      toast.error("Failed to fetch where-used"); console.error("Failed to fetch where-used:", error);
     } finally {
       setWhereUsedLoading(false);
     }
@@ -365,7 +365,7 @@ function PartDetail() {
         setMarketPricingError(prev => prev ? prev + "; " + data.errors!.join("; ") : data.errors!.join("; "));
       }
     } catch (error) {
-      console.error("Failed to fetch market pricing:", error);
+      toast.error("Failed to fetch market pricing"); console.error("Failed to fetch market pricing:", error);
     } finally {
       setMarketPricingLoading(false);
     }

@@ -11,7 +11,7 @@ import { Label } from "../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Plus, ShieldCheck } from "lucide-react";
 import { api, type CAPA, type CAPADashboard } from "../lib/api";
-
+import { toast } from "sonner";
 function CAPAs() {
   const navigate = useNavigate();
   const [capas, setCAPAs] = useState<CAPA[]>([]);
@@ -39,7 +39,7 @@ function CAPAs() {
         setCAPAs(capaData);
         setDashboard(dashData);
       } catch (error) {
-        console.error("Failed to fetch CAPAs:", error);
+        toast.error("Failed to fetch CAPAs"); console.error("Failed to fetch CAPAs:", error);
       } finally {
         setLoading(false);
       }
@@ -55,7 +55,7 @@ function CAPAs() {
       setCreateDialogOpen(false);
       setFormData({ title: "", type: "corrective", root_cause: "", action_plan: "", owner: "", due_date: "", linked_ncr_id: "", linked_rma_id: "" });
     } catch (error) {
-      console.error("Failed to create CAPA:", error);
+      toast.error("Failed to create CAPA"); console.error("Failed to create CAPA:", error);
     }
   };
 

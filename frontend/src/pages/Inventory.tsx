@@ -30,10 +30,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "../components/ui/dropdown-menu";
+import { toast } from "sonner";
 import { api, type InventoryItem } from "../lib/api";
 import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTable";
 import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog";
 import { BarcodeScanner } from "../components/BarcodeScanner";
+import { ConfirmDialog } from "../components/ConfirmDialog";
 
 function Inventory() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -52,6 +54,7 @@ function Inventory() {
     notes: "",
   });
   const [showScanner, setShowScanner] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
   useEffect(() => {
     fetchInventory();
@@ -64,7 +67,7 @@ function Inventory() {
       const data = await api.getInventory(showLowStock);
       setInventory(data);
     } catch (error) {
-      console.error("Failed to fetch inventory:", error);
+      toast.error("Failed to fetch inventory"); console.error("Failed to fetch inventory:", error);
     } finally {
       setLoading(false);
     }
@@ -76,7 +79,7 @@ function Inventory() {
       const partsArray = Array.isArray(data) ? data : [];
       setParts(partsArray.map(p => ({ ipn: p.ipn, description: p.description })));
     } catch (error) {
-      console.error("Failed to fetch parts:", error);
+      toast.error("Failed to fetch parts"); console.error("Failed to fetch parts:", error);
     }
   };
 
@@ -92,23 +95,26 @@ function Inventory() {
       
       setReceiveDialogOpen(false);
       setReceiveForm({ ipn: "", qty: "", reference: "", notes: "" });
-      fetchInventory(); // Refresh list
-    } catch (error) {
-      console.error("Failed to receive inventory:", error);
+      toast.success(`Received ${receiveForm.qty} units of ${receiveForm.ipn}`);
+      fetchInventory();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to receive inventory");
     }
   };
 
   const handleBulkDelete = async () => {
-    if (selectedItems.size === 0 || !confirm(`Delete ${selectedItems.size} inventory items?`)) {
-      return;
-    }
-    
+    if (selectedItems.size === 0) return;
+    setDeleteConfirmOpen(true);
+  };
+
+  const confirmBulkDelete = async () => {
     try {
       await api.bulkDeleteInventory(Array.from(selectedItems));
+      toast.success(`Deleted ${selectedItems.size} inventory items`);
       setSelectedItems(new Set());
       fetchInventory();
-    } catch (error) {
-      console.error("Failed to delete items:", error);
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete items");
     }
   };
 
@@ -119,10 +125,15 @@ function Inventory() {
   ];
 
   const handleBulkUpdate = async (updates: Record<string, string>) => {
-    await api.bulkUpdateInventory(Array.from(selectedItems), updates);
-    setSelectedItems(new Set());
-    setBulkEditOpen(false);
-    fetchInventory();
+    try {
+      await api.bulkUpdateInventory(Array.from(selectedItems), updates);
+      toast.success(`Updated ${selectedItems.size} inventory items`);
+      setSelectedItems(new Set());
+      setBulkEditOpen(false);
+      fetchInventory();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update items");
+    }
   };
 
   const toggleSelectAll = () => {
@@ -460,7 +471,7 @@ function Inventory() {
             columns={inventoryColumns}
             data={inventory}
             rowKey={(item) => item.ipn}
-            rowClassName={(item) => isLowStock(item) ? "bg-red-50" : ""}
+            rowClassName={(item) => isLowStock(item) ? "bg-destructive/5" : ""}
             emptyMessage={showLowStock ? "No low stock items found" : "No inventory items found"}
             leadingColumn={{
               header: (
@@ -488,6 +499,16 @@ function Inventory() {
         selectedCount={selectedItems.size}
         onSubmit={handleBulkUpdate}
         title="Bulk Edit Inventory"
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete Inventory Items"
+        description={`Are you sure you want to delete ${selectedItems.size} inventory item${selectedItems.size === 1 ? "" : "s"}? This action cannot be undone.`}
+        confirmLabel="Delete"
+        variant="destructive"
+        onConfirm={confirmBulkDelete}
       />
     </div>
   );

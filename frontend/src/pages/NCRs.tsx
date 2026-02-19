@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Label } from "../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { AlertTriangle, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { api, type NCR } from "../lib/api";
 
 function NCRs() {
@@ -29,8 +30,8 @@ function NCRs() {
       try {
         const data = await api.getNCRs();
         setNCRs(data);
-      } catch (error) {
-        console.error("Failed to fetch NCRs:", error);
+      } catch (error: any) {
+        toast.error(error.message || "Failed to fetch NCRs");
       } finally {
         setLoading(false);
       }
@@ -46,8 +47,9 @@ function NCRs() {
       setNCRs([newNCR, ...ncrs]);
       setCreateDialogOpen(false);
       setFormData({ title: "", description: "", severity: "minor", ipn: "" });
-    } catch (error) {
-      console.error("Failed to create NCR:", error);
+      toast.success("NCR created successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create NCR");
     }
   };
 

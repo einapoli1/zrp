@@ -10,7 +10,7 @@ import { Label } from "../components/ui/label";
 import { Cpu, ArrowLeft, Play, Pause, RotateCcw } from "lucide-react";
 import { api, type FirmwareCampaign, type CampaignDevice } from "../lib/api";
 import { useWSSubscription } from "../contexts/WebSocketContext";
-
+import { toast } from "sonner";
 function FirmwareDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -36,7 +36,7 @@ function FirmwareDetail() {
         setCampaign(campaignData);
         setDevices(devicesData);
       } catch (error) {
-        console.error("Failed to fetch campaign data:", error);
+        toast.error("Failed to fetch campaign data"); console.error("Failed to fetch campaign data:", error);
       } finally {
         setLoading(false);
       }
@@ -170,7 +170,7 @@ function FirmwareDetail() {
                 const updated = await api.updateFirmwareCampaign(campaign.id, { status: "paused" });
                 setCampaign(updated);
               } catch (error) {
-                console.error("Failed to pause campaign:", error);
+                toast.error("Failed to pause campaign"); console.error("Failed to pause campaign:", error);
               }
             }}>
               <Pause className="h-4 w-4 mr-2" />
@@ -182,7 +182,7 @@ function FirmwareDetail() {
                 const updated = await api.updateFirmwareCampaign(campaign.id, { status: "running" });
                 setCampaign(updated);
               } catch (error) {
-                console.error("Failed to start campaign:", error);
+                toast.error("Failed to start campaign"); console.error("Failed to start campaign:", error);
               }
             }}>
               <Play className="h-4 w-4 mr-2" />
@@ -196,7 +196,7 @@ function FirmwareDetail() {
                 const updated = await api.updateFirmwareCampaign(campaign.id, { status: "running" });
                 setCampaign(updated);
               } catch (error) {
-                console.error("Failed to retry campaign:", error);
+                toast.error("Failed to retry campaign"); console.error("Failed to retry campaign:", error);
               }
             }}>
               <RotateCcw className="h-4 w-4 mr-2" />

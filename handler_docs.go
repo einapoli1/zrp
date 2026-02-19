@@ -57,6 +57,12 @@ func handleGetDoc(w http.ResponseWriter, r *http.Request, id string) {
 func handleCreateDoc(w http.ResponseWriter, r *http.Request) {
 	var d Document
 	if err := decodeBody(r, &d); err != nil { jsonErr(w, "invalid body", 400); return }
+
+	ve := &ValidationErrors{}
+	requireField(ve, "title", d.Title)
+	if d.Status != "" { validateEnum(ve, "status", d.Status, validDocStatuses) }
+	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
+
 	d.ID = nextID("DOC", "documents", 3)
 	if d.Revision == "" { d.Revision = "A" }
 	if d.Status == "" { d.Status = "draft" }
