@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -138,7 +138,12 @@ function SalesOrderDetail() {
             <div className="flex justify-between"><span className="text-muted-foreground">Customer</span><span>{order.customer}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Quote</span>
               {order.quote_id ? (
-                <span className="font-mono cursor-pointer text-blue-600 hover:underline" onClick={() => navigate(`/quotes/${order.quote_id}`)}>{order.quote_id}</span>
+                <Link 
+                  to={`/quotes/${order.quote_id}`} 
+                  className="font-mono text-blue-600 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded"
+                >
+                  {order.quote_id}
+                </Link>
               ) : <span>—</span>}
             </div>
             <div className="flex justify-between"><span className="text-muted-foreground">Created By</span><span>{order.created_by || "—"}</span></div>
@@ -146,7 +151,12 @@ function SalesOrderDetail() {
             <div className="flex justify-between"><span className="text-muted-foreground">Updated</span><span>{new Date(order.updated_at).toLocaleString()}</span></div>
             {order.shipment_id && (
               <div className="flex justify-between"><span className="text-muted-foreground">Shipment</span>
-                <span className="font-mono cursor-pointer text-blue-600 hover:underline" onClick={() => navigate(`/shipments/${order.shipment_id}`)}>{order.shipment_id}</span>
+                <Link 
+                  to={`/shipments/${order.shipment_id}`}
+                  className="font-mono text-blue-600 hover:underline focus-visible:ring-2 focus-visible:ring-ring focus-visible:rounded"
+                >
+                  {order.shipment_id}
+                </Link>
               </div>
             )}
             {order.invoice_id && (

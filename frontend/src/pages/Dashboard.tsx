@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { useWSSubscription } from "../contexts/WebSocketContext";
+import { usePageTitle } from "../hooks/usePageTitle";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
 import { 
@@ -85,6 +86,7 @@ interface Activity {
 }
 
 function Dashboard() {
+  usePageTitle("Dashboard");
   const [stats, setStats] = useState<ExtendedDashboardStats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);

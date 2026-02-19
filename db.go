@@ -665,6 +665,16 @@ func runMigrations() error {
 		"CREATE INDEX IF NOT EXISTS idx_shipment_lines_shipment_id ON shipment_lines(shipment_id)",
 		"CREATE INDEX IF NOT EXISTS idx_field_reports_status ON field_reports(status)",
 		"CREATE INDEX IF NOT EXISTS idx_email_log_sent_at ON email_log(sent_at)",
+		
+		// Performance optimization: Composite indexes for common query patterns
+		"CREATE INDEX IF NOT EXISTS idx_inventory_ipn_qty_on_hand ON inventory(ipn, qty_on_hand)",
+		"CREATE INDEX IF NOT EXISTS idx_inventory_ipn_qty_reserved ON inventory(ipn, qty_reserved)",
+		"CREATE INDEX IF NOT EXISTS idx_po_lines_ipn_unit_price ON po_lines(ipn, unit_price)",
+		"CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, read_at)",
+		"CREATE INDEX IF NOT EXISTS idx_test_records_ipn_result_tested ON test_records(ipn, result, tested_at)",
+		"CREATE INDEX IF NOT EXISTS idx_audit_log_user_created ON audit_log(user_id, created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_change_history_user_created ON change_history(user_id, created_at)",
+		"CREATE INDEX IF NOT EXISTS idx_email_log_address_sent ON email_log(to_address, sent_at)",
 	}
 	for _, idx := range indexes {
 		if _, err := db.Exec(idx); err != nil {

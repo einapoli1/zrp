@@ -72,7 +72,7 @@ func handleUploadAttachment(w http.ResponseWriter, r *http.Request) {
 	result, err := db.Exec(`INSERT INTO attachments (module, record_id, filename, original_name, size_bytes, mime_type, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		module, recordID, filename, header.Filename, written, mimeType, uploadedBy)
 	if err != nil {
-		jsonErr(w, err.Error(), 500)
+		jsonErr(w, "Failed to save attachment. Please try again.", 500)
 		return
 	}
 
@@ -100,7 +100,7 @@ func handleListAttachments(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query(`SELECT id, module, record_id, filename, original_name, size_bytes, mime_type, uploaded_by, created_at
 		FROM attachments WHERE module = ? AND record_id = ? ORDER BY created_at DESC`, module, recordID)
 	if err != nil {
-		jsonErr(w, err.Error(), 500)
+		jsonErr(w, "Failed to fetch attachments. Please try again.", 500)
 		return
 	}
 	defer rows.Close()
@@ -138,8 +138,27 @@ func handleDeleteAttachment(w http.ResponseWriter, r *http.Request, idStr string
 		jsonErr(w, "Attachment not found", 404)
 		return
 	}
-	db.Exec("DELETE FROM attachments WHERE id = ?", id)
-	os.Remove(filepath.Join("uploads", filename))
+	
+	res, err := db.Exec("DELETE FROM attachments WHERE id = ?", id)
+	if err != nil {
+		jsonErr(w, "Failed to delete attachment. Please try again.", 500)
+		return
+	}
+	
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		jsonErr(w, "Attachment not found", 404)
+		return
+	}
+	
+	// Try to remove file from disk (non-critical, log but don't fail)
+	filePath := filepath.Join("uploads", filename)
+	if err := os.Remove(filePath); err != nil {
+		// Log error but don't fail the request since DB record is deleted
+		logAudit(db, getUsername(r), "delete_file_failed", "attachment", idStr, "Failed to remove file: "+filename)
+	}
+	
+	logAudit(db, getUsername(r), "deleted", "attachment", idStr, "Deleted attachment: "+filename)
 	jsonResp(w, map[string]string{"status": "deleted"})
 }
 

@@ -292,12 +292,19 @@ export function AppLayout() {
 
   return (
     <SidebarProvider>
+      {/* Skip to main content link for keyboard users */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-primary focus:text-primary-foreground focus:rounded-md focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
       <div className="flex min-h-screen w-full">
         {/* Sidebar */}
-        <Sidebar>
+        <Sidebar role="navigation" aria-label="Main navigation">
           <SidebarHeader className="border-b p-4">
             <div className="flex items-center space-x-2">
-              <Package className="h-6 w-6" />
+              <Package className="h-6 w-6" aria-hidden="true" />
               <span className="text-lg font-semibold">ZRP</span>
             </div>
           </SidebarHeader>
@@ -330,7 +337,12 @@ export function AppLayout() {
           <SidebarFooter className="border-t p-4">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">v1.0.0</span>
-              <Button variant="ghost" size="sm" onClick={toggleDarkMode}>
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={toggleDarkMode}
+                aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+              >
                 {darkMode ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
             </div>
@@ -340,15 +352,16 @@ export function AppLayout() {
         {/* Main Content */}
         <div className="flex flex-1 flex-col">
           {/* Header */}
-          <header className="flex h-16 items-center justify-between border-b bg-background px-6">
+          <header className="flex h-16 items-center justify-between border-b bg-background px-6" role="banner">
             <div className="flex items-center space-x-4">
               <SidebarTrigger />
               <Button
                 variant="outline"
                 className="relative h-9 w-9 p-0 xl:h-10 xl:w-60 xl:justify-start xl:px-3 xl:py-2"
                 onClick={handleSearch}
+                aria-label="Search (Cmd+K)"
               >
-                <Search className="h-4 w-4 xl:mr-2" />
+                <Search className="h-4 w-4 xl:mr-2" aria-hidden="true" />
                 <span className="hidden xl:inline-flex">Search...</span>
                 <kbd className="pointer-events-none absolute right-1.5 top-2 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 xl:flex">
                   <span className="text-xs">⌘</span>K
@@ -372,8 +385,13 @@ export function AppLayout() {
                 </span>
               </div>
 
-              <Button variant="ghost" size="icon" onClick={() => navigate("/undo-history")} title="Undo History">
-                <Clock className="h-4 w-4" />
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate("/undo-history")} 
+                aria-label="View undo history"
+              >
+                <Clock className="h-4 w-4" aria-hidden="true" />
               </Button>
 
               <div className="relative" ref={notifRef}>
@@ -390,7 +408,11 @@ export function AppLayout() {
                     <div className="flex items-center justify-between border-b px-4 py-2">
                       <span className="text-sm font-semibold">Notifications</span>
                       {unreadCount > 0 && (
-                        <button className="text-xs text-muted-foreground hover:text-foreground" onClick={markAllRead}>
+                        <button 
+                          className="text-xs text-muted-foreground hover:text-foreground" 
+                          onClick={markAllRead}
+                          aria-label="Mark all notifications as read"
+                        >
                           Mark all read
                         </button>
                       )}
@@ -433,8 +455,12 @@ export function AppLayout() {
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-8 w-8 rounded-full">
-                    <User className="h-4 w-4" />
+                  <Button 
+                    variant="ghost" 
+                    className="relative h-8 w-8 rounded-full"
+                    aria-label="User menu"
+                  >
+                    <User className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56" align="end" forceMount>
@@ -473,7 +499,7 @@ export function AppLayout() {
           </header>
 
           {/* Main Content Area */}
-          <main className="flex-1 overflow-y-auto p-6">
+          <main id="main-content" className="flex-1 overflow-y-auto p-6" role="main" aria-label="Main content">
             <ErrorBoundary>
               <Outlet />
             </ErrorBoundary>

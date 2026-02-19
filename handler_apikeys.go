@@ -43,7 +43,7 @@ func hashAPIKey(key string) string {
 func handleListAPIKeys(w http.ResponseWriter, r *http.Request) {
 	rows, err := db.Query(`SELECT id, name, key_prefix, created_by, created_at, last_used, expires_at, enabled FROM api_keys ORDER BY created_at DESC`)
 	if err != nil {
-		jsonErr(w, err.Error(), 500)
+		jsonErr(w, "Failed to fetch API keys. Please try again.", 500)
 		return
 	}
 	defer rows.Close()
@@ -93,7 +93,7 @@ func handleCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 	result, err := db.Exec(`INSERT INTO api_keys (name, key_hash, key_prefix, expires_at) VALUES (?, ?, ?, ?)`,
 		req.Name, keyHash, keyPrefix, expiresAt)
 	if err != nil {
-		jsonErr(w, err.Error(), 500)
+		jsonErr(w, "Failed to create API key. Please try again.", 500)
 		return
 	}
 
@@ -116,7 +116,7 @@ func handleCreateAPIKey(w http.ResponseWriter, r *http.Request) {
 func handleDeleteAPIKey(w http.ResponseWriter, r *http.Request, id string) {
 	res, err := db.Exec("DELETE FROM api_keys WHERE id = ?", id)
 	if err != nil {
-		jsonErr(w, err.Error(), 500)
+		jsonErr(w, "Failed to delete API key. Please try again.", 500)
 		return
 	}
 	n, _ := res.RowsAffected()
@@ -124,6 +124,7 @@ func handleDeleteAPIKey(w http.ResponseWriter, r *http.Request, id string) {
 		jsonErr(w, "API key not found", 404)
 		return
 	}
+	logAudit(db, getUsername(r), "deleted", "api_key", id, "Revoked API key")
 	json.NewEncoder(w).Encode(map[string]string{"status": "revoked"})
 }
 
@@ -135,11 +136,21 @@ func handleToggleAPIKey(w http.ResponseWriter, r *http.Request, id string) {
 		jsonErr(w, "Invalid body", 400)
 		return
 	}
-	_, err := db.Exec("UPDATE api_keys SET enabled = ? WHERE id = ?", body.Enabled, id)
+	res, err := db.Exec("UPDATE api_keys SET enabled = ? WHERE id = ?", body.Enabled, id)
 	if err != nil {
-		jsonErr(w, err.Error(), 500)
+		jsonErr(w, "Failed to update API key. Please try again.", 500)
 		return
 	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		jsonErr(w, "API key not found", 404)
+		return
+	}
+	action := "enabled"
+	if body.Enabled == 0 {
+		action = "disabled"
+	}
+	logAudit(db, getUsername(r), action, "api_key", id, fmt.Sprintf("API key %s", action))
 	json.NewEncoder(w).Encode(map[string]string{"status": "updated"})
 }
 

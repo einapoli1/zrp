@@ -2,8 +2,10 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../lib/api";
 import { usePermissions } from "../contexts/PermissionsContext";
+import { usePageTitle } from "../hooks/usePageTitle";
 
 export default function Login() {
+  usePageTitle("Sign In");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");

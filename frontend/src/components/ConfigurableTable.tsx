@@ -52,6 +52,10 @@ interface ConfigurableTableProps<T> {
     cell: (row: T) => ReactNode;
     className?: string;
   };
+  /** Accessible label for the table (required for screen readers) */
+  ariaLabel?: string;
+  /** Optional caption for the table */
+  caption?: string;
 }
 
 function loadColumnState(tableName: string): ColumnState[] | null {
@@ -80,6 +84,8 @@ export function ConfigurableTable<T>({
   rowClassName,
   emptyMessage = "No data found",
   leadingColumn,
+  ariaLabel,
+  caption,
 }: ConfigurableTableProps<T>) {
   const [columnOrder, setColumnOrder] = useState<ColumnState[]>(() => {
     const saved = loadColumnState(tableName);
@@ -227,26 +233,38 @@ export function ConfigurableTable<T>({
 
   return (
     <div>
-      <Table>
+      <Table aria-label={ariaLabel || `${tableName} table`}>
+        {caption && <caption className="sr-only">{caption}</caption>}
         <TableHeader>
           <TableRow>
             {leadingColumn && (
-              <TableHead className={leadingColumn.className}>
+              <TableHead className={leadingColumn.className} scope="col">
                 {leadingColumn.header}
               </TableHead>
             )}
-            {visibleColumns.map((col) => (
-              <TableHead
-                key={col.id}
-                className={col.headerClassName}
-                style={col.width ? { width: col.width, minWidth: col.minWidth || 50 } : { minWidth: col.minWidth || 50 }}
-              >
-                <div
-                  className={`flex items-center gap-1 relative pr-2${col.sortValue ? " cursor-pointer select-none" : ""}`}
-                  onClick={() => handleSort(col.id)}
+            {visibleColumns.map((col) => {
+              const isSorted = sortState?.colId === col.id;
+              const sortDirection = isSorted ? sortState.direction : undefined;
+              const ariaSortValue = sortDirection ? (sortDirection === "asc" ? "ascending" : "descending") : col.sortValue ? "none" : undefined;
+              
+              return (
+                <TableHead
+                  key={col.id}
+                  className={col.headerClassName}
+                  style={col.width ? { width: col.width, minWidth: col.minWidth || 50 } : { minWidth: col.minWidth || 50 }}
+                  scope="col"
+                  aria-sort={ariaSortValue}
                 >
-                  <span>{col.label}</span>
-                  {sortState?.colId === col.id && sortState.direction === "asc" && (
+                  <div
+                    className={`flex items-center gap-1 relative pr-2${col.sortValue ? " cursor-pointer select-none" : ""}`}
+                    onClick={() => handleSort(col.id)}
+                    role={col.sortValue ? "button" : undefined}
+                    aria-label={col.sortValue ? `Sort by ${col.label}${sortDirection ? ` (currently sorted ${sortDirection === "asc" ? "ascending" : "descending"})` : ""}` : undefined}
+                    tabIndex={col.sortValue ? 0 : undefined}
+                    onKeyDown={col.sortValue ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); handleSort(col.id); } } : undefined}
+                  >
+                    <span>{col.label}</span>
+                    {isSorted && sortDirection === "asc" && (
                     <ArrowUpNarrowWide className="h-3.5 w-3.5 text-muted-foreground" />
                   )}
                   {sortState?.colId === col.id && sortState.direction === "desc" && (

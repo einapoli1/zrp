@@ -2,11 +2,16 @@ import React from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { BrowserRouter } from "react-router-dom";
 import { WebSocketProvider } from "../contexts/WebSocketContext";
+import { PermissionsProvider } from "../contexts/PermissionsContext";
 
 function AllProviders({ children }: { children: React.ReactNode }) {
   return (
     <BrowserRouter>
-      <WebSocketProvider>{children}</WebSocketProvider>
+      <WebSocketProvider>
+        <PermissionsProvider>
+          {children}
+        </PermissionsProvider>
+      </WebSocketProvider>
     </BrowserRouter>
   );
 }
@@ -18,3 +23,6 @@ const customRender = (
 
 export * from "@testing-library/react";
 export { customRender as render };
+
+// Re-export accessibility testing utilities
+export { expectNoA11yViolations, testA11y, checkA11y, formatA11yViolations } from "./a11y-test-utils";
