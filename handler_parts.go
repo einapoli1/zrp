@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/csv"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -692,5 +691,5 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	cats, _, _, _ := loadPartsFromDir()
 	for _, p := range cats { d.TotalParts += len(p) }
 
-	json.NewEncoder(w).Encode(d)
+	jsonResp(w, d)
 }

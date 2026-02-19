@@ -655,8 +655,8 @@ func seedHealthTestData(t *testing.T, testDB *sql.DB) {
 
 	// Create a test work order (CRITICAL - this tests qty_good column)
 	_, err = testDB.Exec(
-		"INSERT INTO work_orders (id, ipn, title, quantity, status, assigned_to, created_by, priority, due_date, qty_good, qty_scrap) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-		"WO-001", "TEST-PART-001", "Test Work Order", 100, "pending", "admin", "admin", "normal", "2024-12-31", 0, 0,
+		"INSERT INTO work_orders (id, assembly_ipn, qty, status, priority, due_date, qty_good, qty_scrap, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		"WO-001", "TEST-PART-001", 100, "open", "normal", "2024-12-31", 0, 0, "Test Work Order",
 	)
 	if err != nil {
 		t.Fatalf("Failed to create work order: %v", err)
@@ -673,8 +673,8 @@ func seedHealthTestData(t *testing.T, testDB *sql.DB) {
 
 	// Create test inventory
 	_, err = testDB.Exec(
-		"INSERT INTO inventory (id, ipn, location, quantity, lot, description, mpn) VALUES (?, ?, ?, ?, ?, ?, ?)",
-		1, "TEST-PART-001", "A1", 100, "LOT-001", "Test part", "MPN-001",
+		"INSERT INTO inventory (ipn, location, qty_on_hand, description, mpn) VALUES (?, ?, ?, ?, ?)",
+		"TEST-PART-001", "A1", 100, "Test part", "MPN-001",
 	)
 	if err != nil {
 		t.Fatalf("Failed to create inventory: %v", err)
@@ -682,8 +682,8 @@ func seedHealthTestData(t *testing.T, testDB *sql.DB) {
 
 	// Create test device
 	_, err = testDB.Exec(
-		"INSERT INTO devices (id, serial_number, ipn, firmware_version, status, location) VALUES (?, ?, ?, ?, ?, ?)",
-		1, "SN-001", "TEST-PART-001", "1.0.0", "active", "Field",
+		"INSERT INTO devices (serial_number, ipn, firmware_version, status, location) VALUES (?, ?, ?, ?, ?)",
+		"SN-001", "TEST-PART-001", "1.0.0", "active", "Field",
 	)
 	if err != nil {
 		t.Fatalf("Failed to create device: %v", err)

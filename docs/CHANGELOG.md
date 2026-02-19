@@ -2,6 +2,48 @@
 
 ## [Unreleased]
 
+### Added - Integration Test Planning (2026-02-19)
+
+**Context:** ZRP has excellent unit test coverage (1,224 frontend tests + 40 backend test files, all passing), but integration tests for cross-module workflows were missing. This creates risk for regressions when modules interact.
+
+**Created:** `docs/INTEGRATION_TEST_PLAN.md` - Comprehensive test plan documenting:
+
+1. **Critical Integration Flows Identified:**
+   - BOM shortage → Procurement → PO → Receiving → Inventory (P0)
+   - Work Order → Material Reservation → Completion → Inventory Update (P0)
+   - NCR → ECO / CAPA Creation (P1)
+   - Device → RMA → Repair → Return (P1)
+   - Quote → Sales Order → Work Order → Shipment (P0 BLOCKER)
+
+2. **Test Cases Documented:**
+   - TC-INT-001 through TC-INT-011 covering end-to-end workflows
+   - Expected behavior vs. actual behavior
+   - Known gaps cross-referenced with WORKFLOW_GAPS.md
+
+3. **Implementation Guidance:**
+   - Test database setup patterns
+   - HTTP test patterns using httptest
+   - Strategy for documenting known gaps without failing tests
+
+4. **Gaps Identified and Documented:**
+   - ⚠️ GAP #4.1: Creating WO does NOT reserve materials (`qty_reserved` stays 0)
+   - ⚠️ GAP #4.5: Completing WO does NOT update inventory (no auto add finished goods / consume materials)
+   - ⚠️ GAP #9.1: URL-param based linking (NCR→ECO, NCR→CAPA, Device→RMA) - fragile pattern
+   - 🔴 GAP #8.1: No sales order module exists - quote acceptance is a dead end
+   - ⚠️ GAP #7.4: Device status not auto-updated when RMA created
+
+**Impact:**
+- Provides roadmap for integration test implementation
+- Documents expected behavior for critical workflows
+- Flags P0 blockers (sales orders, inventory updates) for prioritization
+- Establishes testing patterns for future development
+
+**Next Steps:**
+1. Implement tests for working flows (BOM check, PO generation)
+2. Address P0 gaps (WO inventory updates, sales orders)
+3. Migrate URL-param linking to database relations
+4. Add tests to CI pipeline for regression prevention
+
 ### Fixed - Procurement Handler Tests (2026-02-19)
 
 **Issue:** Three procurement handler tests were failing due to incorrect API response decoding.

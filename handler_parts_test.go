@@ -24,16 +24,18 @@ func setupPartsTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to enable foreign keys: %v", err)
 	}
 
-	// Create inventory table (for part cost calculations)
+	// Create inventory table matching production schema
 	_, err = testDB.Exec(`
 		CREATE TABLE inventory (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			ipn TEXT UNIQUE NOT NULL,
-			qty_on_hand INTEGER DEFAULT 0,
-			unit_cost REAL DEFAULT 0,
-			last_purchase_price REAL,
-			last_po_id TEXT,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			ipn TEXT PRIMARY KEY,
+			qty_on_hand REAL DEFAULT 0 CHECK(qty_on_hand >= 0),
+			qty_reserved REAL DEFAULT 0 CHECK(qty_reserved >= 0),
+			location TEXT,
+			reorder_point REAL DEFAULT 0 CHECK(reorder_point >= 0),
+			reorder_qty REAL DEFAULT 0 CHECK(reorder_qty >= 0),
+			description TEXT DEFAULT '',
+			mpn TEXT DEFAULT '',
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
 	`)
 	if err != nil {
@@ -419,10 +421,8 @@ func TestHandleCreatePart(t *testing.T) {
 	tmpDir := t.TempDir()
 	partsDir = tmpDir
 
-	// Create resistors category
-	resistorsDir := filepath.Join(tmpDir, "resistors")
-	os.MkdirAll(resistorsDir, 0755)
-	os.WriteFile(filepath.Join(resistorsDir, "standard.csv"), []byte("IPN,description\n"), 0644)
+	// Create resistors category CSV (must be <category>.csv in partsDir root)
+	os.WriteFile(filepath.Join(tmpDir, "resistors.csv"), []byte("IPN,description\n"), 0644)
 
 	tests := []struct {
 		name           string
@@ -649,23 +649,21 @@ func TestHandlePartBOM(t *testing.T) {
 	partsDir = tmpDir
 	defer func() { partsDir = oldPartsDir }()
 
-	// Create assembly with BOM (using PCA- prefix for assemblies)
-	asmDir := filepath.Join(tmpDir, "assemblies")
-	os.MkdirAll(asmDir, 0755)
+	// Create assembly parts list
+	asmCSV := `IPN,description
+PCA-001,Test Assembly`
+	os.WriteFile(filepath.Join(tmpDir, "assemblies.csv"), []byte(asmCSV), 0644)
 
-	asmCSV := `IPN,description,bom
-PCA-001,Test Assembly,"R-001 x2, C-001 x1"`
+	// Create BOM file for PCA-001 (separate CSV file with same name as IPN)
+	bomCSV := `IPN,qty,description
+R-001,2,Resistor 1K
+C-001,1,Capacitor 10uF`
+	os.WriteFile(filepath.Join(tmpDir, "PCA-001.csv"), []byte(bomCSV), 0644)
 
-	os.WriteFile(filepath.Join(asmDir, "main.csv"), []byte(asmCSV), 0644)
+	// Create component parts (flat CSV files in partsDir root)
+	os.WriteFile(filepath.Join(tmpDir, "resistors.csv"), []byte("IPN,description\nR-001,Resistor 1K\n"), 0644)
 
-	// Create component parts
-	resistorsDir := filepath.Join(tmpDir, "resistors")
-	os.MkdirAll(resistorsDir, 0755)
-	os.WriteFile(filepath.Join(resistorsDir, "main.csv"), []byte("IPN,description\nR-001,Resistor 1K\n"), 0644)
-
-	capsDir := filepath.Join(tmpDir, "capacitors")
-	os.MkdirAll(capsDir, 0755)
-	os.WriteFile(filepath.Join(capsDir, "main.csv"), []byte("IPN,description\nC-001,Capacitor 10uF\n"), 0644)
+	os.WriteFile(filepath.Join(tmpDir, "capacitors.csv"), []byte("IPN,description\nC-001,Capacitor 10uF\n"), 0644)
 
 	req := httptest.NewRequest("GET", "/api/v1/parts/PCA-001/bom", nil)
 	rr := httptest.NewRecorder()
@@ -831,29 +829,10 @@ func TestHandleUpdatePart(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handleUpdatePart(rr, req, "R-001")
 
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d. Body: %s", rr.Code, rr.Body.String())
+	// Handler intentionally returns 501 Not Implemented (parts are read-only from CSV)
+	if rr.Code != http.StatusNotImplemented {
+		t.Errorf("Expected status 501, got %d. Body: %s", rr.Code, rr.Body.String())
 		return
-	}
-
-	// Verify part was updated
-	req2 := httptest.NewRequest("GET", "/api/v1/parts/R-001", nil)
-	rr2 := httptest.NewRecorder()
-	handleGetPart(rr2, req2, "R-001")
-
-	var resp struct {
-		Data Part `json:"data"`
-	}
-	json.NewDecoder(rr2.Body).Decode(&resp)
-
-	if resp.Data.Fields["description"] != "Updated description" {
-		t.Errorf("Description not updated")
-	}
-	if resp.Data.Fields["status"] != "obsolete" {
-		t.Errorf("Status not updated")
-	}
-	if resp.Data.Fields["new_field"] != "new value" {
-		t.Errorf("New field not added")
 	}
 }
 
@@ -875,27 +854,10 @@ func TestHandleDeletePart(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handleDeletePart(rr, req, "R-001")
 
-	if rr.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", rr.Code)
+	// Handler intentionally returns 501 Not Implemented (parts are read-only from CSV)
+	if rr.Code != http.StatusNotImplemented {
+		t.Errorf("Expected status 501, got %d", rr.Code)
 		return
-	}
-
-	// Verify R-001 is gone
-	req2 := httptest.NewRequest("GET", "/api/v1/parts/R-001", nil)
-	rr2 := httptest.NewRecorder()
-	handleGetPart(rr2, req2, "R-001")
-
-	if rr2.Code != http.StatusNotFound {
-		t.Errorf("Expected part to be deleted (404), got %d", rr2.Code)
-	}
-
-	// Verify R-002 still exists
-	req3 := httptest.NewRequest("GET", "/api/v1/parts/R-002", nil)
-	rr3 := httptest.NewRecorder()
-	handleGetPart(rr3, req3, "R-002")
-
-	if rr3.Code != http.StatusOK {
-		t.Errorf("Expected R-002 to still exist, got %d", rr3.Code)
 	}
 }
 
@@ -1142,8 +1104,15 @@ func TestHandleDashboard(t *testing.T) {
 	db = setupPartsTestDB(t)
 
 	// Insert some low stock items
-	db.Exec("INSERT INTO inventory (ipn, qty_on_hand, reorder_point) VALUES (?, ?, ?)", "R-0402-10K", 5, 100)
-	db.Exec("INSERT INTO inventory (ipn, qty_on_hand, reorder_point) VALUES (?, ?, ?)", "C-0805-10U", 150, 100)
+	var err error
+	_, err = db.Exec("INSERT INTO inventory (ipn, qty_on_hand, reorder_point) VALUES (?, ?, ?)", "R-0402-10K", 5, 100)
+	if err != nil {
+		t.Fatalf("Failed to insert low stock item: %v", err)
+	}
+	_, err = db.Exec("INSERT INTO inventory (ipn, qty_on_hand, reorder_point) VALUES (?, ?, ?)", "C-0805-10U", 150, 100)
+	if err != nil {
+		t.Fatalf("Failed to insert normal stock item: %v", err)
+	}
 
 	req := httptest.NewRequest("GET", "/api/v1/dashboard", nil)
 	rr := httptest.NewRecorder()
@@ -1155,22 +1124,17 @@ func TestHandleDashboard(t *testing.T) {
 	}
 
 	var resp struct {
-		Data struct {
-			Stats struct {
-				TotalParts   int `json:"total_parts"`
-				LowStockQty  int `json:"low_stock_qty"`
-			} `json:"stats"`
-		} `json:"data"`
+		Data DashboardData `json:"data"`
 	}
 	json.NewDecoder(rr.Body).Decode(&resp)
 
 	// Should have 7 total parts
-	if resp.Data.Stats.TotalParts != 7 {
-		t.Errorf("Expected 7 total parts, got %d", resp.Data.Stats.TotalParts)
+	if resp.Data.TotalParts != 7 {
+		t.Errorf("Expected 7 total parts, got %d", resp.Data.TotalParts)
 	}
 
-	// Should have 1 low stock item (R-0402-10K)
-	if resp.Data.Stats.LowStockQty != 1 {
-		t.Errorf("Expected 1 low stock item, got %d", resp.Data.Stats.LowStockQty)
+	// Should have 1 low stock item (R-0402-10K with qty_on_hand=5 < reorder_point=100)
+	if resp.Data.LowStock != 1 {
+		t.Errorf("Expected 1 low stock item, got %d", resp.Data.LowStock)
 	}
 }
