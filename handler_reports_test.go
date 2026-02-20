@@ -1797,7 +1797,16 @@ func TestInventoryValuation_CalculationAccuracy(t *testing.T) {
 	handleReportInventoryValuation(w, req)
 
 	var report InvValuationReport
-	json.NewDecoder(w.Body).Decode(&report)
+	if err := json.NewDecoder(w.Body).Decode(&report); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if len(report.Groups) == 0 {
+		t.Fatalf("Expected groups in report, got none")
+	}
+	if len(report.Groups[0].Items) == 0 {
+		t.Fatalf("Expected items in first group, got none")
+	}
 
 	// Expected: 1234.56 * 0.0789 = 97.4067
 	expectedSubtotal := 1234.56 * 0.0789
