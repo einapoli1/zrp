@@ -144,6 +144,22 @@ func setupIntegrationTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create sessions table: %v", err)
 	}
 
+	// Create audit_log table - CRITICAL: Used by almost every handler
+	_, err = testDB.Exec(`
+		CREATE TABLE audit_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+			username TEXT,
+			action TEXT,
+			table_name TEXT,
+			record_id TEXT,
+			details TEXT
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create audit_log table: %v", err)
+	}
+
 	// Insert admin user
 	_, err = testDB.Exec(`
 		INSERT INTO users (id, username, password_hash, role)
