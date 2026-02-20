@@ -112,6 +112,12 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	validateMaxLength(ve, "display_name", req.DisplayName, 255)
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
 	
+	// Validate password strength
+	if err := ValidatePasswordStrength(req.Password); err != nil {
+		jsonErr(w, err.Error(), 400)
+		return
+	}
+
 	validRoles := map[string]bool{"admin": true, "user": true, "readonly": true}
 	if !validRoles[req.Role] {
 		req.Role = "user"
@@ -132,6 +138,10 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id, _ := result.LastInsertId()
+	
+	// Add initial password to history
+	AddPasswordHistory(int(id), string(hash))
+	
 	w.WriteHeader(201)
 	jsonResp(w, map[string]interface{}{"id": id, "username": req.Username, "display_name": req.DisplayName, "role": req.Role})
 }
