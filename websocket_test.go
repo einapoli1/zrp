@@ -14,7 +14,7 @@ import (
 
 func TestWSHub_RegisterUnregister(t *testing.T) {
 	_ = &Hub{
-		clients: make(map[*websocket.Conn]struct{}),
+		clients: make(map[*client]struct{}),
 	}
 
 	// Start a test server to create real WebSocket connections
@@ -488,7 +488,7 @@ func TestWebSocket_InvalidUpgrade(t *testing.T) {
 
 func TestWSHub_EmptyBroadcast(t *testing.T) {
 	hub := &Hub{
-		clients: make(map[*websocket.Conn]struct{}),
+		clients: make(map[*client]struct{}),
 	}
 
 	// Broadcast with no clients connected
@@ -561,13 +561,14 @@ func TestWebSocket_WriteDeadline(t *testing.T) {
 	// the broadcast mechanism handles write errors gracefully
 
 	hub := &Hub{
-		clients: make(map[*websocket.Conn]struct{}),
+		clients: make(map[*client]struct{}),
 	}
 
-	// Register a mock connection that will simulate write failure
+	// Register a mock client that will simulate write failure
 	// In production, closed connections are handled by unregister
 	mockConn := &websocket.Conn{}
-	hub.register(mockConn)
+	mockClient := &client{conn: mockConn}
+	hub.register(mockClient)
 
 	// Broadcast should handle write failures without panicking
 	event := WSEvent{

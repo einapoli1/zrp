@@ -17,27 +17,33 @@ type WSEvent struct {
 	Action string `json:"action"` // "create", "update", "delete"
 }
 
+// client wraps a WebSocket connection with a mutex for thread-safe writes.
+type client struct {
+	conn *websocket.Conn
+	mu   sync.Mutex
+}
+
 // Hub maintains connected WebSocket clients and broadcasts events.
 type Hub struct {
 	mu      sync.RWMutex
-	clients map[*websocket.Conn]struct{}
+	clients map[*client]struct{}
 }
 
 var wsHub = &Hub{
-	clients: make(map[*websocket.Conn]struct{}),
+	clients: make(map[*client]struct{}),
 }
 
-func (h *Hub) register(conn *websocket.Conn) {
+func (h *Hub) register(c *client) {
 	h.mu.Lock()
-	h.clients[conn] = struct{}{}
+	h.clients[c] = struct{}{}
 	h.mu.Unlock()
 }
 
-func (h *Hub) unregister(conn *websocket.Conn) {
+func (h *Hub) unregister(c *client) {
 	h.mu.Lock()
-	delete(h.clients, conn)
+	delete(h.clients, c)
 	h.mu.Unlock()
-	conn.Close()
+	c.conn.Close()
 }
 
 // Broadcast sends an event to all connected clients.
@@ -48,15 +54,19 @@ func (h *Hub) Broadcast(evt WSEvent) {
 		return
 	}
 	h.mu.RLock()
-	clients := make([]*websocket.Conn, 0, len(h.clients))
+	clients := make([]*client, 0, len(h.clients))
 	for c := range h.clients {
 		clients = append(clients, c)
 	}
 	h.mu.RUnlock()
 
 	for _, c := range clients {
-		_ = c.SetWriteDeadline(time.Now().Add(5 * time.Second))
-		if err := c.WriteMessage(websocket.TextMessage, data); err != nil {
+		c.mu.Lock()
+		_ = c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+		err := c.conn.WriteMessage(websocket.TextMessage, data)
+		c.mu.Unlock()
+		
+		if err != nil {
 			h.unregister(c)
 		}
 	}
@@ -74,8 +84,15 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wsHub.register(conn)
-	log.Printf("ws: client connected (%d total)", len(wsHub.clients))
+	// Register the client wrapper
+	c := &client{conn: conn}
+	wsHub.register(c)
+	
+	wsHub.mu.RLock()
+	clientCount := len(wsHub.clients)
+	wsHub.mu.RUnlock()
+	
+	log.Printf("ws: client connected (%d total)", clientCount)
 
 	// Keep-alive: read loop (handles pongs and detects disconnects)
 	conn.SetReadDeadline(time.Now().Add(60 * time.Second))
@@ -89,7 +106,10 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		ticker := time.NewTicker(30 * time.Second)
 		defer ticker.Stop()
 		for range ticker.C {
-			if err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second)); err != nil {
+			c.mu.Lock()
+			err := conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second))
+			c.mu.Unlock()
+			if err != nil {
 				return
 			}
 		}
@@ -102,7 +122,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 	}
-	wsHub.unregister(conn)
+	wsHub.unregister(c)
 	log.Printf("ws: client disconnected")
 }
 
