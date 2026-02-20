@@ -142,11 +142,20 @@ func TestDeletePartChange(t *testing.T) {
 	req := authedRequest("POST", "/api/v1/parts/RES-001/changes", []byte(body), cookie)
 	w := httptest.NewRecorder()
 	handleCreatePartChanges(w, req, "RES-001")
+	
+	if w.Code != 200 {
+		t.Fatalf("Failed to create part change, got %d: %s", w.Code, w.Body.String())
+	}
+	
 	var resp APIResponse
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	data, _ := json.Marshal(resp.Data)
 	var changes []PartChange
 	json.Unmarshal(data, &changes)
+	
+	if len(changes) == 0 {
+		t.Fatalf("No part changes returned from create")
+	}
 	id := fmt.Sprintf("%d", changes[0].ID)
 
 	// Delete
@@ -211,10 +220,21 @@ func TestCreateECOFromChanges(t *testing.T) {
 
 	var resp APIResponse
 	json.Unmarshal(w2.Body.Bytes(), &resp)
-	data := resp.Data.(map[string]interface{})
-	ecoID := data["eco_id"].(string)
+	
+	data, ok := resp.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected resp.Data to be map[string]interface{}, got %T", resp.Data)
+	}
+	ecoIDVal, ok := data["eco_id"]
+	if !ok {
+		t.Fatal("expected eco_id field in response")
+	}
+	ecoID, ok := ecoIDVal.(string)
+	if !ok {
+		t.Fatalf("Expected eco_id to be string, got %T", ecoIDVal)
+	}
 	if ecoID == "" {
-		t.Fatal("expected eco_id")
+		t.Fatal("expected non-empty eco_id")
 	}
 
 	// Verify changes are now pending with eco_id set
@@ -261,9 +281,26 @@ func TestApplyPartChangesOnECOImplement(t *testing.T) {
 	req2 := authedRequest("POST", "/api/v1/parts/RES-001/changes/create-eco", []byte(body2), cookie)
 	w2 := httptest.NewRecorder()
 	handleCreateECOFromChanges(w2, req2, "RES-001")
+	
+	if w2.Code != 200 {
+		t.Fatalf("Failed to create ECO from changes, got %d: %s", w2.Code, w2.Body.String())
+	}
+	
 	var resp APIResponse
 	json.Unmarshal(w2.Body.Bytes(), &resp)
-	ecoID := resp.Data.(map[string]interface{})["eco_id"].(string)
+	
+	dataMap, ok := resp.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected resp.Data to be map[string]interface{}, got %T", resp.Data)
+	}
+	ecoIDVal, ok := dataMap["eco_id"]
+	if !ok {
+		t.Fatalf("Expected 'eco_id' field in response data")
+	}
+	ecoID, ok := ecoIDVal.(string)
+	if !ok {
+		t.Fatalf("Expected 'eco_id' to be string, got %T", ecoIDVal)
+	}
 
 	// Approve ECO
 	req3 := authedRequest("POST", fmt.Sprintf("/api/v1/ecos/%s/approve", ecoID), nil, cookie)
@@ -316,9 +353,26 @@ func TestListECOPartChanges(t *testing.T) {
 	req2 := authedRequest("POST", "/api/v1/parts/RES-001/changes/create-eco", []byte(body2), cookie)
 	w2 := httptest.NewRecorder()
 	handleCreateECOFromChanges(w2, req2, "RES-001")
+	
+	if w2.Code != 200 {
+		t.Fatalf("Failed to create ECO from changes, got %d: %s", w2.Code, w2.Body.String())
+	}
+	
 	var resp APIResponse
 	json.Unmarshal(w2.Body.Bytes(), &resp)
-	ecoID := resp.Data.(map[string]interface{})["eco_id"].(string)
+	
+	dataMap, ok := resp.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected resp.Data to be map[string]interface{}, got %T", resp.Data)
+	}
+	ecoIDVal, ok := dataMap["eco_id"]
+	if !ok {
+		t.Fatalf("Expected 'eco_id' field in response data")
+	}
+	ecoID, ok := ecoIDVal.(string)
+	if !ok {
+		t.Fatalf("Expected 'eco_id' to be string, got %T", ecoIDVal)
+	}
 
 	// List ECO part changes
 	req3 := authedRequest("GET", fmt.Sprintf("/api/v1/ecos/%s/part-changes", ecoID), nil, cookie)

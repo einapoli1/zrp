@@ -86,6 +86,26 @@ func setupAuthTestDB(t *testing.T) func() {
 		t.Fatalf("Failed to create password_history table: %v", err)
 	}
 
+	// Create audit_log table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS audit_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			module TEXT NOT NULL,
+			action TEXT NOT NULL,
+			record_id TEXT NOT NULL,
+			user_id INTEGER,
+			username TEXT DEFAULT '',
+			summary TEXT DEFAULT '',
+			changes TEXT DEFAULT '{}',
+			ip_address TEXT DEFAULT '',
+			user_agent TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create audit_log table: %v", err)
+	}
+
 	// Save and swap db
 	origDB := db
 	db = testDB

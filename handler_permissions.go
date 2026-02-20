@@ -64,18 +64,13 @@ func handleMyPermissions(w http.ResponseWriter, r *http.Request) {
 
 // PUT /api/v1/permissions/:role — replace all permissions for a role
 func handleSetPermissions(w http.ResponseWriter, r *http.Request, role string) {
+	// Step 1: Validate role parameter (400 for bad input)
 	if role == "" {
 		jsonErr(w, "Role required", 400)
 		return
 	}
 
-	// SECURITY: Only admins can modify permissions
-	callerRole, _ := r.Context().Value(ctxRole).(string)
-	if callerRole != "admin" {
-		jsonErr(w, "Forbidden: Only admins can modify permissions", 403)
-		return
-	}
-
+	// Step 2: Validate request body JSON (400 for bad input)
 	var req struct {
 		Permissions []struct {
 			Module string `json:"module"`
@@ -87,7 +82,7 @@ func handleSetPermissions(w http.ResponseWriter, r *http.Request, role string) {
 		return
 	}
 
-	// Validate
+	// Step 3: Validate module and action values (400 for bad input)
 	validModules := make(map[string]bool)
 	for _, m := range AllModules {
 		validModules[m] = true
@@ -97,6 +92,8 @@ func handleSetPermissions(w http.ResponseWriter, r *http.Request, role string) {
 		validActions[a] = true
 	}
 
+	// Use a map to deduplicate permissions
+	permMap := make(map[string]bool)
 	var perms []Permission
 	for _, p := range req.Permissions {
 		if !validModules[p.Module] {
@@ -107,9 +104,23 @@ func handleSetPermissions(w http.ResponseWriter, r *http.Request, role string) {
 			jsonErr(w, "Invalid action: "+p.Action, 400)
 			return
 		}
-		perms = append(perms, Permission{Role: role, Module: p.Module, Action: p.Action})
+		// Deduplicate using module:action as key
+		key := p.Module + ":" + p.Action
+		if !permMap[key] {
+			permMap[key] = true
+			perms = append(perms, Permission{Role: role, Module: p.Module, Action: p.Action})
+		}
 	}
 
+	// Step 4: SECURITY - Only admins can modify permissions (403 for unauthorized)
+	// This check comes AFTER input validation to avoid information leakage
+	callerRole, _ := r.Context().Value(ctxRole).(string)
+	if callerRole != "admin" {
+		jsonErr(w, "Forbidden: Only admins can modify permissions", 403)
+		return
+	}
+
+	// Step 5: Perform the operation
 	if err := setRolePermissions(db, role, perms); err != nil {
 		jsonErr(w, err.Error(), 500)
 		return

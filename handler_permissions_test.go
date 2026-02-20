@@ -54,6 +54,26 @@ func setupPermissionsTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create users table: %v", err)
 	}
 
+	// Create audit_log table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS audit_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			module TEXT NOT NULL,
+			action TEXT NOT NULL,
+			record_id TEXT NOT NULL,
+			user_id INTEGER,
+			username TEXT DEFAULT '',
+			summary TEXT DEFAULT '',
+			changes TEXT DEFAULT '{}',
+			ip_address TEXT DEFAULT '',
+			user_agent TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create audit_log table: %v", err)
+	}
+
 	return testDB
 }
 
@@ -390,15 +410,17 @@ func TestHandleMyPermissions_AdminRole(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var perms []Permission
-	if err := json.NewDecoder(w.Body).Decode(&perms); err != nil {
+	var resp struct {
+		Data []Permission `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
 	// Admin should have all permissions
 	expectedCount := len(AllModules) * len(AllActions)
-	if len(perms) != expectedCount {
-		t.Errorf("Expected %d permissions for admin, got %d", expectedCount, len(perms))
+	if len(resp.Data) != expectedCount {
+		t.Errorf("Expected %d permissions for admin, got %d", expectedCount, len(resp.Data))
 	}
 }
 
@@ -422,19 +444,21 @@ func TestHandleMyPermissions_UserRole(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var perms []Permission
-	if err := json.NewDecoder(w.Body).Decode(&perms); err != nil {
+	var resp struct {
+		Data []Permission `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
 	// User should have permissions on all modules except admin
 	expectedCount := (len(AllModules) - 1) * len(AllActions)
-	if len(perms) != expectedCount {
-		t.Errorf("Expected %d permissions for user, got %d", expectedCount, len(perms))
+	if len(resp.Data) != expectedCount {
+		t.Errorf("Expected %d permissions for user, got %d", expectedCount, len(resp.Data))
 	}
 
 	// Verify no admin module permissions
-	for _, p := range perms {
+	for _, p := range resp.Data {
 		if p.Module == ModuleAdmin {
 			t.Error("User should not have admin module permissions")
 		}
@@ -461,19 +485,21 @@ func TestHandleMyPermissions_ReadonlyRole(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var perms []Permission
-	if err := json.NewDecoder(w.Body).Decode(&perms); err != nil {
+	var resp struct {
+		Data []Permission `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
 	// Readonly should only have view permissions
 	expectedCount := len(AllModules)
-	if len(perms) != expectedCount {
-		t.Errorf("Expected %d permissions for readonly, got %d", expectedCount, len(perms))
+	if len(resp.Data) != expectedCount {
+		t.Errorf("Expected %d permissions for readonly, got %d", expectedCount, len(resp.Data))
 	}
 
 	// Verify all are view actions
-	for _, p := range perms {
+	for _, p := range resp.Data {
 		if p.Action != ActionView {
 			t.Errorf("Readonly should only have view action, got %s", p.Action)
 		}
@@ -499,15 +525,17 @@ func TestHandleMyPermissions_BearerToken_NoRole(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var perms []Permission
-	if err := json.NewDecoder(w.Body).Decode(&perms); err != nil {
+	var resp struct {
+		Data []Permission `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
 	// Bearer tokens get all permissions
 	expectedCount := len(AllModules) * len(AllActions)
-	if len(perms) != expectedCount {
-		t.Errorf("Expected %d permissions for bearer token, got %d", expectedCount, len(perms))
+	if len(resp.Data) != expectedCount {
+		t.Errorf("Expected %d permissions for bearer token, got %d", expectedCount, len(resp.Data))
 	}
 }
 
@@ -535,13 +563,15 @@ func TestHandleMyPermissions_CustomRole(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var perms []Permission
-	if err := json.NewDecoder(w.Body).Decode(&perms); err != nil {
+	var resp struct {
+		Data []Permission `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if len(perms) != 3 {
-		t.Errorf("Expected 3 permissions for custom role, got %d", len(perms))
+	if len(resp.Data) != 3 {
+		t.Errorf("Expected 3 permissions for custom role, got %d", len(resp.Data))
 	}
 }
 
@@ -567,6 +597,8 @@ func TestHandleSetPermissions_Success(t *testing.T) {
 		]
 	}`
 	req := httptest.NewRequest("PUT", "/api/v1/permissions/supervisor", bytes.NewBufferString(reqBody))
+	ctx := context.WithValue(req.Context(), ctxRole, "admin")
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handleSetPermissions(w, req, "supervisor")
@@ -575,13 +607,17 @@ func TestHandleSetPermissions_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var resp map[string]string
+	var resp struct {
+		Data struct {
+			Status string `json:"status"`
+		} `json:"data"`
+	}
 	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if resp["status"] != "updated" {
-		t.Errorf("Expected status 'updated', got '%s'", resp["status"])
+	if resp.Data.Status != "updated" {
+		t.Errorf("Expected status 'updated', got '%s'", resp.Data.Status)
 	}
 
 	// Verify permissions were saved
@@ -623,6 +659,8 @@ func TestHandleSetPermissions_ReplacesExisting(t *testing.T) {
 		]
 	}`
 	req := httptest.NewRequest("PUT", "/api/v1/permissions/manager", bytes.NewBufferString(reqBody))
+	ctx := context.WithValue(req.Context(), ctxRole, "admin")
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handleSetPermissions(w, req, "manager")
@@ -665,6 +703,8 @@ func TestHandleSetPermissions_EmptyPermissions(t *testing.T) {
 	// Set empty permissions (effectively revoke all)
 	reqBody := `{"permissions": []}`
 	req := httptest.NewRequest("PUT", "/api/v1/permissions/user", bytes.NewBufferString(reqBody))
+	ctx := context.WithValue(req.Context(), ctxRole, "admin")
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handleSetPermissions(w, req, "user")
@@ -811,6 +851,8 @@ func TestHandleSetPermissions_AllValidModulesAndActions(t *testing.T) {
 	reqBody := `{"permissions":[` + strings.Join(permsArray, ",") + `]}`
 
 	req := httptest.NewRequest("PUT", "/api/v1/permissions/superadmin", bytes.NewBufferString(reqBody))
+	ctx := context.WithValue(req.Context(), ctxRole, "admin")
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handleSetPermissions(w, req, "superadmin")
@@ -1008,6 +1050,8 @@ func TestHandleSetPermissions_DuplicatePermissions(t *testing.T) {
 		]
 	}`
 	req := httptest.NewRequest("PUT", "/api/v1/permissions/test", bytes.NewBufferString(reqBody))
+	ctx := context.WithValue(req.Context(), ctxRole, "admin")
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handleSetPermissions(w, req, "test")
@@ -1046,6 +1090,8 @@ func TestHandleSetPermissions_CacheRefresh(t *testing.T) {
 		]
 	}`
 	req := httptest.NewRequest("PUT", "/api/v1/permissions/custom", bytes.NewBufferString(reqBody))
+	ctx := context.WithValue(req.Context(), ctxRole, "admin")
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handleSetPermissions(w, req, "custom")
@@ -1082,6 +1128,8 @@ func TestHandleSetPermissions_DoesNotAffectOtherRoles(t *testing.T) {
 		]
 	}`
 	req := httptest.NewRequest("PUT", "/api/v1/permissions/user", bytes.NewBufferString(reqBody))
+	ctx := context.WithValue(req.Context(), ctxRole, "admin")
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handleSetPermissions(w, req, "user")
@@ -1123,10 +1171,13 @@ func TestHandleSetPermissions_NoCircularDependencies(t *testing.T) {
 	reqBody := `{"permissions": [{"module": "parts", "action": "view"}]}`
 
 	req := httptest.NewRequest("PUT", "/api/v1/permissions/roleA", bytes.NewBufferString(reqBody))
+	ctx := context.WithValue(req.Context(), ctxRole, "admin")
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 	handleSetPermissions(w, req, "roleA")
 
 	req = httptest.NewRequest("PUT", "/api/v1/permissions/roleB", bytes.NewBufferString(reqBody))
+	req = req.WithContext(ctx)
 	w = httptest.NewRecorder()
 	handleSetPermissions(w, req, "roleB")
 
@@ -1149,6 +1200,8 @@ func TestHandleSetPermissions_DefaultRoles_CanBeModified(t *testing.T) {
 		]
 	}`
 	req := httptest.NewRequest("PUT", "/api/v1/permissions/admin", bytes.NewBufferString(reqBody))
+	ctx := context.WithValue(req.Context(), ctxRole, "admin")
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handleSetPermissions(w, req, "admin")
@@ -1255,6 +1308,8 @@ func TestHandleSetPermissions_DatabaseError(t *testing.T) {
 
 	reqBody := `{"permissions": [{"module": "parts", "action": "view"}]}`
 	req := httptest.NewRequest("PUT", "/api/v1/permissions/test", bytes.NewBufferString(reqBody))
+	ctx := context.WithValue(req.Context(), ctxRole, "admin")
+	req = req.WithContext(ctx)
 	w := httptest.NewRecorder()
 
 	handleSetPermissions(w, req, "test")

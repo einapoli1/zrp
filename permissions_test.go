@@ -316,6 +316,8 @@ func TestPermissionAPIEndpoints(t *testing.T) {
 	// Test PUT /api/v1/permissions/readonly — add create on parts
 	body := `{"permissions":[{"module":"parts","action":"view"},{"module":"parts","action":"create"},{"module":"ecos","action":"view"}]}`
 	req = httptest.NewRequest("PUT", "/api/v1/permissions/readonly", bytes.NewBufferString(body))
+	ctx = context.WithValue(req.Context(), ctxRole, "admin")
+	req = req.WithContext(ctx)
 	w = httptest.NewRecorder()
 	handleSetPermissions(w, req, "readonly")
 	if w.Code != 200 {
