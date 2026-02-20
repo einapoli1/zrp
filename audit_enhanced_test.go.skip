@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -9,8 +10,8 @@ import (
 )
 
 func TestLogAuditEnhanced(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
 	// Test basic audit logging
 	err := LogAuditEnhanced(db, LogAuditOptions{
@@ -108,14 +109,14 @@ func TestGetClientIP(t *testing.T) {
 }
 
 func TestLogDataExport(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
-	createTestUser(t, db, 1, "admin", "admin@test.com", "admin")
-	cookie := createTestSession(t, db, 1, "admin")
+	userID := createTestUser(t, db, "admin", "password", "admin", true)
+	cookie := createTestSessionSimple(t, db, userID)
 
 	req := httptest.NewRequest("GET", "/api/parts/export?format=csv", nil)
-	req.AddCookie(cookie)
+	req.AddCookie(&http.Cookie{Name: "zrp_session", Value: cookie})
 
 	LogDataExport(db, req, "parts", "CSV", 150)
 
@@ -138,8 +139,8 @@ func TestLogDataExport(t *testing.T) {
 }
 
 func TestAuditRetentionPolicy(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
 	// Test default retention
 	days := GetAuditRetentionDays(db)
@@ -160,8 +161,8 @@ func TestAuditRetentionPolicy(t *testing.T) {
 }
 
 func TestCleanupOldAuditLogs(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
 	// Create old and recent audit logs
 	oldDate := time.Now().AddDate(0, 0, -400).Format("2006-01-02 15:04:05")
@@ -196,8 +197,8 @@ func TestCleanupOldAuditLogs(t *testing.T) {
 }
 
 func TestHandleAuditExport(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
 	// Create test logs
 	for i := 0; i < 3; i++ {
@@ -237,8 +238,8 @@ func TestHandleAuditExport(t *testing.T) {
 }
 
 func TestHandleAuditRetention(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
 	// Test GET
 	req := httptest.NewRequest("GET", "/api/audit/retention", nil)

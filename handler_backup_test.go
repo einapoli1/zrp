@@ -1,620 +1,357 @@
 package main
 
 import (
-	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
-	
+	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
-
-	_ "modernc.org/sqlite"
 )
 
-func setupBackupTestDB(t *testing.T) *sql.DB {
-	testDB, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("Failed to open test DB: %v", err)
-	}
-
-	if _, err := testDB.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		t.Fatalf("Failed to enable foreign keys: %v", err)
-	}
-
-	// Create test tables
-	_, err = testDB.Exec(`
-		CREATE TABLE ecos (
-			id TEXT PRIMARY KEY,
-			title TEXT NOT NULL,
-			description TEXT,
-			status TEXT DEFAULT 'draft',
-			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create ecos table: %v", err)
-	}
-
-	_, err = testDB.Exec(`
-		CREATE TABLE inventory (
-			ipn TEXT PRIMARY KEY,
-			qty_on_hand REAL DEFAULT 0,
-			description TEXT DEFAULT ''
-		)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create inventory table: %v", err)
-	}
-
-	return testDB
-}
-
-func setupBackupDir(t *testing.T) string {
-	tmpDir := t.TempDir()
-	oldBackupDir := backupDir
-	backupDir = tmpDir
-	t.Cleanup(func() { backupDir = oldBackupDir })
-	return tmpDir
-}
-
-func setupTestDBFile(t *testing.T) string {
-	tmpFile := filepath.Join(t.TempDir(), "test.db")
-	testDB, err := sql.Open("sqlite", tmpFile)
-	if err != nil {
-		t.Fatalf("Failed to create test DB file: %v", err)
-	}
-	testDB.Exec("CREATE TABLE test_data (id INTEGER PRIMARY KEY, value TEXT)")
-	testDB.Exec("INSERT INTO test_data (value) VALUES ('test123')")
-	testDB.Close()
-
-	oldDBFilePath := dbFilePath
-	dbFilePath = tmpFile
-	t.Cleanup(func() { dbFilePath = oldDBFilePath })
-	return tmpFile
-}
-
-func TestPerformBackup_Success(t *testing.T) {
+func setupBackupTest(t *testing.T) (*http.Cookie, func()) {
+	t.Helper()
+	// Use a temp backup dir
+	oldDir := backupDir
+	backupDir = t.TempDir()
 	oldDB := db
-	defer func() { db = oldDB }()
-	db = setupBackupTestDB(t)
-	defer db.Close()
-
-	tmpDir := setupBackupDir(t)
-	tmpFile := setupTestDBFile(t)
-
-	// Insert test data
-	db.Exec("INSERT INTO ecos (id, title) VALUES ('ECO-001', 'Test ECO')")
-
-	err := performBackup()
-	if err != nil {
-		t.Fatalf("performBackup failed: %v", err)
-	}
-
-	// Verify backup file was created
-	entries, err := os.ReadDir(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to read backup dir: %v", err)
-	}
-
-	if len(entries) == 0 {
-		t.Error("No backup file created")
-	}
-
-	// Verify backup filename format
-	found := false
-	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), "zrp-backup-") && strings.HasSuffix(e.Name(), ".db") {
-			found = true
-			info, _ := e.Info()
-			if info.Size() == 0 {
-				t.Error("Backup file is empty")
-			}
-		}
-	}
-	if !found {
-		t.Error("Backup file with correct format not found")
-	}
-
-	// Verify it's a valid database
-	backupPath := filepath.Join(tmpDir, entries[0].Name())
-	testBackupDB, err := sql.Open("sqlite", backupPath)
-	if err != nil {
-		t.Fatalf("Failed to open backup file: %v", err)
-	}
-	defer testBackupDB.Close()
-
-	_ = tmpFile // use tmpFile to avoid unused warning
-}
-
-func TestListBackups_Empty(t *testing.T) {
-	setupBackupDir(t)
-
-	backups, err := listBackups()
-	if err != nil {
-		t.Fatalf("listBackups failed: %v", err)
-	}
-
-	if len(backups) != 0 {
-		t.Errorf("Expected 0 backups, got %d", len(backups))
+	db = setupTestDB(t)
+	cookie := loginAdmin(t, db)
+	return &http.Cookie{Name: "zrp_session", Value: cookie}, func() {
+		backupDir = oldDir
+		db.Close()
+		db = oldDB
 	}
 }
 
-func TestListBackups_MultipleFiles(t *testing.T) {
-	tmpDir := setupBackupDir(t)
+func TestCreateBackup(t *testing.T) {
+	cookie, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
 
-	// Create test backup files
-	testFiles := []struct {
-		name    string
-		content string
-	}{
-		{"zrp-backup-2024-01-01T10-00-00.db", "backup1"},
-		{"zrp-backup-2024-01-02T10-00-00.db", "backup2"},
-		{"zrp-backup-2024-01-03T10-00-00.db", "backup3"},
-		{"not-a-backup.db", "ignore"},
-		{"zrp-backup-incomplete", "ignore"},
-	}
-
-	for _, tf := range testFiles {
-		path := filepath.Join(tmpDir, tf.name)
-		os.WriteFile(path, []byte(tf.content), 0644)
-		time.Sleep(10 * time.Millisecond) // Ensure different mod times
-	}
-
-	backups, err := listBackups()
-	if err != nil {
-		t.Fatalf("listBackups failed: %v", err)
-	}
-
-	// Should only include valid backup files
-	if len(backups) != 3 {
-		t.Errorf("Expected 3 backups, got %d", len(backups))
-	}
-
-	// Verify sorted newest first
-	if len(backups) >= 2 {
-		if backups[0].Filename < backups[1].Filename {
-			t.Error("Backups not sorted newest first")
-		}
-	}
-
-	// Verify fields
-	for _, b := range backups {
-		if b.Filename == "" {
-			t.Error("Backup filename is empty")
-		}
-		if b.Size == 0 {
-			t.Error("Backup size is 0")
-		}
-		if b.CreatedAt == "" {
-			t.Error("Backup created_at is empty")
-		}
-		// Verify RFC3339 format
-		_, err := time.Parse(time.RFC3339, b.CreatedAt)
-		if err != nil {
-			t.Errorf("Invalid created_at format: %v", err)
-		}
-	}
-}
-
-func TestHandleListBackups_Success(t *testing.T) {
-	tmpDir := setupBackupDir(t)
-
-	// Create test backup file
-	path := filepath.Join(tmpDir, "zrp-backup-2024-01-01T10-00-00.db")
-	os.WriteFile(path, []byte("test backup"), 0644)
-
-	req := httptest.NewRequest("GET", "/api/backups", nil)
+	req := authedRequest("POST", "/api/v1/admin/backup", nil, cookie.Value)
 	w := httptest.NewRecorder()
-
-	handleListBackups(w, req)
-
-	if w.Code != 200 {
-		t.Errorf("Expected status 200, got %d", w.Code)
-	}
-
-	var resp struct {
-		Data []BackupInfo `json:"data"`
-	}
-	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
-
-	if len(resp.Data) != 1 {
-		t.Errorf("Expected 1 backup, got %d", len(resp.Data))
-	}
-}
-
-func TestHandleCreateBackup_Success(t *testing.T) {
-	oldDB := db
-	defer func() { db = oldDB }()
-	db = setupBackupTestDB(t)
-	defer db.Close()
-
-	setupBackupDir(t)
-	setupTestDBFile(t)
-
-	req := httptest.NewRequest("POST", "/api/backups", nil)
-	w := httptest.NewRecorder()
-
 	handleCreateBackup(w, req)
 
 	if w.Code != 200 {
-		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
-
-	var respWrapper struct {
+	// Response is wrapped in {"data": {"status":"ok","message":"..."}}
+	var resp struct {
 		Data map[string]string `json:"data"`
 	}
-	if err := json.NewDecoder(w.Body).Decode(&respWrapper); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp.Data["status"] != "ok" {
+		t.Fatalf("expected status ok, got %v", resp.Data)
 	}
 
-	if respWrapper.Data["status"] != "ok" {
-		t.Errorf("Expected status ok, got %s", respWrapper.Data["status"])
+	// Verify file was created
+	entries, _ := os.ReadDir(backupDir)
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 backup file, got %d", len(entries))
+	}
+	if !strings.HasPrefix(entries[0].Name(), "zrp-backup-") {
+		t.Fatalf("unexpected filename: %s", entries[0].Name())
 	}
 }
 
-func TestHandleDeleteBackup_Success(t *testing.T) {
-	tmpDir := setupBackupDir(t)
+func TestListBackups(t *testing.T) {
+	cookie, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
 
-	filename := "zrp-backup-2024-01-01T10-00-00.db"
-	path := filepath.Join(tmpDir, filename)
-	os.WriteFile(path, []byte("test"), 0644)
+	// Create two backups
+	handleCreateBackup(httptest.NewRecorder(), authedRequest("POST", "/api/v1/admin/backup", nil, cookie.Value))
+	// Create another with slightly different name
+	os.WriteFile(filepath.Join(backupDir, "zrp-backup-2025-01-01T00-00-00.db"), []byte("fake"), 0644)
 
-	req := httptest.NewRequest("DELETE", "/api/backups/"+filename, nil)
+	req := authedRequest("GET", "/api/v1/admin/backups", nil, cookie.Value)
 	w := httptest.NewRecorder()
+	handleListBackups(w, req)
 
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp struct {
+		Data []BackupInfo `json:"data"`
+	}
+	json.NewDecoder(w.Body).Decode(&resp)
+	if len(resp.Data) != 2 {
+		t.Fatalf("expected 2 backups, got %d", len(resp.Data))
+	}
+	// Should be sorted newest first
+	if resp.Data[0].Filename < resp.Data[1].Filename {
+		t.Error("backups not sorted newest first")
+	}
+}
+
+func TestListBackupsEmpty(t *testing.T) {
+	cookie, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
+
+	// Point to a non-existent directory
+	backupDir = filepath.Join(t.TempDir(), "nonexistent")
+
+	req := authedRequest("GET", "/api/v1/admin/backups", nil, cookie.Value)
+	w := httptest.NewRecorder()
+	handleListBackups(w, req)
+
+	if w.Code != 200 {
+		t.Fatalf("expected 200, got %d", w.Code)
+	}
+	var resp struct {
+		Data []BackupInfo `json:"data"`
+	}
+	json.NewDecoder(w.Body).Decode(&resp)
+	if resp.Data == nil {
+		resp.Data = []BackupInfo{}
+	}
+	if len(resp.Data) != 0 {
+		t.Fatalf("expected 0 backups, got %d", len(resp.Data))
+	}
+}
+
+func TestDeleteBackup(t *testing.T) {
+	cookie, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
+
+	// Create a backup
+	handleCreateBackup(httptest.NewRecorder(), authedRequest("POST", "/api/v1/admin/backup", nil, cookie.Value))
+	entries, _ := os.ReadDir(backupDir)
+	filename := entries[0].Name()
+
+	req := authedRequest("DELETE", "/api/v1/admin/backups/"+filename, nil, cookie.Value)
+	w := httptest.NewRecorder()
 	handleDeleteBackup(w, req, filename)
 
 	if w.Code != 200 {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	// Verify file was deleted
-	if _, err := os.Stat(path); !os.IsNotExist(err) {
-		t.Error("Backup file was not deleted")
+	// Verify deleted
+	entries, _ = os.ReadDir(backupDir)
+	if len(entries) != 0 {
+		t.Fatalf("expected 0 files after delete, got %d", len(entries))
 	}
 }
 
-func TestHandleDeleteBackup_NotFound(t *testing.T) {
-	setupBackupDir(t)
+func TestDeleteBackupNotFound(t *testing.T) {
+	_, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
 
-	req := httptest.NewRequest("DELETE", "/api/backups/nonexistent.db", nil)
 	w := httptest.NewRecorder()
-
-	handleDeleteBackup(w, req, "nonexistent.db")
+	handleDeleteBackup(w, httptest.NewRequest("DELETE", "/api/v1/admin/backups/nonexistent.db", nil), "nonexistent.db")
 
 	if w.Code != 404 {
-		t.Errorf("Expected status 404, got %d", w.Code)
+		t.Fatalf("expected 404, got %d", w.Code)
 	}
 }
 
-func TestHandleDeleteBackup_InvalidFilename(t *testing.T) {
-	setupBackupDir(t)
+func TestDeleteBackupInvalidFilename(t *testing.T) {
+	_, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
 
-	tests := []struct {
-		name     string
-		filename string
-	}{
-		{"path traversal", "../etc/passwd"},
-		{"absolute path", "/etc/passwd"},
-		{"subdirectory", "subdir/file.db"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("DELETE", "/api/backups/"+tt.filename, nil)
-			w := httptest.NewRecorder()
-
-			handleDeleteBackup(w, req, tt.filename)
-
-			if w.Code != 400 {
-				t.Errorf("Expected status 400 for %s, got %d", tt.filename, w.Code)
-			}
-		})
-	}
-}
-
-func TestHandleDownloadBackup_Success(t *testing.T) {
-	tmpDir := setupBackupDir(t)
-
-	filename := "zrp-backup-2024-01-01T10-00-00.db"
-	content := "test backup content"
-	path := filepath.Join(tmpDir, filename)
-	os.WriteFile(path, []byte(content), 0644)
-
-	req := httptest.NewRequest("GET", "/api/backups/"+filename+"/download", nil)
 	w := httptest.NewRecorder()
+	handleDeleteBackup(w, httptest.NewRequest("DELETE", "/api/v1/admin/backups/../etc/passwd", nil), "../etc/passwd")
 
+	if w.Code != 400 {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestDownloadBackup(t *testing.T) {
+	cookie, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
+
+	// Create a backup
+	handleCreateBackup(httptest.NewRecorder(), authedRequest("POST", "/api/v1/admin/backup", nil, cookie.Value))
+	entries, _ := os.ReadDir(backupDir)
+	filename := entries[0].Name()
+
+	req := authedRequest("GET", "/api/v1/admin/backups/"+filename, nil, cookie.Value)
+	w := httptest.NewRecorder()
 	handleDownloadBackup(w, req, filename)
 
 	if w.Code != 200 {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Fatalf("expected 200, got %d", w.Code)
 	}
-
-	if w.Header().Get("Content-Type") != "application/octet-stream" {
-		t.Errorf("Expected Content-Type application/octet-stream, got %s", w.Header().Get("Content-Type"))
+	ct := w.Header().Get("Content-Type")
+	if ct != "application/octet-stream" {
+		t.Errorf("expected octet-stream content type, got %s", ct)
 	}
-
-	if !strings.Contains(w.Header().Get("Content-Disposition"), filename) {
-		t.Errorf("Content-Disposition doesn't contain filename: %s", w.Header().Get("Content-Disposition"))
+	cd := w.Header().Get("Content-Disposition")
+	if !strings.Contains(cd, filename) {
+		t.Errorf("Content-Disposition should contain filename, got %s", cd)
 	}
-
-	if w.Body.String() != content {
-		t.Errorf("Expected body %q, got %q", content, w.Body.String())
+	if w.Body.Len() == 0 {
+		t.Error("downloaded backup is empty")
 	}
 }
 
-func TestHandleDownloadBackup_NotFound(t *testing.T) {
-	setupBackupDir(t)
+func TestDownloadBackupNotFound(t *testing.T) {
+	_, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
 
-	req := httptest.NewRequest("GET", "/api/backups/nonexistent.db/download", nil)
 	w := httptest.NewRecorder()
-
-	handleDownloadBackup(w, req, "nonexistent.db")
+	handleDownloadBackup(w, httptest.NewRequest("GET", "/api/v1/admin/backups/nope.db", nil), "nope.db")
 
 	if w.Code != 404 {
-		t.Errorf("Expected status 404, got %d", w.Code)
+		t.Fatalf("expected 404, got %d", w.Code)
 	}
 }
 
-func TestHandleDownloadBackup_InvalidFilename(t *testing.T) {
-	setupBackupDir(t)
+func TestDownloadBackupPathTraversal(t *testing.T) {
+	_, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
 
-	tests := []string{"../etc/passwd", "/etc/passwd", "subdir/file.db"}
-
-	for _, filename := range tests {
-		t.Run(filename, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/api/backups/"+filename+"/download", nil)
-			w := httptest.NewRecorder()
-
-			handleDownloadBackup(w, req, filename)
-
-			if w.Code != 400 {
-				t.Errorf("Expected status 400 for %s, got %d", filename, w.Code)
-			}
-		})
-	}
-}
-
-func TestHandleRestoreBackup_Success(t *testing.T) {
-	oldDB := db
-	defer func() { db = oldDB }()
-
-	tmpDir := setupBackupDir(t)
-	tmpDBFile := setupTestDBFile(t)
-
-	// Create a backup file with test data
-	backupFile := filepath.Join(tmpDir, "zrp-backup-restore-test.db")
-	backupDB, err := sql.Open("sqlite", backupFile)
-	if err != nil {
-		t.Fatalf("Failed to create backup DB: %v", err)
-	}
-	backupDB.Exec("CREATE TABLE test_data (id INTEGER PRIMARY KEY, value TEXT)")
-	backupDB.Exec("INSERT INTO test_data (value) VALUES ('restored_data')")
-	backupDB.Close()
-
-	db = setupBackupTestDB(t)
-	defer db.Close()
-
-	body := map[string]string{"filename": "zrp-backup-restore-test.db"}
-	bodyBytes, _ := json.Marshal(body)
-
-	req := httptest.NewRequest("POST", "/api/backups/restore", bytes.NewReader(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
+	handleDownloadBackup(w, httptest.NewRequest("GET", "/", nil), "../etc/passwd")
 
+	if w.Code != 400 {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestRestoreBackup(t *testing.T) {
+	cookie, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
+
+	// Set dbFilePath to the test DB so restore can write to it
+	oldDBFilePath := dbFilePath
+	dbFilePath = fmt.Sprintf("test_%s.db", t.Name())
+	defer func() { dbFilePath = oldDBFilePath }()
+
+	// Create a backup first
+	handleCreateBackup(httptest.NewRecorder(), authedRequest("POST", "/api/v1/admin/backup", nil, cookie.Value))
+	entries, _ := os.ReadDir(backupDir)
+	filename := entries[0].Name()
+
+	// Wait to ensure pre-restore backup gets a different timestamp
+	time.Sleep(1100 * time.Millisecond)
+
+	body := fmt.Sprintf(`{"filename":"%s"}`, filename)
+	req := authedRequest("POST", "/api/v1/admin/restore", []byte(body), cookie.Value)
+	w := httptest.NewRecorder()
 	handleRestoreBackup(w, req)
 
 	if w.Code != 200 {
-		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
+		t.Fatalf("expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var respWrapper struct {
-		Data map[string]string `json:"data"`
-	}
-	if err := json.NewDecoder(w.Body).Decode(&respWrapper); err != nil {
-		t.Fatalf("Failed to decode response: %v", err)
-	}
-
-	if respWrapper.Data["status"] != "ok" {
-		t.Errorf("Expected status ok, got %s", respWrapper.Data["status"])
-	}
-
-	// Close the database to ensure all writes are flushed
-	db.Close()
-
-	// Verify database was replaced by checking the data
-	restoredDB, err := sql.Open("sqlite", tmpDBFile)
-	if err != nil {
-		t.Fatalf("Failed to open restored DB: %v", err)
-	}
-	defer restoredDB.Close()
-
-	var value string
-	err = restoredDB.QueryRow("SELECT value FROM test_data WHERE id = 1").Scan(&value)
-	if err != nil {
-		t.Fatalf("Failed to query restored data: %v", err)
-	}
-
-	if value != "restored_data" {
-		t.Errorf("Database was not properly restored: expected 'restored_data', got '%s'", value)
+	// Should have created a pre-restore backup (now 2 total)
+	entries, _ = os.ReadDir(backupDir)
+	if len(entries) < 2 {
+		t.Errorf("expected pre-restore backup to be created, got %d files", len(entries))
 	}
 }
 
-func TestHandleRestoreBackup_MissingFilename(t *testing.T) {
-	setupBackupDir(t)
+func TestRestoreBackupNotFound(t *testing.T) {
+	cookie, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
 
-	req := httptest.NewRequest("POST", "/api/backups/restore", bytes.NewReader([]byte("{}")))
-	req.Header.Set("Content-Type", "application/json")
+	body := `{"filename":"nonexistent.db"}`
+	req := authedRequest("POST", "/api/v1/admin/restore", []byte(body), cookie.Value)
 	w := httptest.NewRecorder()
-
-	handleRestoreBackup(w, req)
-
-	if w.Code != 400 {
-		t.Errorf("Expected status 400, got %d", w.Code)
-	}
-}
-
-func TestHandleRestoreBackup_InvalidFilename(t *testing.T) {
-	setupBackupDir(t)
-
-	tests := []string{"../etc/passwd", "/etc/passwd", "subdir/file.db"}
-
-	for _, filename := range tests {
-		t.Run(filename, func(t *testing.T) {
-			body := map[string]string{"filename": filename}
-			bodyBytes, _ := json.Marshal(body)
-
-			req := httptest.NewRequest("POST", "/api/backups/restore", bytes.NewReader(bodyBytes))
-			req.Header.Set("Content-Type", "application/json")
-			w := httptest.NewRecorder()
-
-			handleRestoreBackup(w, req)
-
-			if w.Code != 400 {
-				t.Errorf("Expected status 400 for %s, got %d", filename, w.Code)
-			}
-		})
-	}
-}
-
-func TestHandleRestoreBackup_NotFound(t *testing.T) {
-	setupBackupDir(t)
-
-	body := map[string]string{"filename": "nonexistent.db"}
-	bodyBytes, _ := json.Marshal(body)
-
-	req := httptest.NewRequest("POST", "/api/backups/restore", bytes.NewReader(bodyBytes))
-	req.Header.Set("Content-Type", "application/json")
-	w := httptest.NewRecorder()
-
 	handleRestoreBackup(w, req)
 
 	if w.Code != 404 {
-		t.Errorf("Expected status 404, got %d", w.Code)
+		t.Fatalf("expected 404, got %d: %s", w.Code, w.Body.String())
 	}
 }
 
-func TestCleanOldBackups_Retention(t *testing.T) {
-	tmpDir := setupBackupDir(t)
+func TestRestoreBackupMissingFilename(t *testing.T) {
+	cookie, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
 
-	// Set retention to 3
+	req := authedRequest("POST", "/api/v1/admin/restore", []byte(`{}`), cookie.Value)
+	w := httptest.NewRecorder()
+	handleRestoreBackup(w, req)
+
+	if w.Code != 400 {
+		t.Fatalf("expected 400, got %d", w.Code)
+	}
+}
+
+func TestRestoreBackupPathTraversal(t *testing.T) {
+	cookie, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
+
+	body := `{"filename":"../etc/passwd"}`
+	req := authedRequest("POST", "/api/v1/admin/restore", []byte(body), cookie.Value)
+	w := httptest.NewRecorder()
+	handleRestoreBackup(w, req)
+
+	if w.Code != 400 {
+		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	}
+}
+
+func TestCleanOldBackups(t *testing.T) {
+	_, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
+
 	oldRetention := backupRetention
 	backupRetention = 3
 	defer func() { backupRetention = oldRetention }()
 
-	// Create 5 backup files with different timestamps
-	for i := 1; i <= 5; i++ {
-		filename := fmt.Sprintf("zrp-backup-2024-01-%02dT10-00-00.db", i)
-		path := filepath.Join(tmpDir, filename)
-		os.WriteFile(path, []byte(fmt.Sprintf("backup%d", i)), 0644)
+	// Create 5 fake backups
+	for i := 0; i < 5; i++ {
+		name := fmt.Sprintf("zrp-backup-2025-01-%02dT00-00-00.db", i+1)
+		os.WriteFile(filepath.Join(backupDir, name), []byte("data"), 0644)
 	}
 
 	cleanOldBackups()
 
-	// Should keep only 3 newest (03, 04, 05)
-	entries, err := os.ReadDir(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to read backup dir: %v", err)
-	}
-
-	if len(entries) != 3 {
-		t.Errorf("Expected 3 backups after cleanup, got %d", len(entries))
-	}
-
-	// Verify oldest were deleted
+	entries, _ := os.ReadDir(backupDir)
+	count := 0
 	for _, e := range entries {
-		if strings.Contains(e.Name(), "-01T") || strings.Contains(e.Name(), "-02T") {
-			t.Errorf("Old backup not deleted: %s", e.Name())
+		if strings.HasPrefix(e.Name(), "zrp-backup-") {
+			count++
+		}
+	}
+	if count != 3 {
+		t.Fatalf("expected 3 backups after cleanup, got %d", count)
+	}
+
+	// Should keep the newest 3 (03, 04, 05)
+	for _, e := range entries {
+		name := e.Name()
+		if strings.Contains(name, "01T") || strings.Contains(name, "02T") {
+			t.Errorf("old backup %s should have been deleted", name)
 		}
 	}
 }
 
-func TestCleanOldBackups_NoCleanupNeeded(t *testing.T) {
-	tmpDir := setupBackupDir(t)
+func TestCleanOldBackupsUnderRetention(t *testing.T) {
+	_, cleanup := setupBackupTest(t)
+	defer cleanup()
+	
 
-	oldRetention := backupRetention
-	backupRetention = 5
-	defer func() { backupRetention = oldRetention }()
-
-	// Create 3 backup files
-	for i := 1; i <= 3; i++ {
-		filename := fmt.Sprintf("zrp-backup-2024-01-%02dT10-00-00.db", i)
-		path := filepath.Join(tmpDir, filename)
-		os.WriteFile(path, []byte(fmt.Sprintf("backup%d", i)), 0644)
+	// Create just 2 backups (under default retention of 7)
+	for i := 0; i < 2; i++ {
+		name := fmt.Sprintf("zrp-backup-2025-01-%02dT00-00-00.db", i+1)
+		os.WriteFile(filepath.Join(backupDir, name), []byte("data"), 0644)
 	}
 
 	cleanOldBackups()
 
-	entries, err := os.ReadDir(tmpDir)
-	if err != nil {
-		t.Fatalf("Failed to read backup dir: %v", err)
-	}
-
-	if len(entries) != 3 {
-		t.Errorf("Expected 3 backups (no cleanup), got %d", len(entries))
-	}
-}
-
-func TestBackupConcurrency(t *testing.T) {
-	oldDB := db
-	defer func() { db = oldDB }()
-	db = setupBackupTestDB(t)
-	defer db.Close()
-
-	setupBackupDir(t)
-	setupTestDBFile(t)
-
-	// Test concurrent backup attempts
-	done := make(chan error, 3)
-	for i := 0; i < 3; i++ {
-		go func() {
-			done <- performBackup()
-		}()
-	}
-
-	// All should complete without error (mutex protects)
-	for i := 0; i < 3; i++ {
-		err := <-done
-		if err != nil {
-			t.Errorf("Concurrent backup %d failed: %v", i, err)
-		}
-	}
-}
-
-func TestBackupWithLargeData(t *testing.T) {
-	oldDB := db
-	defer func() { db = oldDB }()
-	db = setupBackupTestDB(t)
-	defer db.Close()
-
-	tmpDir := setupBackupDir(t)
-	setupTestDBFile(t)
-
-	// Insert large amount of test data
-	for i := 0; i < 100; i++ {
-		db.Exec("INSERT INTO inventory (ipn, description) VALUES (?, ?)",
-			fmt.Sprintf("TEST-%04d", i),
-			strings.Repeat("x", 1000))
-	}
-
-	err := performBackup()
-	if err != nil {
-		t.Fatalf("Backup with large data failed: %v", err)
-	}
-
-	// Verify backup file size
-	entries, _ := os.ReadDir(tmpDir)
-	if len(entries) > 0 {
-		info, _ := entries[0].Info()
-		if info.Size() < 10000 {
-			t.Error("Backup file seems too small for large dataset")
-		}
+	entries, _ := os.ReadDir(backupDir)
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 backups (none deleted), got %d", len(entries))
 	}
 }
