@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 
 	_ "modernc.org/sqlite"
@@ -363,10 +364,10 @@ func TestHandleDeletePrice_Success(t *testing.T) {
 
 	id := insertTestPrice(t, db, "IPN-DELETE", "", 10.0, "USD", 1)
 
-	req := httptest.NewRequest("DELETE", "/api/prices/"+string(rune(id)), nil)
+	req := httptest.NewRequest("DELETE", "/api/prices/"+strconv.Itoa(id), nil)
 	w := httptest.NewRecorder()
 
-	handleDeletePrice(w, req, string(rune(id)))
+	handleDeletePrice(w, req, strconv.Itoa(id))
 
 	if w.Code != 200 {
 		t.Errorf("Expected status 200, got %d", w.Code)
