@@ -97,6 +97,9 @@ func TestShipShipment(t *testing.T) {
 		t.Fatalf("ship: %d %s", w.Code, w.Body.String())
 	}
 	json.Unmarshal(w.Body.Bytes(), &resp)
+	if resp.Data == nil {
+		t.Fatalf("Expected data in response, got nil. Response: %+v", resp)
+	}
 	data := resp.Data.(map[string]interface{})
 	if data["status"] != "shipped" {
 		t.Errorf("expected shipped, got %v", data["status"])
