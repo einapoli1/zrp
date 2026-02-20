@@ -15,8 +15,8 @@ import (
 // TestRateLimit_LoginEndpoint tests that the login endpoint has strict rate limiting
 // Requirement: 5 requests per minute per IP for login endpoint
 func TestRateLimit_LoginEndpoint(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 	resetRateLimiter()
 
 	// Create test user with bcrypt hash
@@ -81,8 +81,8 @@ func TestRateLimit_LoginEndpoint(t *testing.T) {
 
 // TestRateLimit_429Response tests that rate-limited requests return 429 status code
 func TestRateLimit_429Response(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 	resetRateLimiter()
 
 	mux := setupTestMux()
@@ -114,12 +114,12 @@ func TestRateLimit_429Response(t *testing.T) {
 
 // TestRateLimit_GlobalAPILimit tests global API rate limit (100 req/min)
 func TestRateLimit_GlobalAPILimit(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 	resetRateLimiter()
 
 	// Create admin user for API access
-	cookie := loginAdmin(t)
+	cookie := loginAdmin(t, db)
 
 	mux := setupTestMux()
 	handler := securityHeaders(rateLimitMiddleware(gzipMiddleware(logging(requireAuth(requireRBAC(mux))))))
@@ -130,7 +130,7 @@ func TestRateLimit_GlobalAPILimit(t *testing.T) {
 
 	for i := 1; i <= 105; i++ {
 		req := httptest.NewRequest("GET", "/api/v1/dashboard", nil)
-		req.AddCookie(cookie)
+		req.AddCookie(&http.Cookie{Name: "zrp_session", Value: cookie})
 		req.RemoteAddr = "192.168.1.50:12345"
 
 		w := httptest.NewRecorder()
@@ -154,8 +154,8 @@ func TestRateLimit_GlobalAPILimit(t *testing.T) {
 
 // TestRateLimit_Headers tests that rate limit headers are present and correct
 func TestRateLimit_Headers(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 	resetRateLimiter()
 
 	mux := setupTestMux()
@@ -200,8 +200,8 @@ func TestRateLimit_ResetAfterWindow(t *testing.T) {
 		t.Skip("Skipping time-dependent test in short mode")
 	}
 
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 	resetRateLimiter()
 
 	mux := setupTestMux()
@@ -258,8 +258,8 @@ func TestRateLimit_ResetAfterWindow(t *testing.T) {
 
 // TestRateLimit_DifferentIPsIndependent tests that different IPs have independent rate limits
 func TestRateLimit_DifferentIPsIndependent(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 	resetRateLimiter()
 
 	mux := setupTestMux()
@@ -306,8 +306,8 @@ func TestRateLimit_DifferentIPsIndependent(t *testing.T) {
 
 // TestRateLimit_ForwardedForHeader tests that X-Forwarded-For header is respected for rate limiting
 func TestRateLimit_ForwardedForHeader(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 	resetRateLimiter()
 
 	mux := setupTestMux()
@@ -340,12 +340,12 @@ func TestRateLimit_ForwardedForHeader(t *testing.T) {
 
 // TestRateLimit_PerEndpointLimits tests that different endpoints have different rate limits
 func TestRateLimit_PerEndpointLimits(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 	resetRateLimiter()
 
 	// Create admin user for API access
-	cookie := loginAdmin(t)
+	cookie := loginAdmin(t, db)
 
 	mux := setupTestMux()
 	handler := securityHeaders(rateLimitMiddleware(gzipMiddleware(logging(requireAuth(requireRBAC(mux))))))
@@ -376,7 +376,7 @@ func TestRateLimit_PerEndpointLimits(t *testing.T) {
 
 	// API endpoint should still work (has separate limit of 100)
 	apiReq := httptest.NewRequest("GET", "/api/v1/dashboard", nil)
-	apiReq.AddCookie(cookie)
+	apiReq.AddCookie(&http.Cookie{Name: "zrp_session", Value: cookie})
 	apiReq.RemoteAddr = clientIP
 	apiW := httptest.NewRecorder()
 	handler.ServeHTTP(apiW, apiReq)
@@ -388,8 +388,8 @@ func TestRateLimit_PerEndpointLimits(t *testing.T) {
 
 // TestRateLimit_StaticAssetsNotLimited tests that static assets are not rate limited
 func TestRateLimit_StaticAssetsNotLimited(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 	resetRateLimiter()
 
 	mux := setupTestMux()
@@ -414,8 +414,8 @@ func TestRateLimit_StaticAssetsNotLimited(t *testing.T) {
 
 // TestRateLimit_RetryAfterHeader tests that Retry-After header is set correctly
 func TestRateLimit_RetryAfterHeader(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 	resetRateLimiter()
 
 	mux := setupTestMux()

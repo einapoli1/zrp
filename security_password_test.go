@@ -19,10 +19,10 @@ func randomTestStr(n int) string {
 
 // TestPasswordHashing_BCryptUsed verifies passwords are hashed with bcrypt
 func TestPasswordHashing_BCryptUsed(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
-	cookie := loginAdmin(t)
+	cookie := loginAdmin(t, db)
 	username := "hashtest_" + randomTestStr(8)
 	password := "SecurePassword123!"
 
@@ -36,7 +36,7 @@ func TestPasswordHashing_BCryptUsed(t *testing.T) {
 
 	req := httptest.NewRequest("POST", "/api/v1/users", bytes.NewReader(bodyJSON))
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(cookie)
+	req.AddCookie(&http.Cookie{Name: "zrp_session", Value: cookie})
 	w := httptest.NewRecorder()
 
 	handleCreateUser(w, req)
@@ -69,10 +69,10 @@ func TestPasswordHashing_BCryptUsed(t *testing.T) {
 
 // TestPasswordComplexity_WeakPasswordsRejected tests weak password rejection
 func TestPasswordComplexity_WeakPasswordsRejected(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
-	cookie := loginAdmin(t)
+	cookie := loginAdmin(t, db)
 
 	weakPasswords := []string{
 		"123456",
@@ -95,7 +95,7 @@ func TestPasswordComplexity_WeakPasswordsRejected(t *testing.T) {
 
 			req := httptest.NewRequest("POST", "/api/v1/users", bytes.NewReader(bodyJSON))
 			req.Header.Set("Content-Type", "application/json")
-			req.AddCookie(cookie)
+			req.AddCookie(&http.Cookie{Name: "zrp_session", Value: cookie})
 			w := httptest.NewRecorder()
 
 			handleCreateUser(w, req)
@@ -111,10 +111,10 @@ func TestPasswordComplexity_WeakPasswordsRejected(t *testing.T) {
 
 // TestPasswordComplexity_StrongPasswordsAccepted tests strong password acceptance
 func TestPasswordComplexity_StrongPasswordsAccepted(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
-	cookie := loginAdmin(t)
+	cookie := loginAdmin(t, db)
 
 	strongPasswords := []string{
 		"SecurePass123!",
@@ -135,7 +135,7 @@ func TestPasswordComplexity_StrongPasswordsAccepted(t *testing.T) {
 
 			req := httptest.NewRequest("POST", "/api/v1/users", bytes.NewReader(bodyJSON))
 			req.Header.Set("Content-Type", "application/json")
-			req.AddCookie(cookie)
+			req.AddCookie(&http.Cookie{Name: "zrp_session", Value: cookie})
 			w := httptest.NewRecorder()
 
 			handleCreateUser(w, req)
@@ -151,8 +151,8 @@ func TestPasswordComplexity_StrongPasswordsAccepted(t *testing.T) {
 
 // TestBruteForceProtection_AccountLockout tests account lockout
 func TestBruteForceProtection_AccountLockout(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
 	resetLoginRateLimit()
 
@@ -203,8 +203,8 @@ func TestBruteForceProtection_AccountLockout(t *testing.T) {
 
 // TestPasswordHistory_PreventReuse tests password history enforcement
 func TestPasswordHistory_PreventReuse(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
 	username := "history_" + randomTestStr(8)
 	password1 := "FirstPassword123!"
@@ -233,7 +233,7 @@ func TestPasswordHistory_PreventReuse(t *testing.T) {
 	changeJSON, _ := json.Marshal(changeReq)
 	req := httptest.NewRequest("POST", "/api/v1/users/me/password", bytes.NewReader(changeJSON))
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(cookie)
+	req.AddCookie(&http.Cookie{Name: "zrp_session", Value: cookie.Value})
 	w := httptest.NewRecorder()
 	handleChangePassword(w, req)
 
@@ -249,7 +249,7 @@ func TestPasswordHistory_PreventReuse(t *testing.T) {
 	changeJSON, _ = json.Marshal(changeReq)
 	req = httptest.NewRequest("POST", "/api/v1/users/me/password", bytes.NewReader(changeJSON))
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(cookie)
+	req.AddCookie(&http.Cookie{Name: "zrp_session", Value: cookie.Value})
 	w = httptest.NewRecorder()
 	handleChangePassword(w, req)
 
@@ -264,7 +264,7 @@ func TestPasswordHistory_PreventReuse(t *testing.T) {
 	changeJSON, _ = json.Marshal(changeReq)
 	req = httptest.NewRequest("POST", "/api/v1/users/me/password", bytes.NewReader(changeJSON))
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(cookie)
+	req.AddCookie(&http.Cookie{Name: "zrp_session", Value: cookie.Value})
 	w = httptest.NewRecorder()
 	handleChangePassword(w, req)
 
@@ -277,8 +277,8 @@ func TestPasswordHistory_PreventReuse(t *testing.T) {
 
 // TestPasswordResetToken_Expiration tests token expiration
 func TestPasswordResetToken_Expiration(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
 	username := "reset_" + randomTestStr(8)
 	password := "OriginalPassword123!"
@@ -325,8 +325,8 @@ func TestPasswordResetToken_Expiration(t *testing.T) {
 
 // TestPasswordResetToken_SingleUse tests single-use tokens
 func TestPasswordResetToken_SingleUse(t *testing.T) {
-	cleanup := setupTestDB(t)
-	defer cleanup()
+	oldDB := db; db = setupTestDB(t)
+	defer func() { db.Close(); db = oldDB }()
 
 	username := "singleuse_" + randomTestStr(8)
 	password := "OriginalPassword123!"
