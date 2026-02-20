@@ -45,6 +45,7 @@ import { Checkbox } from "../components/ui/checkbox";
 import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog";
 import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { LoadingState } from "../components/LoadingState";
 function WorkOrders() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
@@ -346,11 +347,12 @@ function WorkOrders() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading work orders...</p>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Work Orders</h1>
+          <p className="text-muted-foreground">Manage assembly and manufacturing orders</p>
         </div>
+        <LoadingState variant="spinner" message="Loading work orders..." />
       </div>
     );
   }

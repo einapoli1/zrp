@@ -339,11 +339,18 @@ func handleCAPADashboard(w http.ResponseWriter, r *http.Request) {
 
 // Email notification for new CAPA
 func emailOnCAPACreated(c CAPA) {
+	emailOnCAPACreatedWithDB(db, c)
+}
+
+func emailOnCAPACreatedWithDB(database *sql.DB, c CAPA) {
+	if database == nil {
+		return
+	}
 	subject := fmt.Sprintf("New CAPA Created: %s - %s", c.ID, c.Title)
 	body := fmt.Sprintf("A new %s CAPA has been created.\n\nID: %s\nTitle: %s\nOwner: %s\nDue Date: %s\nLinked NCR: %s\nLinked RMA: %s",
 		c.Type, c.ID, c.Title, c.Owner, c.DueDate, c.LinkedNCRID, c.LinkedRMAID)
 
-	rows, _ := db.Query("SELECT email FROM email_subscriptions WHERE event_type IN ('capa_created','all') AND email != ''")
+	rows, _ := database.Query("SELECT email FROM email_subscriptions WHERE event_type IN ('capa_created','all') AND email != ''")
 	if rows != nil {
 		defer rows.Close()
 		for rows.Next() {

@@ -165,9 +165,15 @@ func TestHandleCreateCAPAFromNCR_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result CAPA
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	resultBytes, _ := json.Marshal(response.Data)
+	var result CAPA
+	if err := json.Unmarshal(resultBytes, &result); err != nil {
+		t.Fatalf("Failed to unmarshal CAPA: %v", err)
 	}
 
 	if result.Title != "CAPA for NCR-001" {
@@ -220,9 +226,15 @@ func TestHandleCreateCAPAFromNCR_AutoPopulate(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result CAPA
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	resultBytes, _ := json.Marshal(response.Data)
+	var result CAPA
+	if err := json.Unmarshal(resultBytes, &result); err != nil {
+		t.Fatalf("Failed to unmarshal CAPA: %v", err)
 	}
 
 	// Check auto-populated title
@@ -269,9 +281,15 @@ func TestHandleCreateCAPAFromNCR_EmptyBody(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result CAPA
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	resultBytes, _ := json.Marshal(response.Data)
+	var result CAPA
+	if err := json.Unmarshal(resultBytes, &result); err != nil {
+		t.Fatalf("Failed to unmarshal CAPA: %v", err)
 	}
 
 	// Should auto-populate title
@@ -358,11 +376,16 @@ func TestHandleCreateECOFromNCR_Success(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result map[string]interface{}
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
+	result, ok := response["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Response data is not a map: %+v", response)
+	}
+	
 	if result["title"].(string) != "ECO for NCR-001" {
 		t.Errorf("Expected title 'ECO for NCR-001', got %s", result["title"])
 	}
@@ -403,9 +426,14 @@ func TestHandleCreateECOFromNCR_AutoPopulate(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result map[string]interface{}
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	result, ok := response["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Response data is not a map: %+v", response)
 	}
 
 	// Check auto-populated title
@@ -477,14 +505,23 @@ func TestHandleCreateECOFromNCR_PriorityMapping(t *testing.T) {
 				t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 			}
 
-			var result map[string]interface{}
-			if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+			var response map[string]interface{}
+			if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 				t.Fatalf("Failed to decode response: %v", err)
 			}
 
-			if result["priority"].(string) != tc.expectedPriority {
-				t.Errorf("Expected priority '%s' for severity '%s', got %s",
-					tc.expectedPriority, tc.severity, result["priority"])
+			data, ok := response["data"].(map[string]interface{})
+			if !ok {
+				t.Fatalf("Expected 'data' field in response, got %T", response["data"])
+			}
+
+			priority, ok := data["priority"].(string)
+			if !ok {
+				t.Fatalf("Expected priority field to be a string, got %T (value: %v)", data["priority"], data["priority"])
+			}
+			if priority != tc.expectedPriority {
+				t.Errorf("Expected priority '%s' for severity '%s', got '%s'",
+					tc.expectedPriority, tc.severity, priority)
 			}
 		})
 	}
@@ -512,15 +549,24 @@ func TestHandleCreateECOFromNCR_DescriptionFallback(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result map[string]interface{}
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	data, ok := response["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected 'data' field in response, got %T", response["data"])
 	}
 
 	// Description should fall back to "Corrective action for: <description>"
 	expectedDescription := "Corrective action for: This is the NCR description"
-	if result["description"].(string) != expectedDescription {
-		t.Errorf("Expected fallback description, got %s", result["description"])
+	description, ok := data["description"].(string)
+	if !ok {
+		t.Fatalf("Expected description field to be a string, got %T (value: %v)", data["description"], data["description"])
+	}
+	if description != expectedDescription {
+		t.Errorf("Expected fallback description '%s', got '%s'", expectedDescription, description)
 	}
 }
 
@@ -592,9 +638,14 @@ func TestHandleCreateCAPAFromNCR_DataIntegrity(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result CAPA
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	data, ok := response["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected 'data' field in response, got %T", response["data"])
 	}
 
 	// Verify CAPA was actually inserted into database
@@ -608,7 +659,7 @@ func TestHandleCreateCAPAFromNCR_DataIntegrity(t *testing.T) {
 		t.Fatalf("Failed to query CAPA from database: %v", err)
 	}
 
-	if dbCapa.ID != result.ID {
+	if dbCapa.ID != data["id"].(string) {
 		t.Errorf("Database ID doesn't match response ID")
 	}
 
@@ -639,9 +690,14 @@ func TestHandleCreateECOFromNCR_DataIntegrity(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result map[string]interface{}
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	data, ok := response["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected 'data' field in response, got %T", response["data"])
 	}
 
 	// Verify ECO was actually inserted into database
@@ -661,7 +717,12 @@ func TestHandleCreateECOFromNCR_DataIntegrity(t *testing.T) {
 		t.Fatalf("Failed to query ECO from database: %v", err)
 	}
 
-	if dbECO.ID != result["id"].(string) {
+	responseID, ok := data["id"].(string)
+	if !ok {
+		t.Fatalf("Expected 'id' field to be string, got %T", data["id"])
+	}
+
+	if dbECO.ID != responseID {
 		t.Errorf("Database ID doesn't match response ID")
 	}
 
@@ -820,14 +881,23 @@ func TestHandleCreateCAPAFromNCR_StatusPropagation(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result CAPA
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
+	data, ok := response["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected 'data' field in response, got %T", response["data"])
+	}
+
 	// CAPA should always start with status 'open' regardless of NCR status
-	if result.Status != "open" {
-		t.Errorf("Expected CAPA status 'open', got %s", result.Status)
+	status, ok := data["status"].(string)
+	if !ok {
+		t.Fatalf("Expected 'status' field to be string, got %T", data["status"])
+	}
+	if status != "open" {
+		t.Errorf("Expected CAPA status 'open', got %s", status)
 	}
 }
 
@@ -853,14 +923,23 @@ func TestHandleCreateECOFromNCR_StatusPropagation(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var result map[string]interface{}
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var response map[string]interface{}
+	if err := json.NewDecoder(w.Body).Decode(&response); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
+	data, ok := response["data"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected 'data' field in response, got %T", response["data"])
+	}
+
 	// ECO should always start with status 'draft' regardless of NCR status
-	if result["status"].(string) != "draft" {
-		t.Errorf("Expected ECO status 'draft', got %s", result["status"])
+	status, ok := data["status"].(string)
+	if !ok {
+		t.Fatalf("Expected 'status' field to be string, got %T", data["status"])
+	}
+	if status != "draft" {
+		t.Errorf("Expected ECO status 'draft', got %s", status)
 	}
 }
 

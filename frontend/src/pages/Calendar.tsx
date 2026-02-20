@@ -5,6 +5,7 @@ import { Badge } from "../components/ui/badge";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { api, type CalendarEvent } from "../lib/api";
 import { toast } from "sonner";
+import { LoadingState } from "../components/LoadingState";
 const months = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
@@ -80,14 +81,7 @@ function Calendar() {
   const selectedDateEvents = selectedDate ? getEventsForDate(selectedDate) : [];
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading calendar...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState variant="spinner" message="Loading calendar..." />;
   }
 
   return (

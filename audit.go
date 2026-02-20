@@ -397,10 +397,15 @@ func handleLowStockAlerts(w http.ResponseWriter, r *http.Request) {
 
 // Stub functions for audit enhancements
 func LogDataExport(db *sql.DB, r *http.Request, module, format string, recordCount int) {
-	// Log data export action
+	// Log data export action to data_exports table
 	username := getUsername(r)
-	summary := fmt.Sprintf("Exported %d records from %s as %s", recordCount, module, format)
-	logAudit(db, username, "export", module, "", summary)
+	_, err := db.Exec(`INSERT INTO data_exports (entity_type, format, record_count, user_id, exported_at) 
+		VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`, module, format, recordCount, username)
+	if err != nil {
+		// Fallback to audit log if data_exports table doesn't exist
+		summary := fmt.Sprintf("Exported %d records from %s as %s", recordCount, module, format)
+		logAudit(db, username, "export", module, "", summary)
+	}
 }
 
 func GetAuditRetentionDays(db *sql.DB) int {

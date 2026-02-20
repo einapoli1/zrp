@@ -29,6 +29,8 @@ import {
 } from "../components/ui/dropdown-menu";
 // Table components used by ConfigurableTable internally
 import { Skeleton } from "../components/ui/skeleton";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
 import { 
   Search, 
   Filter,
@@ -70,6 +72,7 @@ function Parts() {
   const [parts, setParts] = useState<Part[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showScanner, setShowScanner] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
@@ -115,6 +118,7 @@ function Parts() {
 
   const fetchParts = async () => {
     setLoading(true);
+    setError(null);
     try {
       const params: any = {
         page: currentPage,
@@ -133,9 +137,11 @@ function Parts() {
       setParts(response.data || []);
       setTotalParts(response.meta?.total || 0);
     } catch (error) {
-      toast.error("Failed to fetch parts"); console.error("Failed to fetch parts:", error);
+      toast.error("Failed to fetch parts");
+      console.error("Failed to fetch parts:", error);
       setParts([]);
       setTotalParts(0);
+      setError("Failed to load parts. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -558,11 +564,13 @@ function Parts() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
+            <LoadingState variant="table" rows={5} />
+          ) : error ? (
+            <ErrorState 
+              title="Failed to load parts"
+              message={error}
+              onRetry={fetchParts}
+            />
           ) : (
             <>
               <ConfigurableTable<PartWithFields>

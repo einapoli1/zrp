@@ -50,6 +50,7 @@ import {
 import { api, type Vendor } from "../lib/api";
 import { toast } from "sonner";
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { LoadingState } from "../components/LoadingState";
 function Vendors() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,14 +183,7 @@ function Vendors() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading vendors...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState variant="spinner" message="Loading vendors..." />;
   }
 
   return (

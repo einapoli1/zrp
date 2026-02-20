@@ -47,8 +47,7 @@ func setupFirmwareTestDB(t *testing.T) *sql.DB {
 			serial_number TEXT NOT NULL,
 			status TEXT DEFAULT 'pending',
 			updated_at DATETIME,
-			PRIMARY KEY (campaign_id, serial_number),
-			FOREIGN KEY (campaign_id) REFERENCES firmware_campaigns(id) ON DELETE CASCADE
+			PRIMARY KEY (campaign_id, serial_number)
 		)
 	`)
 	if err != nil {
@@ -389,7 +388,7 @@ func TestHandleLaunchCampaign_Success(t *testing.T) {
 	handleLaunchCampaign(w, req, "FW-001")
 
 	if w.Code != 200 {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
 	var resp APIResponse

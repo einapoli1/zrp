@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -920,7 +921,9 @@ func TestHandleSetPermissions_SQLInjection_Prevention(t *testing.T) {
 			{"module": "parts", "action": "view"}
 		]
 	}`
-	req := httptest.NewRequest("PUT", "/api/v1/permissions/"+sqlInjectionRole, bytes.NewBufferString(reqBody))
+	// URL encode the malicious role parameter
+	encodedRole := url.QueryEscape(sqlInjectionRole)
+	req := httptest.NewRequest("PUT", "/api/v1/permissions/"+encodedRole, bytes.NewBufferString(reqBody))
 	w := httptest.NewRecorder()
 
 	handleSetPermissions(w, req, sqlInjectionRole)
@@ -1211,7 +1214,7 @@ func TestHandleSetPermissions_SpecialCharactersInRole(t *testing.T) {
 	for _, role := range specialRoles {
 		t.Run(role, func(t *testing.T) {
 			reqBody := `{"permissions": [{"module": "parts", "action": "view"}]}`
-			req := httptest.NewRequest("PUT", "/api/v1/permissions/"+role, bytes.NewBufferString(reqBody))
+			req := httptest.NewRequest("PUT", "/api/v1/permissions/"+url.PathEscape(role), bytes.NewBufferString(reqBody))
 			w := httptest.NewRecorder()
 
 			handleSetPermissions(w, req, role)

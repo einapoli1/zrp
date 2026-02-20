@@ -70,14 +70,27 @@ func handleLaunchCampaign(w http.ResponseWriter, r *http.Request, id string) {
 	// Get all active devices and add them to campaign
 	rows, err := db.Query("SELECT serial_number FROM devices WHERE status='active'")
 	if err != nil { jsonErr(w, err.Error(), 500); return }
-	defer rows.Close()
-	count := 0
+	
+	// Collect all serial numbers first
+	var serialNumbers []string
 	for rows.Next() {
 		var sn string
 		rows.Scan(&sn)
-		db.Exec("INSERT OR IGNORE INTO campaign_devices (campaign_id,serial_number,status) VALUES (?,?,?)", id, sn, "pending")
-		count++
+		serialNumbers = append(serialNumbers, sn)
 	}
+	rows.Close()
+	
+	// Now insert them into campaign_devices
+	count := 0
+	for _, sn := range serialNumbers {
+		_, insertErr := db.Exec("INSERT OR IGNORE INTO campaign_devices (campaign_id,serial_number,status) VALUES (?,?,?)", id, sn, "pending")
+		if insertErr != nil {
+			fmt.Printf("Error inserting device %s into campaign: %v\n", sn, insertErr)
+		} else {
+			count++
+		}
+	}
+	
 	db.Exec("UPDATE firmware_campaigns SET status='active',started_at=? WHERE id=?", now, id)
 	logAudit(db, getUsername(r), "launched", "firmware", id, fmt.Sprintf("Launched campaign %s to %d devices", id, count))
 	jsonResp(w, map[string]interface{}{"launched": true, "devices_added": count})

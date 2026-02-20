@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
@@ -179,6 +180,13 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			last_login TIMESTAMP
 		)`,
+		`CREATE TABLE sessions (
+			token TEXT PRIMARY KEY,
+			user_id INTEGER NOT NULL,
+			expires_at TIMESTAMP NOT NULL,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (user_id) REFERENCES users(id)
+		)`,
 		`CREATE TABLE change_history (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			username TEXT,
@@ -195,6 +203,19 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 		if _, err := testDB.Exec(schema); err != nil {
 			t.Fatalf("Failed to create table: %v", err)
 		}
+	}
+
+	// Create test admin user and session for tests that require auth
+	_, err = testDB.Exec(`INSERT INTO users (id, username, display_name, role, active) 
+		VALUES (1, 'testadmin', 'Test Admin', 'admin', 1)`)
+	if err != nil {
+		t.Fatalf("Failed to create test admin: %v", err)
+	}
+	
+	_, err = testDB.Exec(`INSERT INTO sessions (token, user_id, expires_at) 
+		VALUES ('test-admin-session', 1, datetime('now', '+1 day'))`)
+	if err != nil {
+		t.Fatalf("Failed to create test session: %v", err)
 	}
 
 	return testDB
@@ -715,20 +736,21 @@ func TestUserEmailValidation(t *testing.T) {
 			payload := map[string]interface{}{
 				"username": "testuser" + tt.name,
 				"email":    tt.email,
-				"password": "testpass123",
+				"password": "TestPass123!",
 			}
 			body, _ := json.Marshal(payload)
 
 			req := httptest.NewRequest("POST", "/api/users", bytes.NewReader(body))
 			req.Header.Set("Content-Type", "application/json")
+			req.AddCookie(&http.Cookie{Name: "zrp_session", Value: "test-admin-session"})
 			w := httptest.NewRecorder()
 
 			handleCreateUser(w, req)
 
-			if tt.wantErr && w.Code == 200 {
+			if tt.wantErr && (w.Code == 200 || w.Code == 201) {
 				t.Errorf("Expected error for %s, got success", tt.name)
 			}
-			if !tt.wantErr && w.Code != 200 {
+			if !tt.wantErr && w.Code != 200 && w.Code != 201 {
 				t.Errorf("Expected success for %s, got %d: %s", tt.name, w.Code, w.Body.String())
 			}
 		})

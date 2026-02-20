@@ -92,7 +92,7 @@ func handleCreateCAPAFromNCR(w http.ResponseWriter, r *http.Request, ncrID strin
 
 	logAudit(db, getUsername(r), "created", "capa", capaID, fmt.Sprintf("Created CAPA from NCR %s", ncrID))
 	recordChangeJSON(getUsername(r), "capas", capaID, "create", nil, newCAPA)
-	go emailOnCAPACreated(newCAPA)
+	go emailOnCAPACreatedWithDB(db, newCAPA)
 
 	jsonResp(w, newCAPA)
 }

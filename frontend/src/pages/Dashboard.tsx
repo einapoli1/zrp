@@ -16,6 +16,7 @@ import {
 import { api, type DashboardStats } from "../lib/api";
 import { LoadingState } from "../components/LoadingState";
 import { EmptyState } from "../components/EmptyState";
+import { toast } from "sonner";
 interface ExtendedDashboardStats extends DashboardStats {
   open_ecos: number;
   open_pos: number;
@@ -134,8 +135,8 @@ function Dashboard() {
         },
       ]);
     } catch (error: any) {
-      // Gracefully handle errors by leaving stats/activities in their default state
       console.error("Failed to fetch dashboard data:", error);
+      toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
     }

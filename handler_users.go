@@ -22,6 +22,7 @@ type UserFull struct {
 type CreateUserRequest struct {
 	Username    string `json:"username"`
 	DisplayName string `json:"display_name"`
+	Email       string `json:"email"`
 	Password    string `json:"password"`
 	Role        string `json:"role"`
 }
@@ -110,6 +111,8 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 	ve := &ValidationErrors{}
 	validateMaxLength(ve, "username", req.Username, 100)
 	validateMaxLength(ve, "display_name", req.DisplayName, 255)
+	validateMaxLength(ve, "email", req.Email, 255)
+	validateEmail(ve, "email", req.Email)
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
 	
 	// Validate password strength
@@ -127,8 +130,8 @@ func handleCreateUser(w http.ResponseWriter, r *http.Request) {
 		jsonErr(w, "Failed to hash password", 500)
 		return
 	}
-	result, err := db.Exec(`INSERT INTO users (username, password_hash, display_name, role, active) VALUES (?, ?, ?, ?, 1)`,
-		req.Username, string(hash), req.DisplayName, req.Role)
+	result, err := db.Exec(`INSERT INTO users (username, password_hash, display_name, email, role, active) VALUES (?, ?, ?, ?, ?, 1)`,
+		req.Username, string(hash), req.DisplayName, req.Email, req.Role)
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE") {
 			jsonErr(w, "Username already exists", 409)
