@@ -241,6 +241,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			description TEXT DEFAULT '',
 			status TEXT DEFAULT 'draft',
 			priority TEXT DEFAULT 'normal',
+			affected_ipns TEXT DEFAULT '',
 			linked_ncr_id TEXT DEFAULT '',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
@@ -376,7 +377,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create app_settings table: %v", err)
 	}
 
-	// Create audit_log table
+	// Create audit_log table - CRITICAL: Used by almost every handler via logAudit()
 	_, err = testDB.Exec(`
 		CREATE TABLE IF NOT EXISTS audit_log (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
