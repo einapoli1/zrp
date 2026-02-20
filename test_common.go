@@ -245,12 +245,15 @@ func setupTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT DEFAULT '',
-			status TEXT DEFAULT 'draft',
-			priority TEXT DEFAULT 'normal',
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','review','approved','implemented','rejected','cancelled')),
+			priority TEXT DEFAULT 'normal' CHECK(priority IN ('low','normal','high','critical')),
 			affected_ipns TEXT DEFAULT '',
+			created_by TEXT DEFAULT 'engineer',
 			linked_ncr_id TEXT DEFAULT '',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			approved_at DATETIME,
+			approved_by TEXT DEFAULT ''
 		)
 	`)
 	if err != nil {
