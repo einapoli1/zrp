@@ -61,22 +61,34 @@ func handleInventoryTransact(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	db.Exec("INSERT OR IGNORE INTO inventory (ipn, description, mpn) VALUES (?, ?, ?)", t.IPN, desc, mpn)
+
+	// Begin transaction to ensure atomicity
+	tx, err := db.Begin()
+	if err != nil { jsonErr(w, err.Error(), 500); return }
+	defer tx.Rollback() // Rollback if not committed
+
+	// Ensure inventory record exists
+	_, err = tx.Exec("INSERT OR IGNORE INTO inventory (ipn, description, mpn) VALUES (?, ?, ?)", t.IPN, desc, mpn)
+	if err != nil { jsonErr(w, err.Error(), 500); return }
 
 	// Insert transaction
-	_, err := db.Exec("INSERT INTO inventory_transactions (ipn,type,qty,reference,notes,created_at) VALUES (?,?,?,?,?,?)",
+	_, err = tx.Exec("INSERT INTO inventory_transactions (ipn,type,qty,reference,notes,created_at) VALUES (?,?,?,?,?,?)",
 		t.IPN, t.Type, t.Qty, t.Reference, t.Notes, now)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 
 	// Update inventory quantity
 	switch t.Type {
 	case "receive", "return":
-		db.Exec("UPDATE inventory SET qty_on_hand=qty_on_hand+?,updated_at=? WHERE ipn=?", t.Qty, now, t.IPN)
+		_, err = tx.Exec("UPDATE inventory SET qty_on_hand=qty_on_hand+?,updated_at=? WHERE ipn=?", t.Qty, now, t.IPN)
 	case "issue":
-		db.Exec("UPDATE inventory SET qty_on_hand=qty_on_hand-?,updated_at=? WHERE ipn=?", t.Qty, now, t.IPN)
+		_, err = tx.Exec("UPDATE inventory SET qty_on_hand=qty_on_hand-?,updated_at=? WHERE ipn=?", t.Qty, now, t.IPN)
 	case "adjust":
-		db.Exec("UPDATE inventory SET qty_on_hand=?,updated_at=? WHERE ipn=?", t.Qty, now, t.IPN)
+		_, err = tx.Exec("UPDATE inventory SET qty_on_hand=?,updated_at=? WHERE ipn=?", t.Qty, now, t.IPN)
 	}
+	if err != nil { jsonErr(w, err.Error(), 500); return }
+
+	// Commit transaction
+	if err = tx.Commit(); err != nil { jsonErr(w, err.Error(), 500); return }
 
 	logAudit(db, getUsername(r), t.Type, "inventory", t.IPN, "Inventory "+t.Type+": "+t.IPN)
 	go emailOnLowStock(t.IPN)
