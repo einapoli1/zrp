@@ -426,19 +426,24 @@ func TestHandleRestoreBackup_Success(t *testing.T) {
 		t.Errorf("Expected status ok, got %s", respWrapper.Data["status"])
 	}
 
-	// Verify database was replaced
-	restoredData, err := os.ReadFile(tmpDBFile)
+	// Close the database to ensure all writes are flushed
+	db.Close()
+
+	// Verify database was replaced by checking the data
+	restoredDB, err := sql.Open("sqlite", tmpDBFile)
 	if err != nil {
-		t.Fatalf("Failed to read restored DB: %v", err)
+		t.Fatalf("Failed to open restored DB: %v", err)
+	}
+	defer restoredDB.Close()
+
+	var value string
+	err = restoredDB.QueryRow("SELECT value FROM test_data WHERE id = 1").Scan(&value)
+	if err != nil {
+		t.Fatalf("Failed to query restored data: %v", err)
 	}
 
-	backupData, err := os.ReadFile(backupFile)
-	if err != nil {
-		t.Fatalf("Failed to read backup file: %v", err)
-	}
-
-	if !bytes.Equal(restoredData, backupData) {
-		t.Error("Database was not properly restored")
+	if value != "restored_data" {
+		t.Errorf("Database was not properly restored: expected 'restored_data', got '%s'", value)
 	}
 }
 

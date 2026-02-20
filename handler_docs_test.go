@@ -503,11 +503,9 @@ func TestHandleApproveDoc_NotFound(t *testing.T) {
 
 	handleApproveDoc(w, req, "DOC-999")
 
-	// The handler doesn't check if document exists before updating
-	// It will return 200 but with no rows affected
-	// This might be a bug - should return 404 if document not found
-	if w.Code != 200 {
-		t.Errorf("Expected status 200, got %d", w.Code)
+	// The handler now correctly returns 404 when document not found
+	if w.Code != 404 {
+		t.Errorf("Expected status 404, got %d", w.Code)
 	}
 }
 
@@ -631,12 +629,14 @@ func TestHandleDocs_CategoryFilter(t *testing.T) {
 		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
-	var result []map[string]interface{}
-	if err := json.NewDecoder(w.Body).Decode(&result); err != nil {
+	var respWrapper struct {
+		Data []map[string]interface{} `json:"data"`
+	}
+	if err := json.NewDecoder(w.Body).Decode(&respWrapper); err != nil {
 		t.Fatalf("Failed to decode response: %v", err)
 	}
 
-	if len(result) != 3 {
-		t.Errorf("Expected 3 documents, got %d", len(result))
+	if len(respWrapper.Data) != 3 {
+		t.Errorf("Expected 3 documents, got %d", len(respWrapper.Data))
 	}
 }

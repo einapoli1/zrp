@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -629,7 +630,8 @@ func TestHandleExport_SQLInjection(t *testing.T) {
 
 	for _, attempt := range sqlInjectionAttempts {
 		t.Run("SQL_Injection_"+attempt, func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/api/export/parts?format=csv&search="+attempt, nil)
+			escapedAttempt := url.QueryEscape(attempt)
+			req := httptest.NewRequest("GET", "/api/export/parts?format=csv&search="+escapedAttempt, nil)
 			w := httptest.NewRecorder()
 
 			handleExportParts(w, req)
