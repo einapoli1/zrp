@@ -42,15 +42,13 @@ func handleAdvancedSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Log search to history (capture db to avoid race with test cleanup)
-	currentDB := db
-	go func() {
-		if currentDB != nil {
-			filtersJSON, _ := json.Marshal(query.Filters)
-			currentDB.Exec("INSERT INTO search_history (user_id, entity_type, search_text, filters) VALUES (?, ?, ?, ?)",
-				getUserFromRequest(r), query.EntityType, query.SearchText, string(filtersJSON))
-		}
-	}()
+	// Log search to history (synchronous to avoid race conditions with SQLite)
+	if db != nil {
+		filtersJSON, _ := json.Marshal(query.Filters)
+		// Ignore errors - logging search history is not critical
+		db.Exec("INSERT INTO search_history (user_id, entity_type, search_text, filters) VALUES (?, ?, ?, ?)",
+			getUserFromRequest(r), query.EntityType, query.SearchText, string(filtersJSON))
+	}
 
 	// Return SearchResult directly (not wrapped in APIResponse)
 	w.Header().Set("Content-Type", "application/json")

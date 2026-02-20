@@ -50,11 +50,19 @@ func TestHandleGetGitPLMConfig_NoConfig(t *testing.T) {
 		t.Fatalf("Expected status 200, got %d", w.Code)
 	}
 
-	var response GitPLMConfig
-	json.NewDecoder(w.Body).Decode(&response)
+	var apiResp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&apiResp); err != nil {
+		t.Fatalf("Failed to decode API response: %v", err)
+	}
 
-	if response.BaseURL != "" {
-		t.Errorf("Expected empty BaseURL, got %q", response.BaseURL)
+	configData, ok := apiResp.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Response data is not a map: %T", apiResp.Data)
+	}
+
+	baseURL, _ := configData["base_url"].(string)
+	if baseURL != "" {
+		t.Errorf("Expected empty BaseURL, got %q", baseURL)
 	}
 }
 
@@ -79,11 +87,19 @@ func TestHandleGetGitPLMConfig_WithConfig(t *testing.T) {
 		t.Fatalf("Expected status 200, got %d", w.Code)
 	}
 
-	var response GitPLMConfig
-	json.NewDecoder(w.Body).Decode(&response)
+	var apiResp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&apiResp); err != nil {
+		t.Fatalf("Failed to decode API response: %v", err)
+	}
 
-	if response.BaseURL != "https://gitplm.example.com" {
-		t.Errorf("Expected URL 'https://gitplm.example.com', got %q", response.BaseURL)
+	configData, ok := apiResp.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Response data is not a map: %T", apiResp.Data)
+	}
+
+	baseURL, ok := configData["base_url"].(string)
+	if !ok || baseURL != "https://gitplm.example.com" {
+		t.Errorf("Expected URL 'https://gitplm.example.com', got %q", baseURL)
 	}
 }
 
@@ -107,11 +123,23 @@ func TestHandleUpdateGitPLMConfig_Create(t *testing.T) {
 		t.Fatalf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	var response GitPLMConfig
-	json.NewDecoder(w.Body).Decode(&response)
+	var apiResp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&apiResp); err != nil {
+		t.Fatalf("Failed to decode API response: %v", err)
+	}
 
-	if response.BaseURL != "https://gitplm.example.com" {
-		t.Errorf("Expected URL 'https://gitplm.example.com', got %q", response.BaseURL)
+	configData, ok := apiResp.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Response data is not a map: %T", apiResp.Data)
+	}
+
+	baseURL, ok := configData["base_url"].(string)
+	if !ok {
+		t.Fatalf("base_url is not a string: %T", configData["base_url"])
+	}
+
+	if baseURL != "https://gitplm.example.com" {
+		t.Errorf("Expected URL 'https://gitplm.example.com', got %q", baseURL)
 	}
 }
 
@@ -135,11 +163,19 @@ func TestHandleUpdateGitPLMConfig_TrimSlash(t *testing.T) {
 		t.Fatalf("Expected status 200, got %d", w.Code)
 	}
 
-	var response GitPLMConfig
-	json.NewDecoder(w.Body).Decode(&response)
+	var apiResp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&apiResp); err != nil {
+		t.Fatalf("Failed to decode API response: %v", err)
+	}
 
-	if response.BaseURL != "https://gitplm.example.com" {
-		t.Errorf("Expected trailing slash trimmed, got %q", response.BaseURL)
+	configData, ok := apiResp.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Response data is not a map: %T", apiResp.Data)
+	}
+
+	baseURL, ok := configData["base_url"].(string)
+	if !ok || baseURL != "https://gitplm.example.com" {
+		t.Errorf("Expected trailing slash trimmed, got %q", baseURL)
 	}
 }
 
@@ -159,14 +195,24 @@ func TestHandleGetGitPLMURL_NotConfigured(t *testing.T) {
 		t.Fatalf("Expected status 200, got %d", w.Code)
 	}
 
-	var response GitPLMURLResponse
-	json.NewDecoder(w.Body).Decode(&response)
+	var apiResp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&apiResp); err != nil {
+		t.Fatalf("Failed to decode API response: %v", err)
+	}
 
-	if response.Configured {
+	responseData, ok := apiResp.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Response data is not a map: %T", apiResp.Data)
+	}
+
+	configured, _ := responseData["configured"].(bool)
+	url, _ := responseData["url"].(string)
+
+	if configured {
 		t.Error("Expected Configured=false when no config")
 	}
-	if response.URL != "" {
-		t.Errorf("Expected empty URL, got %q", response.URL)
+	if url != "" {
+		t.Errorf("Expected empty URL, got %q", url)
 	}
 }
 
@@ -188,15 +234,25 @@ func TestHandleGetGitPLMURL_Configured(t *testing.T) {
 		t.Fatalf("Expected status 200, got %d", w.Code)
 	}
 
-	var response GitPLMURLResponse
-	json.NewDecoder(w.Body).Decode(&response)
+	var apiResp APIResponse
+	if err := json.NewDecoder(w.Body).Decode(&apiResp); err != nil {
+		t.Fatalf("Failed to decode API response: %v", err)
+	}
 
-	if !response.Configured {
+	responseData, ok := apiResp.Data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Response data is not a map: %T", apiResp.Data)
+	}
+
+	configured, _ := responseData["configured"].(bool)
+	url, _ := responseData["url"].(string)
+
+	if !configured {
 		t.Error("Expected Configured=true")
 	}
 
 	expectedURL := "https://gitplm.example.com/parts/RES-0001"
-	if response.URL != expectedURL {
-		t.Errorf("Expected URL %q, got %q", expectedURL, response.URL)
+	if url != expectedURL {
+		t.Errorf("Expected URL %q, got %q", expectedURL, url)
 	}
 }

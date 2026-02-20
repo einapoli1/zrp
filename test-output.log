@@ -1,0 +1,2056 @@
+=== RUN   TestAPIContractRoutes
+--- PASS: TestAPIContractRoutes (0.01s)
+=== RUN   TestFrontendRoutesExistInBackend
+--- PASS: TestFrontendRoutesExistInBackend (0.00s)
+=== RUN   TestOpenAPISpecValid
+    api_contract_test.go:127: OpenAPI spec: 135 paths, 187 endpoints
+--- PASS: TestOpenAPISpecValid (0.00s)
+=== RUN   TestAPIHealth
+=== RUN   TestAPIHealth/Health_Check
+=== RUN   TestAPIHealth/Login
+=== RUN   TestAPIHealth/Me
+=== RUN   TestAPIHealth/Global_Search
+=== RUN   TestAPIHealth/Scan_Lookup
+=== RUN   TestAPIHealth/Dashboard
+=== RUN   TestAPIHealth/Dashboard_Charts
+=== RUN   TestAPIHealth/Low_Stock_Alerts
+=== RUN   TestAPIHealth/Get_Dashboard_Widgets
+=== RUN   TestAPIHealth/Audit_Log
+=== RUN   TestAPIHealth/List_Parts
+=== RUN   TestAPIHealth/List_Categories
+=== RUN   TestAPIHealth/Check_IPN
+=== RUN   TestAPIHealth/Get_Part
+=== RUN   TestAPIHealth/Part_BOM
+=== RUN   TestAPIHealth/Part_Cost
+=== RUN   TestAPIHealth/Part_Where_Used
+=== RUN   TestAPIHealth/Part_Changes
+=== RUN   TestAPIHealth/List_All_Part_Changes
+=== RUN   TestAPIHealth/List_Categories_2
+=== RUN   TestAPIHealth/Calendar
+=== RUN   TestAPIHealth/List_ECOs
+=== RUN   TestAPIHealth/Get_ECO
+=== RUN   TestAPIHealth/ECO_Part_Changes
+=== RUN   TestAPIHealth/ECO_Revisions
+=== RUN   TestAPIHealth/List_Docs
+=== RUN   TestAPIHealth/Get_Doc
+=== RUN   TestAPIHealth/Doc_Versions
+=== RUN   TestAPIHealth/List_Vendors
+=== RUN   TestAPIHealth/Get_Vendor
+=== RUN   TestAPIHealth/List_Inventory
+=== RUN   TestAPIHealth/Get_Inventory
+=== RUN   TestAPIHealth/Inventory_History
+=== RUN   TestAPIHealth/List_POs
+=== RUN   TestAPIHealth/Get_PO
+=== RUN   TestAPIHealth/List_Receiving
+=== RUN   TestAPIHealth/List_Work_Orders
+=== RUN   TestAPIHealth/Get_Work_Order
+=== RUN   TestAPIHealth/Work_Order_BOM
+=== RUN   TestAPIHealth/List_Tests
+=== RUN   TestAPIHealth/List_NCRs
+=== RUN   TestAPIHealth/Get_NCR
+=== RUN   TestAPIHealth/List_Devices
+=== RUN   TestAPIHealth/Get_Device
+=== RUN   TestAPIHealth/Device_History
+=== RUN   TestAPIHealth/Export_Devices
+=== RUN   TestAPIHealth/List_Campaigns
+=== RUN   TestAPIHealth/Get_Campaign
+=== RUN   TestAPIHealth/Campaign_Progress
+=== RUN   TestAPIHealth/Campaign_Devices
+=== RUN   TestAPIHealth/List_Firmware
+=== RUN   TestAPIHealth/List_Shipments
+=== RUN   TestAPIHealth/Get_Shipment
+=== RUN   TestAPIHealth/CAPA_Dashboard
+=== RUN   TestAPIHealth/List_CAPAs
+=== RUN   TestAPIHealth/Get_CAPA
+=== RUN   TestAPIHealth/List_RMAs
+=== RUN   TestAPIHealth/Get_RMA
+=== RUN   TestAPIHealth/List_Quotes
+=== RUN   TestAPIHealth/Get_Quote
+=== RUN   TestAPIHealth/Quote_Cost
+=== RUN   TestAPIHealth/List_API_Keys
+=== RUN   TestAPIHealth/List_API_Keys_Alt
+=== RUN   TestAPIHealth/List_Users
+=== RUN   TestAPIHealth/List_Permissions
+=== RUN   TestAPIHealth/List_Modules
+=== RUN   TestAPIHealth/My_Permissions
+=== RUN   TestAPIHealth/List_Attachments
+=== RUN   TestAPIHealth/Get_Email_Config
+=== RUN   TestAPIHealth/Get_Email_Subscriptions
+=== RUN   TestAPIHealth/Email_Log
+=== RUN   TestAPIHealth/General_Settings
+=== RUN   TestAPIHealth/GitPLM_Settings
+=== RUN   TestAPIHealth/Git_Docs_Settings
+=== RUN   TestAPIHealth/Distributor_Settings
+=== RUN   TestAPIHealth/Email_Settings
+=== RUN   TestAPIHealth/Config
+=== RUN   TestAPIHealth/Inventory_Valuation_Report
+=== RUN   TestAPIHealth/Open_ECOs_Report
+=== RUN   TestAPIHealth/WO_Throughput_Report
+=== RUN   TestAPIHealth/Low_Stock_Report
+=== RUN   TestAPIHealth/NCR_Summary_Report
+=== RUN   TestAPIHealth/List_Notifications
+=== RUN   TestAPIHealth/Notification_Preferences
+=== RUN   TestAPIHealth/Notification_Types
+=== RUN   TestAPIHealth/List_RFQs
+=== RUN   TestAPIHealth/Get_RFQ
+=== RUN   TestAPIHealth/RFQ_Compare
+=== RUN   TestAPIHealth/RFQ_Email_Body
+=== RUN   TestAPIHealth/RFQ_Dashboard
+=== RUN   TestAPIHealth/List_Product_Pricing
+=== RUN   TestAPIHealth/List_Cost_Analysis
+=== RUN   TestAPIHealth/Get_Product_Pricing
+=== RUN   TestAPIHealth/Product_Pricing_History
+=== RUN   TestAPIHealth/Recent_Changes
+=== RUN   TestAPIHealth/List_Undo
+=== RUN   TestAPIHealth/List_Backups
+=== RUN   TestAPIHealth/List_Field_Reports
+=== RUN   TestAPIHealth/Get_Field_Report
+=== RUN   TestAPIHealth/List_Sales_Orders
+=== RUN   TestAPIHealth/Get_Sales_Order
+=== RUN   TestAPIHealth/List_Invoices
+=== RUN   TestAPIHealth/Get_Invoice
+--- PASS: TestAPIHealth (0.13s)
+    --- PASS: TestAPIHealth/Health_Check (0.00s)
+    --- PASS: TestAPIHealth/Login (0.05s)
+    --- PASS: TestAPIHealth/Me (0.00s)
+    --- PASS: TestAPIHealth/Global_Search (0.00s)
+    --- PASS: TestAPIHealth/Scan_Lookup (0.00s)
+    --- PASS: TestAPIHealth/Dashboard (0.00s)
+    --- PASS: TestAPIHealth/Dashboard_Charts (0.00s)
+    --- PASS: TestAPIHealth/Low_Stock_Alerts (0.00s)
+    --- PASS: TestAPIHealth/Get_Dashboard_Widgets (0.00s)
+    --- PASS: TestAPIHealth/Audit_Log (0.00s)
+    --- PASS: TestAPIHealth/List_Parts (0.00s)
+    --- PASS: TestAPIHealth/List_Categories (0.00s)
+    --- PASS: TestAPIHealth/Check_IPN (0.00s)
+    --- PASS: TestAPIHealth/Get_Part (0.00s)
+    --- PASS: TestAPIHealth/Part_BOM (0.00s)
+    --- PASS: TestAPIHealth/Part_Cost (0.00s)
+    --- PASS: TestAPIHealth/Part_Where_Used (0.00s)
+    --- PASS: TestAPIHealth/Part_Changes (0.00s)
+    --- PASS: TestAPIHealth/List_All_Part_Changes (0.00s)
+    --- PASS: TestAPIHealth/List_Categories_2 (0.00s)
+    --- PASS: TestAPIHealth/Calendar (0.00s)
+    --- PASS: TestAPIHealth/List_ECOs (0.00s)
+    --- PASS: TestAPIHealth/Get_ECO (0.00s)
+    --- PASS: TestAPIHealth/ECO_Part_Changes (0.00s)
+    --- PASS: TestAPIHealth/ECO_Revisions (0.00s)
+    --- PASS: TestAPIHealth/List_Docs (0.00s)
+    --- PASS: TestAPIHealth/Get_Doc (0.00s)
+    --- PASS: TestAPIHealth/Doc_Versions (0.00s)
+    --- PASS: TestAPIHealth/List_Vendors (0.00s)
+    --- PASS: TestAPIHealth/Get_Vendor (0.00s)
+    --- PASS: TestAPIHealth/List_Inventory (0.00s)
+    --- PASS: TestAPIHealth/Get_Inventory (0.00s)
+    --- PASS: TestAPIHealth/Inventory_History (0.00s)
+    --- PASS: TestAPIHealth/List_POs (0.00s)
+    --- PASS: TestAPIHealth/Get_PO (0.00s)
+    --- PASS: TestAPIHealth/List_Receiving (0.00s)
+    --- PASS: TestAPIHealth/List_Work_Orders (0.00s)
+    --- PASS: TestAPIHealth/Get_Work_Order (0.00s)
+    --- PASS: TestAPIHealth/Work_Order_BOM (0.00s)
+    --- PASS: TestAPIHealth/List_Tests (0.00s)
+    --- PASS: TestAPIHealth/List_NCRs (0.00s)
+    --- PASS: TestAPIHealth/Get_NCR (0.00s)
+    --- PASS: TestAPIHealth/List_Devices (0.00s)
+    --- PASS: TestAPIHealth/Get_Device (0.00s)
+    --- PASS: TestAPIHealth/Device_History (0.00s)
+    --- PASS: TestAPIHealth/Export_Devices (0.00s)
+    --- PASS: TestAPIHealth/List_Campaigns (0.00s)
+    --- PASS: TestAPIHealth/Get_Campaign (0.00s)
+    --- PASS: TestAPIHealth/Campaign_Progress (0.00s)
+    --- PASS: TestAPIHealth/Campaign_Devices (0.00s)
+    --- PASS: TestAPIHealth/List_Firmware (0.00s)
+    --- PASS: TestAPIHealth/List_Shipments (0.00s)
+    --- PASS: TestAPIHealth/Get_Shipment (0.00s)
+    --- PASS: TestAPIHealth/CAPA_Dashboard (0.00s)
+    --- PASS: TestAPIHealth/List_CAPAs (0.00s)
+    --- PASS: TestAPIHealth/Get_CAPA (0.00s)
+    --- PASS: TestAPIHealth/List_RMAs (0.00s)
+    --- PASS: TestAPIHealth/Get_RMA (0.00s)
+    --- PASS: TestAPIHealth/List_Quotes (0.00s)
+    --- PASS: TestAPIHealth/Get_Quote (0.00s)
+    --- PASS: TestAPIHealth/Quote_Cost (0.00s)
+    --- PASS: TestAPIHealth/List_API_Keys (0.00s)
+    --- PASS: TestAPIHealth/List_API_Keys_Alt (0.00s)
+    --- PASS: TestAPIHealth/List_Users (0.00s)
+    --- PASS: TestAPIHealth/List_Permissions (0.00s)
+    --- PASS: TestAPIHealth/List_Modules (0.00s)
+    --- PASS: TestAPIHealth/My_Permissions (0.00s)
+    --- PASS: TestAPIHealth/List_Attachments (0.00s)
+    --- PASS: TestAPIHealth/Get_Email_Config (0.00s)
+    --- PASS: TestAPIHealth/Get_Email_Subscriptions (0.00s)
+    --- PASS: TestAPIHealth/Email_Log (0.00s)
+    --- PASS: TestAPIHealth/General_Settings (0.00s)
+    --- PASS: TestAPIHealth/GitPLM_Settings (0.00s)
+    --- PASS: TestAPIHealth/Git_Docs_Settings (0.00s)
+    --- PASS: TestAPIHealth/Distributor_Settings (0.00s)
+    --- PASS: TestAPIHealth/Email_Settings (0.00s)
+    --- PASS: TestAPIHealth/Config (0.00s)
+    --- PASS: TestAPIHealth/Inventory_Valuation_Report (0.00s)
+    --- PASS: TestAPIHealth/Open_ECOs_Report (0.00s)
+    --- PASS: TestAPIHealth/WO_Throughput_Report (0.00s)
+    --- PASS: TestAPIHealth/Low_Stock_Report (0.00s)
+    --- PASS: TestAPIHealth/NCR_Summary_Report (0.00s)
+    --- PASS: TestAPIHealth/List_Notifications (0.00s)
+    --- PASS: TestAPIHealth/Notification_Preferences (0.00s)
+    --- PASS: TestAPIHealth/Notification_Types (0.00s)
+    --- PASS: TestAPIHealth/List_RFQs (0.00s)
+    --- PASS: TestAPIHealth/Get_RFQ (0.00s)
+    --- PASS: TestAPIHealth/RFQ_Compare (0.00s)
+    --- PASS: TestAPIHealth/RFQ_Email_Body (0.00s)
+    --- PASS: TestAPIHealth/RFQ_Dashboard (0.00s)
+    --- PASS: TestAPIHealth/List_Product_Pricing (0.00s)
+    --- PASS: TestAPIHealth/List_Cost_Analysis (0.00s)
+    --- PASS: TestAPIHealth/Get_Product_Pricing (0.00s)
+    --- PASS: TestAPIHealth/Product_Pricing_History (0.00s)
+    --- PASS: TestAPIHealth/Recent_Changes (0.00s)
+    --- PASS: TestAPIHealth/List_Undo (0.00s)
+    --- PASS: TestAPIHealth/List_Backups (0.00s)
+    --- PASS: TestAPIHealth/List_Field_Reports (0.00s)
+    --- PASS: TestAPIHealth/Get_Field_Report (0.00s)
+    --- PASS: TestAPIHealth/List_Sales_Orders (0.00s)
+    --- PASS: TestAPIHealth/Get_Sales_Order (0.00s)
+    --- PASS: TestAPIHealth/List_Invoices (0.00s)
+    --- PASS: TestAPIHealth/Get_Invoice (0.00s)
+=== RUN   TestConcurrentInventoryUpdates_TwoGoroutines
+--- PASS: TestConcurrentInventoryUpdates_TwoGoroutines (0.00s)
+=== RUN   TestConcurrentInventoryUpdates_TenGoroutines
+--- PASS: TestConcurrentInventoryUpdates_TenGoroutines (0.00s)
+=== RUN   TestConcurrentInventoryUpdates_DifferentParts
+--- PASS: TestConcurrentInventoryUpdates_DifferentParts (0.00s)
+=== RUN   TestConcurrentInventoryUpdates_MixedOperations
+--- PASS: TestConcurrentInventoryUpdates_MixedOperations (0.00s)
+=== RUN   TestConcurrentInventoryRead_WhileUpdating
+--- PASS: TestConcurrentInventoryRead_WhileUpdating (0.00s)
+=== RUN   TestForeignKeysEnabled
+--- PASS: TestForeignKeysEnabled (0.03s)
+=== RUN   TestFK_PORequiresVendor
+--- PASS: TestFK_PORequiresVendor (0.03s)
+=== RUN   TestFK_POLineRequiresPO
+--- PASS: TestFK_POLineRequiresPO (0.02s)
+=== RUN   TestFK_CascadeDeletePOLines
+--- PASS: TestFK_CascadeDeletePOLines (0.03s)
+=== RUN   TestFK_RestrictVendorDeleteWithPO
+--- PASS: TestFK_RestrictVendorDeleteWithPO (0.03s)
+=== RUN   TestFK_QuoteLineCascade
+--- PASS: TestFK_QuoteLineCascade (0.02s)
+=== RUN   TestFK_WOSerialRequiresWO
+--- PASS: TestFK_WOSerialRequiresWO (0.03s)
+=== RUN   TestFK_SessionRequiresUser
+--- PASS: TestFK_SessionRequiresUser (0.02s)
+=== RUN   TestFK_ShipmentLineCascade
+--- PASS: TestFK_ShipmentLineCascade (0.03s)
+=== RUN   TestFK_EcoRevisionRequiresEco
+--- PASS: TestFK_EcoRevisionRequiresEco (0.03s)
+=== RUN   TestFK_DocumentVersionRequiresDocument
+--- PASS: TestFK_DocumentVersionRequiresDocument (0.03s)
+=== RUN   TestFK_RFQVendorRequiresVendor
+--- PASS: TestFK_RFQVendorRequiresVendor (0.03s)
+=== RUN   TestFK_CampaignDeviceRequiresCampaign
+--- PASS: TestFK_CampaignDeviceRequiresCampaign (0.03s)
+=== RUN   TestFK_ReceivingInspectionRequiresPO
+--- PASS: TestFK_ReceivingInspectionRequiresPO (0.03s)
+=== RUN   TestCheck_ECOInvalidStatus
+--- PASS: TestCheck_ECOInvalidStatus (0.03s)
+=== RUN   TestCheck_WorkOrderInvalidPriority
+--- PASS: TestCheck_WorkOrderInvalidPriority (0.02s)
+=== RUN   TestCheck_NegativeInventory
+--- PASS: TestCheck_NegativeInventory (0.03s)
+=== RUN   TestCheck_NegativeUnitPrice
+--- PASS: TestCheck_NegativeUnitPrice (0.04s)
+=== RUN   TestCheck_ZeroQtyOrdered
+--- PASS: TestCheck_ZeroQtyOrdered (0.03s)
+=== RUN   TestCheck_TestRecordInvalidResult
+--- PASS: TestCheck_TestRecordInvalidResult (0.03s)
+=== RUN   TestCheck_VendorNegativeLeadTime
+--- PASS: TestCheck_VendorNegativeLeadTime (0.03s)
+=== RUN   TestCheck_NCRInvalidSeverity
+--- PASS: TestCheck_NCRInvalidSeverity (0.03s)
+=== RUN   TestCheck_DeviceInvalidStatus
+--- PASS: TestCheck_DeviceInvalidStatus (0.03s)
+=== RUN   TestUnique_WOSerialNumber
+--- PASS: TestUnique_WOSerialNumber (0.03s)
+=== RUN   TestUnique_MarketPricing
+--- PASS: TestUnique_MarketPricing (0.02s)
+=== RUN   TestIndexesExist
+--- PASS: TestIndexesExist (0.03s)
+=== RUN   TestValidDataInserts
+--- PASS: TestValidDataInserts (0.03s)
+=== RUN   TestDatabaseMigrations
+    db_migration_test.go:103: ✓ All 51 required tables exist
+    db_migration_test.go:104: ✓ All 17 critical columns exist
+--- PASS: TestDatabaseMigrations (0.01s)
+=== RUN   TestHandlerQueryConsistency
+    db_migration_test.go:212: ✓ 11/11 handler queries verified
+--- PASS: TestHandlerQueryConsistency (0.01s)
+=== RUN   TestMigrationIdempotency
+    db_migration_test.go:257: ✓ Migrations are idempotent
+--- PASS: TestMigrationIdempotency (0.01s)
+=== RUN   TestForeignKeyConstraints
+    db_migration_test.go:358: ✓ Foreign key constraints verified
+--- PASS: TestForeignKeyConstraints (0.01s)
+=== RUN   TestDatabaseConnectionLost
+    error_recovery_test.go:123: ✅ Database connection failure handled gracefully with error: sql: database is closed
+--- PASS: TestDatabaseConnectionLost (0.00s)
+=== RUN   TestDatabaseBusyTimeout
+    error_recovery_test.go:165: ✅ Database busy condition handled (error returned)
+--- PASS: TestDatabaseBusyTimeout (0.00s)
+=== RUN   TestInvalidJSONRequest
+=== RUN   TestInvalidJSONRequest/Completely_invalid_JSON
+    error_recovery_test.go:231: ✅ Invalid JSON handled: invalid body
+=== RUN   TestInvalidJSONRequest/Malformed_JSON_with_extra_comma
+    error_recovery_test.go:231: ✅ Invalid JSON handled: invalid body
+=== RUN   TestInvalidJSONRequest/Not_JSON_at_all
+    error_recovery_test.go:231: ✅ Invalid JSON handled: invalid body
+=== RUN   TestInvalidJSONRequest/Empty_body
+    error_recovery_test.go:231: ✅ Invalid JSON handled: invalid body
+--- PASS: TestInvalidJSONRequest (0.00s)
+    --- PASS: TestInvalidJSONRequest/Completely_invalid_JSON (0.00s)
+    --- PASS: TestInvalidJSONRequest/Malformed_JSON_with_extra_comma (0.00s)
+    --- PASS: TestInvalidJSONRequest/Not_JSON_at_all (0.00s)
+    --- PASS: TestInvalidJSONRequest/Empty_body (0.00s)
+=== RUN   TestMissingRequiredFields
+=== RUN   TestMissingRequiredFields/Vendor_without_name
+    error_recovery_test.go:290: ✅ Missing field 'name' properly validated: name: is required
+=== RUN   TestMissingRequiredFields/Vendor_with_empty_name
+    error_recovery_test.go:290: ✅ Missing field 'name' properly validated: name: is required
+=== RUN   TestMissingRequiredFields/Vendor_with_whitespace-only_name
+    error_recovery_test.go:290: ✅ Missing field 'name' properly validated: name: is required
+--- PASS: TestMissingRequiredFields (0.00s)
+    --- PASS: TestMissingRequiredFields/Vendor_without_name (0.00s)
+    --- PASS: TestMissingRequiredFields/Vendor_with_empty_name (0.00s)
+    --- PASS: TestMissingRequiredFields/Vendor_with_whitespace-only_name (0.00s)
+=== RUN   TestForeignKeyConstraintViolation
+    error_recovery_test.go:337: ✅ Foreign key constraint properly enforced: constraint failed: FOREIGN KEY constraint failed (1811)
+--- PASS: TestForeignKeyConstraintViolation (0.00s)
+=== RUN   TestTransactionRollbackOnError
+    error_recovery_test.go:387: ✅ Transaction rollback on constraint violation works correctly
+--- PASS: TestTransactionRollbackOnError (0.00s)
+=== RUN   TestNegativeQuantityRejection
+=== RUN   TestNegativeQuantityRejection/Negative_qty_on_hand
+    error_recovery_test.go:430: ✅ CHECK constraint enforced: constraint failed: CHECK constraint failed: qty_on_hand >= 0 (275)
+=== RUN   TestNegativeQuantityRejection/Negative_qty_reserved
+    error_recovery_test.go:430: ✅ CHECK constraint enforced: constraint failed: CHECK constraint failed: qty_reserved >= 0 (275)
+=== RUN   TestNegativeQuantityRejection/Negative_reorder_point
+    error_recovery_test.go:430: ✅ CHECK constraint enforced: constraint failed: CHECK constraint failed: reorder_point >= 0 (275)
+=== RUN   TestNegativeQuantityRejection/Zero_qty_on_hand
+=== RUN   TestNegativeQuantityRejection/Positive_qty_on_hand
+--- PASS: TestNegativeQuantityRejection (0.00s)
+    --- PASS: TestNegativeQuantityRejection/Negative_qty_on_hand (0.00s)
+    --- PASS: TestNegativeQuantityRejection/Negative_qty_reserved (0.00s)
+    --- PASS: TestNegativeQuantityRejection/Negative_reorder_point (0.00s)
+    --- PASS: TestNegativeQuantityRejection/Zero_qty_on_hand (0.00s)
+    --- PASS: TestNegativeQuantityRejection/Positive_qty_on_hand (0.00s)
+=== RUN   TestVeryLongFilePath
+    error_recovery_test.go:453: ✅ Very long file path properly rejected by OS: open /var/folders/56/n92zs44s7cd7262ym00jt2bm0000gn/T/TestVeryLongFilePath769345299/001/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.txt: file name too long
+--- PASS: TestVeryLongFilePath (0.00s)
+=== RUN   TestDiskFullSimulation
+    error_recovery_test.go:486: ✅ Write error properly detected: write /var/folders/56/n92zs44s7cd7262ym00jt2bm0000gn/T/diskfull-test-2402853099.txt: file already closed
+--- PASS: TestDiskFullSimulation (0.00s)
+=== RUN   TestNetworkTimeoutHandling
+    error_recovery_test.go:527: ✅ Request completed without hanging
+--- PASS: TestNetworkTimeoutHandling (0.00s)
+=== RUN   TestMultipleValidationErrors
+    error_recovery_test.go:570: ✅ Validation errors reported: name: is required; contact_email: must be a valid email address
+--- PASS: TestMultipleValidationErrors (0.00s)
+=== RUN   TestDuplicateKeyError
+    error_recovery_test.go:599: ✅ Duplicate key properly rejected: constraint failed: UNIQUE constraint failed: vendors.name (2067)
+--- PASS: TestDuplicateKeyError (0.00s)
+=== RUN   TestNilDatabaseConnection
+    error_recovery_test.go:631: ✅ Nil database handled gracefully (status 503): database not initialized
+--- PASS: TestNilDatabaseConnection (0.00s)
+=== RUN   TestUserFriendlyErrorMessages
+=== RUN   TestUserFriendlyErrorMessages/Empty_name_field
+    error_recovery_test.go:683: ✅ User-friendly error message: name: is required
+--- PASS: TestUserFriendlyErrorMessages (0.00s)
+    --- PASS: TestUserFriendlyErrorMessages/Empty_name_field (0.00s)
+=== RUN   TestHandleAdvancedSearch_InvalidJSON
+--- PASS: TestHandleAdvancedSearch_InvalidJSON (0.00s)
+=== RUN   TestHandleAdvancedSearch_WorkOrders
+=== RUN   TestHandleAdvancedSearch_WorkOrders/Search_all_work_orders
+=== RUN   TestHandleAdvancedSearch_WorkOrders/Filter_by_status
+=== RUN   TestHandleAdvancedSearch_WorkOrders/Filter_by_priority
+=== RUN   TestHandleAdvancedSearch_WorkOrders/Multiple_filters_with_AND
+    handler_advanced_search_test.go:360: Expected status 200, got 500: SQL logic error: no such table: work_orders (1)
+    handler_advanced_search_test.go:365: Failed to decode response: invalid character 'S' looking for beginning of value
+--- FAIL: TestHandleAdvancedSearch_WorkOrders (0.00s)
+    --- PASS: TestHandleAdvancedSearch_WorkOrders/Search_all_work_orders (0.00s)
+    --- PASS: TestHandleAdvancedSearch_WorkOrders/Filter_by_status (0.00s)
+    --- PASS: TestHandleAdvancedSearch_WorkOrders/Filter_by_priority (0.00s)
+    --- FAIL: TestHandleAdvancedSearch_WorkOrders/Multiple_filters_with_AND (0.00s)
+=== RUN   TestHandleAdvancedSearch_ECOs
+--- PASS: TestHandleAdvancedSearch_ECOs (0.00s)
+=== RUN   TestHandleAdvancedSearch_Inventory
+--- PASS: TestHandleAdvancedSearch_Inventory (0.00s)
+=== RUN   TestHandleAdvancedSearch_Pagination
+=== RUN   TestHandleAdvancedSearch_Pagination/First_page
+=== RUN   TestHandleAdvancedSearch_Pagination/Second_page
+    handler_advanced_search_test.go:502: Failed to decode response: invalid character 'S' looking for beginning of value
+=== RUN   TestHandleAdvancedSearch_Pagination/Third_page
+    handler_advanced_search_test.go:502: Failed to decode response: invalid character 'S' looking for beginning of value
+--- FAIL: TestHandleAdvancedSearch_Pagination (0.00s)
+    --- PASS: TestHandleAdvancedSearch_Pagination/First_page (0.00s)
+    --- FAIL: TestHandleAdvancedSearch_Pagination/Second_page (0.00s)
+    --- FAIL: TestHandleAdvancedSearch_Pagination/Third_page (0.00s)
+=== RUN   TestHandleAdvancedSearch_UnsupportedEntity
+--- PASS: TestHandleAdvancedSearch_UnsupportedEntity (0.00s)
+=== RUN   TestHandleAdvancedSearch_SQLInjection
+--- PASS: TestHandleAdvancedSearch_SQLInjection (0.00s)
+=== RUN   TestHandleSaveSavedSearch
+--- PASS: TestHandleSaveSavedSearch (0.00s)
+=== RUN   TestHandleGetSavedSearches
+=== RUN   TestHandleGetSavedSearches/Get_all_searches_for_user
+=== RUN   TestHandleGetSavedSearches/Filter_by_entity_type
+--- PASS: TestHandleGetSavedSearches (0.00s)
+    --- PASS: TestHandleGetSavedSearches/Get_all_searches_for_user (0.00s)
+    --- PASS: TestHandleGetSavedSearches/Filter_by_entity_type (0.00s)
+=== RUN   TestHandleDeleteSavedSearch
+=== RUN   TestHandleDeleteSavedSearch/Delete_own_search
+=== RUN   TestHandleDeleteSavedSearch/Cannot_delete_other's_search
+--- PASS: TestHandleDeleteSavedSearch (0.00s)
+    --- PASS: TestHandleDeleteSavedSearch/Delete_own_search (0.00s)
+    --- PASS: TestHandleDeleteSavedSearch/Cannot_delete_other's_search (0.00s)
+=== RUN   TestHandleGetQuickFilters
+--- PASS: TestHandleGetQuickFilters (0.00s)
+=== RUN   TestHandleGetSearchHistory
+=== RUN   TestHandleGetSearchHistory/Get_all_history
+=== RUN   TestHandleGetSearchHistory/Filter_by_entity_type
+=== RUN   TestHandleGetSearchHistory/Limit_results
+--- PASS: TestHandleGetSearchHistory (0.00s)
+    --- PASS: TestHandleGetSearchHistory/Get_all_history (0.00s)
+    --- PASS: TestHandleGetSearchHistory/Filter_by_entity_type (0.00s)
+    --- PASS: TestHandleGetSearchHistory/Limit_results (0.00s)
+=== RUN   TestHandleAdvancedSearch_DevicesAndNCRsAndPOs
+=== RUN   TestHandleAdvancedSearch_DevicesAndNCRsAndPOs/Search_devices
+=== RUN   TestHandleAdvancedSearch_DevicesAndNCRsAndPOs/Search_NCRs
+=== RUN   TestHandleAdvancedSearch_DevicesAndNCRsAndPOs/Search_POs
+    handler_advanced_search_test.go:894: Expected status 200, got 500
+    handler_advanced_search_test.go:899: Failed to decode response: invalid character 'S' looking for beginning of value
+--- FAIL: TestHandleAdvancedSearch_DevicesAndNCRsAndPOs (0.00s)
+    --- PASS: TestHandleAdvancedSearch_DevicesAndNCRsAndPOs/Search_devices (0.00s)
+    --- PASS: TestHandleAdvancedSearch_DevicesAndNCRsAndPOs/Search_NCRs (0.00s)
+    --- FAIL: TestHandleAdvancedSearch_DevicesAndNCRsAndPOs/Search_POs (0.00s)
+=== RUN   TestHandleListAPIKeys
+--- PASS: TestHandleListAPIKeys (0.00s)
+=== RUN   TestHandleListAPIKeys_Empty
+--- PASS: TestHandleListAPIKeys_Empty (0.00s)
+=== RUN   TestHandleCreateAPIKey_Success
+--- PASS: TestHandleCreateAPIKey_Success (0.00s)
+=== RUN   TestHandleCreateAPIKey_WithExpiration
+--- PASS: TestHandleCreateAPIKey_WithExpiration (0.00s)
+=== RUN   TestHandleCreateAPIKey_EmptyName
+--- PASS: TestHandleCreateAPIKey_EmptyName (0.00s)
+=== RUN   TestHandleCreateAPIKey_InvalidJSON
+--- PASS: TestHandleCreateAPIKey_InvalidJSON (0.00s)
+=== RUN   TestHandleDeleteAPIKey_Success
+--- PASS: TestHandleDeleteAPIKey_Success (0.00s)
+=== RUN   TestHandleDeleteAPIKey_NotFound
+--- PASS: TestHandleDeleteAPIKey_NotFound (0.00s)
+=== RUN   TestHandleToggleAPIKey_Enable
+--- PASS: TestHandleToggleAPIKey_Enable (0.00s)
+=== RUN   TestHandleToggleAPIKey_Disable
+--- PASS: TestHandleToggleAPIKey_Disable (0.00s)
+=== RUN   TestHandleToggleAPIKey_NotFound
+--- PASS: TestHandleToggleAPIKey_NotFound (0.00s)
+=== RUN   TestHandleToggleAPIKey_InvalidJSON
+--- PASS: TestHandleToggleAPIKey_InvalidJSON (0.00s)
+=== RUN   TestValidateBearerToken_Valid
+--- PASS: TestValidateBearerToken_Valid (0.00s)
+=== RUN   TestValidateBearerToken_Disabled
+--- PASS: TestValidateBearerToken_Disabled (0.00s)
+=== RUN   TestValidateBearerToken_Expired
+--- PASS: TestValidateBearerToken_Expired (0.00s)
+=== RUN   TestValidateBearerToken_InvalidPrefix
+--- PASS: TestValidateBearerToken_InvalidPrefix (0.00s)
+=== RUN   TestValidateBearerToken_NotFound
+--- PASS: TestValidateBearerToken_NotFound (0.00s)
+=== RUN   TestGenerateAPIKey_Randomness
+--- PASS: TestGenerateAPIKey_Randomness (0.00s)
+=== RUN   TestHashAPIKey_Consistency
+--- PASS: TestHashAPIKey_Consistency (0.00s)
+=== RUN   TestHashAPIKey_DifferentKeys
+--- PASS: TestHashAPIKey_DifferentKeys (0.00s)
+=== RUN   TestAPIKeyPrefix_Storage
+--- PASS: TestAPIKeyPrefix_Storage (0.00s)
+=== RUN   TestValidateBearerToken_FutureExpiration
+--- PASS: TestValidateBearerToken_FutureExpiration (0.00s)
+=== RUN   TestHandleUploadAttachment_Success
+=== RUN   TestHandleUploadAttachment_Success/PDF_upload
+=== RUN   TestHandleUploadAttachment_Success/Image_upload
+=== RUN   TestHandleUploadAttachment_Success/Excel_upload
+--- PASS: TestHandleUploadAttachment_Success (0.00s)
+    --- PASS: TestHandleUploadAttachment_Success/PDF_upload (0.00s)
+    --- PASS: TestHandleUploadAttachment_Success/Image_upload (0.00s)
+    --- PASS: TestHandleUploadAttachment_Success/Excel_upload (0.00s)
+=== RUN   TestHandleUploadAttachment_MissingFields
+=== RUN   TestHandleUploadAttachment_MissingFields/Missing_module
+=== RUN   TestHandleUploadAttachment_MissingFields/Missing_record_id
+=== RUN   TestHandleUploadAttachment_MissingFields/Both_missing
+--- PASS: TestHandleUploadAttachment_MissingFields (0.00s)
+    --- PASS: TestHandleUploadAttachment_MissingFields/Missing_module (0.00s)
+    --- PASS: TestHandleUploadAttachment_MissingFields/Missing_record_id (0.00s)
+    --- PASS: TestHandleUploadAttachment_MissingFields/Both_missing (0.00s)
+=== RUN   TestHandleUploadAttachment_NoFile
+--- PASS: TestHandleUploadAttachment_NoFile (0.00s)
+=== RUN   TestHandleUploadAttachment_DangerousExtensions
+=== RUN   TestHandleUploadAttachment_DangerousExtensions/Block_malware.exe
+=== RUN   TestHandleUploadAttachment_DangerousExtensions/Block_script.bat
+=== RUN   TestHandleUploadAttachment_DangerousExtensions/Block_shell.sh
+=== RUN   TestHandleUploadAttachment_DangerousExtensions/Block_backdoor.php
+=== RUN   TestHandleUploadAttachment_DangerousExtensions/Block_virus.js
+=== RUN   TestHandleUploadAttachment_DangerousExtensions/Block_trojan.vbs
+=== RUN   TestHandleUploadAttachment_DangerousExtensions/Block_payload.jar
+=== RUN   TestHandleUploadAttachment_DangerousExtensions/Block_exploit.ps1
+=== RUN   TestHandleUploadAttachment_DangerousExtensions/Block_hack.cmd
+=== RUN   TestHandleUploadAttachment_DangerousExtensions/Block_rootkit.dll
+=== RUN   TestHandleUploadAttachment_DangerousExtensions/Block_malicious.app
+=== RUN   TestHandleUploadAttachment_DangerousExtensions/Block_installer.msi
+--- PASS: TestHandleUploadAttachment_DangerousExtensions (0.00s)
+    --- PASS: TestHandleUploadAttachment_DangerousExtensions/Block_malware.exe (0.00s)
+    --- PASS: TestHandleUploadAttachment_DangerousExtensions/Block_script.bat (0.00s)
+    --- PASS: TestHandleUploadAttachment_DangerousExtensions/Block_shell.sh (0.00s)
+    --- PASS: TestHandleUploadAttachment_DangerousExtensions/Block_backdoor.php (0.00s)
+    --- PASS: TestHandleUploadAttachment_DangerousExtensions/Block_virus.js (0.00s)
+    --- PASS: TestHandleUploadAttachment_DangerousExtensions/Block_trojan.vbs (0.00s)
+    --- PASS: TestHandleUploadAttachment_DangerousExtensions/Block_payload.jar (0.00s)
+    --- PASS: TestHandleUploadAttachment_DangerousExtensions/Block_exploit.ps1 (0.00s)
+    --- PASS: TestHandleUploadAttachment_DangerousExtensions/Block_hack.cmd (0.00s)
+    --- PASS: TestHandleUploadAttachment_DangerousExtensions/Block_rootkit.dll (0.00s)
+    --- PASS: TestHandleUploadAttachment_DangerousExtensions/Block_malicious.app (0.00s)
+    --- PASS: TestHandleUploadAttachment_DangerousExtensions/Block_installer.msi (0.00s)
+=== RUN   TestHandleUploadAttachment_PathTraversal
+=== RUN   TestHandleUploadAttachment_PathTraversal/Block_../../../etc/passwd.txt
+=== RUN   TestHandleUploadAttachment_PathTraversal/Block_..\..\..\windows\system32\config\sam.txt
+=== RUN   TestHandleUploadAttachment_PathTraversal/Block_../../../../../root/.ssh/id_rsa.txt
+=== RUN   TestHandleUploadAttachment_PathTraversal/Block_test/../../../secret.txt
+=== RUN   TestHandleUploadAttachment_PathTraversal/Block_/etc/passwd.txt
+=== RUN   TestHandleUploadAttachment_PathTraversal/Block_\etc\passwd.txt
+=== RUN   TestHandleUploadAttachment_PathTraversal/Block_C:\Windows\System32\drivers\etc\hosts.txt
+=== RUN   TestHandleUploadAttachment_PathTraversal/Block_test/../../outside.txt
+--- PASS: TestHandleUploadAttachment_PathTraversal (0.00s)
+    --- PASS: TestHandleUploadAttachment_PathTraversal/Block_../../../etc/passwd.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_PathTraversal/Block_..\..\..\windows\system32\config\sam.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_PathTraversal/Block_../../../../../root/.ssh/id_rsa.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_PathTraversal/Block_test/../../../secret.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_PathTraversal/Block_/etc/passwd.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_PathTraversal/Block_\etc\passwd.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_PathTraversal/Block_C:\Windows\System32\drivers\etc\hosts.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_PathTraversal/Block_test/../../outside.txt (0.00s)
+=== RUN   TestHandleUploadAttachment_MaliciousFilenames
+=== RUN   TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file;rm_-rf_/.txt
+=== RUN   TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file|whoami.txt
+=== RUN   TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file&cat_/etc/passwd&.txt
+=== RUN   TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file`id`.txt
+=== RUN   TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file$(ls).txt
+=== RUN   TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file\x00.exe.txt
+=== RUN   TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file__.txt
+=== RUN   TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file<script>.txt
+=== RUN   TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file>output.txt
+=== RUN   TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file*.txt
+=== RUN   TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file?.txt
+--- PASS: TestHandleUploadAttachment_MaliciousFilenames (0.00s)
+    --- PASS: TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file;rm_-rf_/.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file|whoami.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file&cat_/etc/passwd&.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file`id`.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file$(ls).txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file\x00.exe.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file__.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file<script>.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file>output.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file*.txt (0.00s)
+    --- PASS: TestHandleUploadAttachment_MaliciousFilenames/Sanitize_file?.txt (0.00s)
+=== RUN   TestHandleUploadAttachment_FileSizeLimits
+=== RUN   TestHandleUploadAttachment_FileSizeLimits/Empty_file
+=== RUN   TestHandleUploadAttachment_FileSizeLimits/Tiny_file_(1_byte)
+=== RUN   TestHandleUploadAttachment_FileSizeLimits/Normal_file_(1MB)
+=== RUN   TestHandleUploadAttachment_FileSizeLimits/Large_file_(50MB)
+=== RUN   TestHandleUploadAttachment_FileSizeLimits/Max_size_(100MB)
+--- PASS: TestHandleUploadAttachment_FileSizeLimits (0.00s)
+    --- PASS: TestHandleUploadAttachment_FileSizeLimits/Empty_file (0.00s)
+    --- PASS: TestHandleUploadAttachment_FileSizeLimits/Tiny_file_(1_byte) (0.00s)
+    --- PASS: TestHandleUploadAttachment_FileSizeLimits/Normal_file_(1MB) (0.00s)
+    --- PASS: TestHandleUploadAttachment_FileSizeLimits/Large_file_(50MB) (0.00s)
+    --- PASS: TestHandleUploadAttachment_FileSizeLimits/Max_size_(100MB) (0.00s)
+=== RUN   TestHandleUploadAttachment_DoubleExtension
+=== RUN   TestHandleUploadAttachment_DoubleExtension/Block_document.pdf.exe
+=== RUN   TestHandleUploadAttachment_DoubleExtension/Block_image.png.bat
+=== RUN   TestHandleUploadAttachment_DoubleExtension/Block_data.xlsx.js
+=== RUN   TestHandleUploadAttachment_DoubleExtension/Block_report.txt.sh
+--- PASS: TestHandleUploadAttachment_DoubleExtension (0.00s)
+    --- PASS: TestHandleUploadAttachment_DoubleExtension/Block_document.pdf.exe (0.00s)
+    --- PASS: TestHandleUploadAttachment_DoubleExtension/Block_image.png.bat (0.00s)
+    --- PASS: TestHandleUploadAttachment_DoubleExtension/Block_data.xlsx.js (0.00s)
+    --- PASS: TestHandleUploadAttachment_DoubleExtension/Block_report.txt.sh (0.00s)
+=== RUN   TestHandleListAttachments_Success
+--- PASS: TestHandleListAttachments_Success (0.00s)
+=== RUN   TestHandleListAttachments_MissingParams
+=== RUN   TestHandleListAttachments_MissingParams/Missing_module
+=== RUN   TestHandleListAttachments_MissingParams/Missing_record_id
+=== RUN   TestHandleListAttachments_MissingParams/Missing_both
+--- PASS: TestHandleListAttachments_MissingParams (0.00s)
+    --- PASS: TestHandleListAttachments_MissingParams/Missing_module (0.00s)
+    --- PASS: TestHandleListAttachments_MissingParams/Missing_record_id (0.00s)
+    --- PASS: TestHandleListAttachments_MissingParams/Missing_both (0.00s)
+=== RUN   TestHandleListAttachments_EmptyResult
+--- PASS: TestHandleListAttachments_EmptyResult (0.00s)
+=== RUN   TestHandleDownloadAttachment_Success
+--- PASS: TestHandleDownloadAttachment_Success (0.00s)
+=== RUN   TestHandleDownloadAttachment_NotFound
+--- PASS: TestHandleDownloadAttachment_NotFound (0.00s)
+=== RUN   TestHandleDownloadAttachment_InvalidID
+--- PASS: TestHandleDownloadAttachment_InvalidID (0.00s)
+=== RUN   TestHandleDownloadAttachment_FileDeleted
+--- PASS: TestHandleDownloadAttachment_FileDeleted (0.00s)
+=== RUN   TestHandleDeleteAttachment_Success
+--- PASS: TestHandleDeleteAttachment_Success (0.00s)
+=== RUN   TestHandleDeleteAttachment_NotFound
+--- PASS: TestHandleDeleteAttachment_NotFound (0.00s)
+=== RUN   TestHandleDeleteAttachment_InvalidID
+--- PASS: TestHandleDeleteAttachment_InvalidID (0.00s)
+=== RUN   TestHandleServeFile_Success
+--- PASS: TestHandleServeFile_Success (0.00s)
+=== RUN   TestHandleServeFile_NotFound
+--- PASS: TestHandleServeFile_NotFound (0.00s)
+=== RUN   TestHandleServeFile_PathTraversalPrevention
+=== RUN   TestHandleServeFile_PathTraversalPrevention/Block_../../../etc/passwd
+=== RUN   TestHandleServeFile_PathTraversalPrevention/Block_..\..\..\windows\system32\config\sam
+=== RUN   TestHandleServeFile_PathTraversalPrevention/Block_../secret.key
+--- PASS: TestHandleServeFile_PathTraversalPrevention (0.00s)
+    --- PASS: TestHandleServeFile_PathTraversalPrevention/Block_../../../etc/passwd (0.00s)
+    --- PASS: TestHandleServeFile_PathTraversalPrevention/Block_..\..\..\windows\system32\config\sam (0.00s)
+    --- PASS: TestHandleServeFile_PathTraversalPrevention/Block_../secret.key (0.00s)
+=== RUN   TestAttachmentWorkflow_UploadListDownloadDelete
+--- PASS: TestAttachmentWorkflow_UploadListDownloadDelete (0.00s)
+=== RUN   TestAttachmentMultipleModules
+--- PASS: TestAttachmentMultipleModules (0.00s)
+=== RUN   TestSecurityVulnerabilityReport
+    handler_attachments_test.go:1053: === SECURITY VULNERABILITY ASSESSMENT ===
+    handler_attachments_test.go:1054: 
+    handler_attachments_test.go:1055: CRITICAL FINDINGS:
+    handler_attachments_test.go:1056: 
+    handler_attachments_test.go:1057: 🔴 VULNERABILITY 1: NO PERMISSION CHECKS ON ATTACHMENT HANDLERS
+    handler_attachments_test.go:1058:    Location: handler_attachments.go - ALL endpoints
+    handler_attachments_test.go:1059:    Severity: CRITICAL
+    handler_attachments_test.go:1060:    Impact: Any unauthenticated user can upload, list, download, and delete attachments
+    handler_attachments_test.go:1061:    Recommendation: Add requirePermission() middleware to all attachment endpoints
+    handler_attachments_test.go:1062:    Current: handleUploadAttachment, handleDeleteAttachment have NO auth checks
+    handler_attachments_test.go:1063: 
+    handler_attachments_test.go:1064: 🔴 VULNERABILITY 2: NO READONLY ROLE ENFORCEMENT
+    handler_attachments_test.go:1065:    Severity: HIGH
+    handler_attachments_test.go:1066:    Impact: Readonly users can upload and delete files (no enforcement)
+    handler_attachments_test.go:1067:    Recommendation: Readonly should only have view permission
+    handler_attachments_test.go:1068: 
+    handler_attachments_test.go:1069: 🟡 VULNERABILITY 3: NO MIME TYPE VALIDATION
+    handler_attachments_test.go:1070:    Severity: MEDIUM
+    handler_attachments_test.go:1071:    Impact: File extension validation only - attacker can claim .pdf but upload .exe
+    handler_attachments_test.go:1072:    Recommendation: Validate actual file content (magic bytes) vs declared MIME type
+    handler_attachments_test.go:1073: 
+    handler_attachments_test.go:1074: 🟡 VULNERABILITY 4: NO VIRUS/MALWARE SCANNING
+    handler_attachments_test.go:1075:    Severity: MEDIUM
+    handler_attachments_test.go:1076:    Impact: Malicious files can be uploaded and shared
+    handler_attachments_test.go:1077:    Recommendation: Integrate ClamAV or similar antivirus scanning
+    handler_attachments_test.go:1078: 
+    handler_attachments_test.go:1079: 🟢 GOOD: Path traversal protection via sanitizeFilename()
+    handler_attachments_test.go:1080: 🟢 GOOD: Dangerous extension blocking
+    handler_attachments_test.go:1081: 🟢 GOOD: File size limits (100MB)
+    handler_attachments_test.go:1082: 🟢 GOOD: Malicious character sanitization
+    handler_attachments_test.go:1083: 
+    handler_attachments_test.go:1084: REMEDIATION PRIORITY:
+    handler_attachments_test.go:1085: 1. Add permission checks immediately (CRITICAL)
+    handler_attachments_test.go:1086: 2. Add readonly role enforcement (HIGH)
+    handler_attachments_test.go:1087: 3. Add MIME type validation (MEDIUM)
+    handler_attachments_test.go:1088: 4. Consider antivirus integration (MEDIUM)
+    handler_attachments_test.go:1089: 
+    handler_attachments_test.go:1092: Security assessment complete. Review findings above.
+--- PASS: TestSecurityVulnerabilityReport (0.00s)
+=== RUN   TestAuditLog_Vendor_Create
+    handler_audit_log_test.go:337: Created vendor ID: V-001
+    handler_audit_log_test.go:358: ✓ Vendor CREATE audit log verified: V-001
+--- PASS: TestAuditLog_Vendor_Create (0.00s)
+=== RUN   TestAuditLog_Vendor_Update
+    handler_audit_log_test.go:399: ✓ Vendor UPDATE audit log verified
+--- PASS: TestAuditLog_Vendor_Update (0.00s)
+=== RUN   TestAuditLog_Vendor_Delete
+    handler_audit_log_test.go:433: ✓ Vendor DELETE audit log verified
+--- PASS: TestAuditLog_Vendor_Delete (0.00s)
+=== RUN   TestAuditLog_ECO_Create
+    handler_audit_log_test.go:475: Created ECO ID: ECO-2026-001
+    handler_audit_log_test.go:484: ✓ ECO CREATE audit log verified: ECO-2026-001
+--- PASS: TestAuditLog_ECO_Create (0.00s)
+=== RUN   TestAuditLog_ECO_Approve
+    handler_audit_log_test.go:544: ✓ ECO APPROVE audit log verified with user tracking
+--- PASS: TestAuditLog_ECO_Approve (0.00s)
+=== RUN   TestAuditLog_PurchaseOrder_Create
+    handler_audit_log_test.go:602: Created PO ID: PO-2026-0001
+    handler_audit_log_test.go:631: ✓ PO CREATE audit log verified with price tracking: PO-2026-0001
+--- PASS: TestAuditLog_PurchaseOrder_Create (0.00s)
+=== RUN   TestAuditLog_PurchaseOrder_Update_PriceChange
+    handler_audit_log_test.go:685: ✓ PO UPDATE audit log verified
+--- PASS: TestAuditLog_PurchaseOrder_Update_PriceChange (0.00s)
+=== RUN   TestAuditLog_Inventory_Adjust
+    handler_audit_log_test.go:748: ✓ Inventory ADJUST audit log verified
+--- PASS: TestAuditLog_Inventory_Adjust (0.00s)
+=== RUN   TestAuditLog_BeforeAfter_Values
+    handler_audit_log_test.go:822: ✓ Before/after values verified in audit log
+--- PASS: TestAuditLog_BeforeAfter_Values (0.00s)
+=== RUN   TestAuditLog_Search_Filter
+    handler_audit_log_test.go:894: ✓ Audit log search and filtering verified
+--- PASS: TestAuditLog_Search_Filter (0.00s)
+=== RUN   TestAuditLog_IPAddress_UserAgent
+    handler_audit_log_test.go:948: ✓ IP address and user agent tracking verified
+--- PASS: TestAuditLog_IPAddress_UserAgent (0.00s)
+=== RUN   TestAuditLog_Completeness_AllOperations
+    handler_audit_log_test.go:1014: ✓ Audit log completeness verified for all CRUD operations
+--- PASS: TestAuditLog_Completeness_AllOperations (0.00s)
+=== RUN   TestHandleLoginSuccess
+--- PASS: TestHandleLoginSuccess (0.10s)
+=== RUN   TestHandleLoginInvalidUsername
+--- PASS: TestHandleLoginInvalidUsername (0.05s)
+=== RUN   TestHandleLoginInvalidPassword
+    handler_auth_test.go:207: Expected 1 failed attempt, got 0
+--- FAIL: TestHandleLoginInvalidPassword (0.10s)
+=== RUN   TestHandleLoginInactiveUser
+--- PASS: TestHandleLoginInactiveUser (0.10s)
+=== RUN   TestHandleLoginRateLimiting
+--- PASS: TestHandleLoginRateLimiting (0.29s)
+=== RUN   TestHandleLoginRateLimitPerIP
+--- PASS: TestHandleLoginRateLimitPerIP (0.35s)
+=== RUN   TestHandleLoginInvalidJSON
+--- PASS: TestHandleLoginInvalidJSON (0.00s)
+=== RUN   TestHandleLoginCleansExpiredSessions
+--- PASS: TestHandleLoginCleansExpiredSessions (0.10s)
+=== RUN   TestHandleLogoutSuccess
+--- PASS: TestHandleLogoutSuccess (0.05s)
+=== RUN   TestHandleLogoutNoCookie
+--- PASS: TestHandleLogoutNoCookie (0.00s)
+=== RUN   TestHandleMeValidSession
+--- PASS: TestHandleMeValidSession (0.05s)
+=== RUN   TestHandleMeNoCookie
+--- PASS: TestHandleMeNoCookie (0.00s)
+=== RUN   TestHandleMeInvalidToken
+--- PASS: TestHandleMeInvalidToken (0.00s)
+=== RUN   TestHandleMeExpiredSession
+--- PASS: TestHandleMeExpiredSession (0.05s)
+=== RUN   TestHandleMeInactivityTimeout
+--- PASS: TestHandleMeInactivityTimeout (0.05s)
+=== RUN   TestHandleMeUpdatesLastActivity
+    handler_auth_test.go:524: Expected status 200, got 401
+--- FAIL: TestHandleMeUpdatesLastActivity (0.05s)
+=== RUN   TestHandleChangePasswordSuccess
+--- PASS: TestHandleChangePasswordSuccess (0.25s)
+=== RUN   TestHandleChangePasswordWrongCurrent
+--- PASS: TestHandleChangePasswordWrongCurrent (0.10s)
+=== RUN   TestHandleChangePasswordTooShort
+--- PASS: TestHandleChangePasswordTooShort (0.05s)
+=== RUN   TestHandleChangePasswordMissingFields
+=== RUN   TestHandleChangePasswordMissingFields/missing_new_password
+=== RUN   TestHandleChangePasswordMissingFields/missing_current_password
+=== RUN   TestHandleChangePasswordMissingFields/empty_strings
+--- PASS: TestHandleChangePasswordMissingFields (0.05s)
+    --- PASS: TestHandleChangePasswordMissingFields/missing_new_password (0.00s)
+    --- PASS: TestHandleChangePasswordMissingFields/missing_current_password (0.00s)
+    --- PASS: TestHandleChangePasswordMissingFields/empty_strings (0.00s)
+=== RUN   TestHandleChangePasswordUnauthorized
+--- PASS: TestHandleChangePasswordUnauthorized (0.00s)
+=== RUN   TestGenerateToken
+--- PASS: TestGenerateToken (0.00s)
+=== RUN   TestGetClientIPDirect
+--- PASS: TestGetClientIPDirect (0.00s)
+=== RUN   TestGetClientIPXForwardedFor
+--- PASS: TestGetClientIPXForwardedFor (0.00s)
+=== RUN   TestHandleGetCSRFToken
+--- PASS: TestHandleGetCSRFToken (0.05s)
+=== RUN   TestHandleGetCSRFTokenUnauthorized
+--- PASS: TestHandleGetCSRFTokenUnauthorized (0.00s)
+=== RUN   TestCSRFTokenCleansExpired
+--- PASS: TestCSRFTokenCleansExpired (0.05s)
+=== RUN   TestLoginCSRFToken
+--- PASS: TestLoginCSRFToken (0.10s)
+=== RUN   TestCreateBackup
+--- PASS: TestCreateBackup (0.05s)
+=== RUN   TestListBackups
+--- PASS: TestListBackups (0.05s)
+=== RUN   TestListBackupsEmpty
+--- PASS: TestListBackupsEmpty (0.05s)
+=== RUN   TestDeleteBackup
+--- PASS: TestDeleteBackup (0.05s)
+=== RUN   TestDeleteBackupNotFound
+--- PASS: TestDeleteBackupNotFound (0.05s)
+=== RUN   TestDeleteBackupInvalidFilename
+--- PASS: TestDeleteBackupInvalidFilename (0.05s)
+=== RUN   TestDownloadBackup
+--- PASS: TestDownloadBackup (0.05s)
+=== RUN   TestDownloadBackupNotFound
+--- PASS: TestDownloadBackupNotFound (0.05s)
+=== RUN   TestDownloadBackupPathTraversal
+--- PASS: TestDownloadBackupPathTraversal (0.05s)
+=== RUN   TestRestoreBackup
+    handler_backup_test.go:249: expected 200, got 500: {"error":"Failed to reopen DB after restore: index creation: SQL logic error: no such column: ipn (1)\nSQL: CREATE INDEX IF NOT EXISTS idx_ncrs_ipn ON ncrs(ipn)"}
+--- FAIL: TestRestoreBackup (1.21s)
+=== RUN   TestRestoreBackupNotFound
+--- PASS: TestRestoreBackupNotFound (0.06s)
+=== RUN   TestRestoreBackupMissingFilename
+--- PASS: TestRestoreBackupMissingFilename (0.05s)
+=== RUN   TestRestoreBackupPathTraversal
+--- PASS: TestRestoreBackupPathTraversal (0.05s)
+=== RUN   TestCleanOldBackups
+2026/02/20 12:42:31 Removed old backup: zrp-backup-2025-01-01T00-00-00.db
+2026/02/20 12:42:31 Removed old backup: zrp-backup-2025-01-02T00-00-00.db
+--- PASS: TestCleanOldBackups (0.05s)
+=== RUN   TestCleanOldBackupsUnderRetention
+--- PASS: TestCleanOldBackupsUnderRetention (0.05s)
+=== RUN   TestBOMCost_SimpleBOM
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestBOMCost_SimpleBOM (0.00s)
+=== RUN   TestBOMCost_NestedBOM
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestBOMCost_NestedBOM (0.00s)
+=== RUN   TestBOMCost_MissingCostData
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestBOMCost_MissingCostData (0.00s)
+=== RUN   TestBOMCost_CircularBOM
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestBOMCost_CircularBOM (0.00s)
+=== RUN   TestBOMCost_LargeBOM
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestBOMCost_LargeBOM (0.00s)
+=== RUN   TestBOMCost_EmptyBOM
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestBOMCost_EmptyBOM (0.00s)
+=== RUN   TestBOMCost_NonAssemblyPart
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestBOMCost_NonAssemblyPart (0.00s)
+=== RUN   TestHandleBulkECOs_ApproveSuccess
+--- PASS: TestHandleBulkECOs_ApproveSuccess (0.00s)
+=== RUN   TestHandleBulkECOs_PartialFailure
+--- PASS: TestHandleBulkECOs_PartialFailure (0.00s)
+=== RUN   TestHandleBulkECOs_InvalidAction
+--- PASS: TestHandleBulkECOs_InvalidAction (0.00s)
+=== RUN   TestHandleBulkECOs_InvalidJSON
+--- PASS: TestHandleBulkECOs_InvalidJSON (0.00s)
+=== RUN   TestHandleBulkECOs_Delete
+--- PASS: TestHandleBulkECOs_Delete (0.00s)
+=== RUN   TestHandleBulkWorkOrders_CompleteSuccess
+--- PASS: TestHandleBulkWorkOrders_CompleteSuccess (0.00s)
+=== RUN   TestHandleBulkNCRs_CloseSuccess
+--- PASS: TestHandleBulkNCRs_CloseSuccess (0.00s)
+=== RUN   TestHandleBulkDevices_DecommissionSuccess
+--- PASS: TestHandleBulkDevices_DecommissionSuccess (0.00s)
+=== RUN   TestHandleBulkInventory_DeleteSuccess
+--- PASS: TestHandleBulkInventory_DeleteSuccess (0.00s)
+=== RUN   TestHandleBulkRMAs_CloseSuccess
+--- PASS: TestHandleBulkRMAs_CloseSuccess (0.00s)
+=== RUN   TestHandleBulkParts_ArchiveSuccess
+--- PASS: TestHandleBulkParts_ArchiveSuccess (0.00s)
+=== RUN   TestHandleBulkPurchaseOrders_ApproveSuccess
+--- PASS: TestHandleBulkPurchaseOrders_ApproveSuccess (0.00s)
+=== RUN   TestHandleBulkECOs_LargeBatch
+--- PASS: TestHandleBulkECOs_LargeBatch (0.00s)
+=== RUN   TestHandleBulkECOs_EmptyIDs
+--- PASS: TestHandleBulkECOs_EmptyIDs (0.00s)
+=== RUN   TestHandleBulkInventory_InvalidAction
+--- PASS: TestHandleBulkInventory_InvalidAction (0.00s)
+=== RUN   TestHandleBulkECOs_AuditLogging
+--- PASS: TestHandleBulkECOs_AuditLogging (0.00s)
+=== RUN   TestHandleBulkECOs_TransactionalIntegrity
+    handler_bulk_test.go:917: NOTE: Bulk operations are NOT transactional. Success=0, Failed=0
+--- PASS: TestHandleBulkECOs_TransactionalIntegrity (0.00s)
+=== RUN   TestBulkUpdateInventoryLocation
+--- PASS: TestBulkUpdateInventoryLocation (0.00s)
+=== RUN   TestBulkUpdateInventoryReorderPoint
+--- PASS: TestBulkUpdateInventoryReorderPoint (0.00s)
+=== RUN   TestBulkUpdateInventoryDisallowedField
+--- PASS: TestBulkUpdateInventoryDisallowedField (0.00s)
+=== RUN   TestBulkUpdateInventoryEmptyIDs
+--- PASS: TestBulkUpdateInventoryEmptyIDs (0.00s)
+=== RUN   TestBulkUpdateInventoryEmptyUpdates
+--- PASS: TestBulkUpdateInventoryEmptyUpdates (0.00s)
+=== RUN   TestBulkUpdateInventoryNotFound
+--- PASS: TestBulkUpdateInventoryNotFound (0.00s)
+=== RUN   TestBulkUpdateWorkOrdersStatus
+--- PASS: TestBulkUpdateWorkOrdersStatus (0.00s)
+=== RUN   TestBulkUpdateWorkOrdersPriority
+--- PASS: TestBulkUpdateWorkOrdersPriority (0.00s)
+=== RUN   TestBulkUpdateWorkOrdersInvalidStatus
+--- PASS: TestBulkUpdateWorkOrdersInvalidStatus (0.00s)
+=== RUN   TestBulkUpdateWorkOrdersInvalidPriority
+--- PASS: TestBulkUpdateWorkOrdersInvalidPriority (0.00s)
+=== RUN   TestBulkUpdateWorkOrdersDisallowedField
+--- PASS: TestBulkUpdateWorkOrdersDisallowedField (0.00s)
+=== RUN   TestBulkUpdateDevicesStatus
+--- PASS: TestBulkUpdateDevicesStatus (0.00s)
+=== RUN   TestBulkUpdateDevicesCustomerAndLocation
+--- PASS: TestBulkUpdateDevicesCustomerAndLocation (0.00s)
+=== RUN   TestBulkUpdateDevicesInvalidStatus
+--- PASS: TestBulkUpdateDevicesInvalidStatus (0.00s)
+=== RUN   TestBulkUpdateDevicesDisallowedField
+--- PASS: TestBulkUpdateDevicesDisallowedField (0.00s)
+=== RUN   TestBulkUpdatePartsCategory
+--- PASS: TestBulkUpdatePartsCategory (0.00s)
+=== RUN   TestBulkUpdatePartsLifecycle
+--- PASS: TestBulkUpdatePartsLifecycle (0.00s)
+=== RUN   TestBulkUpdatePartsMinStock
+--- PASS: TestBulkUpdatePartsMinStock (0.00s)
+=== RUN   TestBulkUpdatePartsDisallowedField
+--- PASS: TestBulkUpdatePartsDisallowedField (0.00s)
+=== RUN   TestBulkUpdateECOsStatus
+--- PASS: TestBulkUpdateECOsStatus (0.00s)
+=== RUN   TestBulkUpdateECOsPriority
+--- PASS: TestBulkUpdateECOsPriority (0.00s)
+=== RUN   TestBulkUpdateECOsInvalidStatus
+--- PASS: TestBulkUpdateECOsInvalidStatus (0.00s)
+=== RUN   TestBulkUpdateECOsDisallowedField
+--- PASS: TestBulkUpdateECOsDisallowedField (0.00s)
+=== RUN   TestBulkUpdateAuditLogging
+--- PASS: TestBulkUpdateAuditLogging (0.00s)
+=== RUN   TestBulkUpdatePartialFailure
+--- PASS: TestBulkUpdatePartialFailure (0.00s)
+=== RUN   TestBulkUpdateTransactionSafety
+--- PASS: TestBulkUpdateTransactionSafety (0.00s)
+=== RUN   TestBulkUpdateTimestamps
+--- PASS: TestBulkUpdateTimestamps (0.00s)
+=== RUN   TestHandleCalendar_CurrentMonth
+--- PASS: TestHandleCalendar_CurrentMonth (0.00s)
+=== RUN   TestHandleCalendar_SpecificMonth
+--- PASS: TestHandleCalendar_SpecificMonth (0.00s)
+=== RUN   TestHandleCalendar_Empty
+--- PASS: TestHandleCalendar_Empty (0.00s)
+=== RUN   TestHandleCalendar_WorkOrderWithNotes
+--- PASS: TestHandleCalendar_WorkOrderWithNotes (0.00s)
+=== RUN   TestHandleCalendar_WorkOrderWithoutNotes
+--- PASS: TestHandleCalendar_WorkOrderWithoutNotes (0.00s)
+=== RUN   TestHandleCalendar_WorkOrderEstimatedDueDate
+--- PASS: TestHandleCalendar_WorkOrderEstimatedDueDate (0.00s)
+=== RUN   TestHandleCalendar_POWithNotes
+--- PASS: TestHandleCalendar_POWithNotes (0.00s)
+=== RUN   TestHandleCalendar_POWithoutNotes
+--- PASS: TestHandleCalendar_POWithoutNotes (0.00s)
+=== RUN   TestHandleCalendar_QuoteWithCustomer
+--- PASS: TestHandleCalendar_QuoteWithCustomer (0.00s)
+=== RUN   TestHandleCalendar_QuoteWithoutCustomer
+--- PASS: TestHandleCalendar_QuoteWithoutCustomer (0.00s)
+=== RUN   TestHandleCalendar_EventColors
+--- PASS: TestHandleCalendar_EventColors (0.00s)
+=== RUN   TestHandleCalendar_DateFormatting
+--- PASS: TestHandleCalendar_DateFormatting (0.00s)
+=== RUN   TestHandleCalendar_DateRangeQuery
+--- PASS: TestHandleCalendar_DateRangeQuery (0.00s)
+=== RUN   TestHandleCalendar_MultipleEventsPerDay
+--- PASS: TestHandleCalendar_MultipleEventsPerDay (0.00s)
+=== RUN   TestHandleCalendar_InvalidMonth
+--- PASS: TestHandleCalendar_InvalidMonth (0.00s)
+=== RUN   TestHandleCalendar_EventAggregation
+--- PASS: TestHandleCalendar_EventAggregation (0.00s)
+=== RUN   TestHandleCalendar_DefaultsToCurrentMonth
+--- PASS: TestHandleCalendar_DefaultsToCurrentMonth (0.00s)
+=== RUN   TestHandleCalendar_EventRecordIDPopulated
+--- PASS: TestHandleCalendar_EventRecordIDPopulated (0.00s)
+=== RUN   TestCAPACRUD
+audit log error: SQL logic error: no such table: audit_log (1)
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestCAPACRUD (0.05s)
+=== RUN   TestCAPACloseRequiresEffectivenessAndApproval
+audit log error: SQL logic error: no such table: audit_log (1)
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestCAPACloseRequiresEffectivenessAndApproval (0.05s)
+=== RUN   TestCAPADashboard
+audit log error: SQL logic error: no such table: audit_log (1)
+audit log error: SQL logic error: no such table: audit_log (1)
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_capa_test.go:166: expected 3 open, got 0
+--- FAIL: TestCAPADashboard (0.00s)
+=== RUN   TestCAPAGetNotFound
+--- PASS: TestCAPAGetNotFound (0.00s)
+=== RUN   TestCAPAPreventiveType
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestCAPAPreventiveType (0.00s)
+=== RUN   TestCAPADefaultType
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestCAPADefaultType (0.00s)
+=== RUN   TestRecordChangeCreate
+--- PASS: TestRecordChangeCreate (0.00s)
+=== RUN   TestCircularBOM_DirectSelfReference
+    handler_circular_bom_test.go:173: Direct circular BOM response: map[children:[map[children:[] description:100Ω Resistor ipn:RES-001 qty:1 ref:R1] map[children:[map[children:[] description:100Ω Resistor ipn:RES-001 qty:1 ref:R1] map[children:[map[children:[] description:100Ω Resistor ipn:RES-001 qty:1 ref:R1] map[children:[map[children:[] description:100Ω Resistor ipn:RES-001 qty:1 ref:R1] map[children:[map[children:[] description:100Ω Resistor ipn:RES-001 qty:1 ref:R1] map[children:[map[children:[] description:100Ω Resistor ipn:RES-001 qty:1 ref:R1] map[children:[] description:(max depth reached) ipn:PCA-SELF qty:1 ref:A1]] description:Self-reference ipn:PCA-SELF qty:1 ref:A1]] description:Self-reference ipn:PCA-SELF qty:1 ref:A1]] description:Self-reference ipn:PCA-SELF qty:1 ref:A1]] description:Self-reference ipn:PCA-SELF qty:1 ref:A1]] description:Self-reference ipn:PCA-SELF qty:1 ref:A1]] description:Self-reference ipn:PCA-SELF]
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_circular_bom_test.go:198: Direct circular BOM cost: 0.60
+--- PASS: TestCircularBOM_DirectSelfReference (0.00s)
+=== RUN   TestCircularBOM_IndirectReference
+    handler_circular_bom_test.go:264: Indirect circular BOM response (should be depth-limited): map[children:[map[children:[] description:100Ω Resistor ipn:RES-001 qty:1 ref:R1] map[children:[map[children:[] description: ipn:CAP-001 qty:1 ref:C1] map[children:[map[children:[] description:100Ω Resistor ipn:RES-001 qty:1 ref:R1] map[children:[map[children:[] description: ipn:CAP-001 qty:1 ref:C1] map[children:[map[children:[] description: ipn:RES-001 qty:1 ref:R1] map[children:[map[children:[] description: ipn:CAP-001 qty:1 ref:C1] map[children:[] description:(max depth reached) ipn:PCA-A qty:1 ref:A1]] description: ipn:PCA-B qty:1 ref:A1]] description: ipn:PCA-A qty:1 ref:A1]] description: ipn:PCA-B qty:1 ref:A1]] description: ipn:PCA-A qty:1 ref:A1]] description: ipn:PCA-B qty:1 ref:A1]] description: ipn:PCA-A]
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_circular_bom_test.go:289: Indirect circular BOM cost: 1.05
+--- PASS: TestCircularBOM_IndirectReference (0.00s)
+=== RUN   TestCircularBOM_DeepNesting
+    handler_circular_bom_test.go:357: Deep nested BOM (15 levels requested): {
+          "children": [
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "children": [],
+                                  "description": "(max depth reached)",
+                                  "ipn": "PCA-LEVEL-06",
+                                  "qty": 1
+                                }
+                              ],
+                              "description": "",
+                              "ipn": "PCA-LEVEL-05",
+                              "qty": 1
+                            }
+                          ],
+                          "description": "",
+                          "ipn": "PCA-LEVEL-04",
+                          "qty": 1
+                        }
+                      ],
+                      "description": "",
+                      "ipn": "PCA-LEVEL-03",
+                      "qty": 1
+                    }
+                  ],
+                  "description": "",
+                  "ipn": "PCA-LEVEL-02",
+                  "qty": 1
+                }
+              ],
+              "description": "Assembly Level 1",
+              "ipn": "PCA-LEVEL-01",
+              "qty": 1
+            }
+          ],
+          "description": "Assembly Level 0",
+          "ipn": "PCA-LEVEL-00"
+        }
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_circular_bom_test.go:383: Deep nested BOM cost: 0.00
+--- PASS: TestCircularBOM_DeepNesting (0.01s)
+=== RUN   TestCircularBOM_ComplexCircular
+    handler_circular_bom_test.go:462: Complex circular BOM: {
+          "children": [
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "children": [],
+                                  "description": "(max depth reached)",
+                                  "ipn": "ASY-ROOT",
+                                  "qty": 1
+                                }
+                              ],
+                              "description": "Sub-Assembly C",
+                              "ipn": "PCA-C",
+                              "qty": 1
+                            }
+                          ],
+                          "description": "Sub-Assembly A",
+                          "ipn": "PCA-A",
+                          "qty": 1
+                        },
+                        {
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "children": [],
+                                  "description": "(max depth reached)",
+                                  "ipn": "ASY-ROOT",
+                                  "qty": 1
+                                }
+                              ],
+                              "description": "",
+                              "ipn": "PCA-C",
+                              "qty": 2
+                            }
+                          ],
+                          "description": "",
+                          "ipn": "PCA-B",
+                          "qty": 1
+                        },
+                        {
+                          "children": [],
+                          "description": "Resistor",
+                          "ipn": "RES-001",
+                          "qty": 1
+                        }
+                      ],
+                      "description": "",
+                      "ipn": "ASY-ROOT",
+                      "qty": 1
+                    }
+                  ],
+                  "description": "Sub-Assembly C",
+                  "ipn": "PCA-C",
+                  "qty": 1
+                }
+              ],
+              "description": "",
+              "ipn": "PCA-A",
+              "qty": 1
+            },
+            {
+              "children": [
+                {
+                  "children": [
+                    {
+                      "children": [
+                        {
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "children": [],
+                                  "description": "(max depth reached)",
+                                  "ipn": "ASY-ROOT",
+                                  "qty": 1
+                                }
+                              ],
+                              "description": "",
+                              "ipn": "PCA-C",
+                              "qty": 1
+                            }
+                          ],
+                          "description": "Sub-Assembly A",
+                          "ipn": "PCA-A",
+                          "qty": 1
+                        },
+                        {
+                          "children": [
+                            {
+                              "children": [
+                                {
+                                  "children": [],
+                                  "description": "(max depth reached)",
+                                  "ipn": "ASY-ROOT",
+                                  "qty": 1
+                                }
+                              ],
+                              "description": "",
+                              "ipn": "PCA-C",
+                              "qty": 2
+                            }
+                          ],
+                          "description": "Sub-Assembly B",
+                          "ipn": "PCA-B",
+                          "qty": 1
+                        },
+                        {
+                          "children": [],
+                          "description": "",
+                          "ipn": "RES-001",
+                          "qty": 1
+                        }
+                      ],
+                      "description": "",
+                      "ipn": "ASY-ROOT",
+                      "qty": 1
+                    }
+                  ],
+                  "description": "Sub-Assembly C",
+                  "ipn": "PCA-C",
+                  "qty": 2
+                }
+              ],
+              "description": "Sub-Assembly B",
+              "ipn": "PCA-B",
+              "qty": 1
+            },
+            {
+              "children": [],
+              "description": "",
+              "ipn": "RES-001",
+              "qty": 1
+            }
+          ],
+          "description": "",
+          "ipn": "ASY-ROOT"
+        }
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_circular_bom_test.go:486: Complex circular BOM cost: 0.40
+--- PASS: TestCircularBOM_ComplexCircular (0.00s)
+=== RUN   TestCircularBOM_GracefulTermination
+=== RUN   TestCircularBOM_GracefulTermination/BOM_retrieval_ALPHA
+    handler_circular_bom_test.go:562: BOM retrieval ALPHA completed successfully
+=== RUN   TestCircularBOM_GracefulTermination/BOM_retrieval_BETA
+    handler_circular_bom_test.go:562: BOM retrieval BETA completed successfully
+=== RUN   TestCircularBOM_GracefulTermination/Cost_calculation_ALPHA
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_circular_bom_test.go:562: Cost calculation ALPHA completed successfully
+=== RUN   TestCircularBOM_GracefulTermination/Cost_calculation_BETA
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_circular_bom_test.go:562: Cost calculation BETA completed successfully
+--- PASS: TestCircularBOM_GracefulTermination (0.00s)
+    --- PASS: TestCircularBOM_GracefulTermination/BOM_retrieval_ALPHA (0.00s)
+    --- PASS: TestCircularBOM_GracefulTermination/BOM_retrieval_BETA (0.00s)
+    --- PASS: TestCircularBOM_GracefulTermination/Cost_calculation_ALPHA (0.00s)
+    --- PASS: TestCircularBOM_GracefulTermination/Cost_calculation_BETA (0.00s)
+=== RUN   TestCircularBOM_RejectOrLimit
+    handler_circular_bom_test.go:628: Circular BOM depth-limited (acceptable): {
+          "children": [
+            {
+              "children": [],
+              "description": "",
+              "ipn": "RES-001",
+              "qty": 1
+            },
+            {
+              "children": [
+                {
+                  "children": [],
+                  "description": "",
+                  "ipn": "RES-001",
+                  "qty": 1
+                },
+                {
+                  "children": [
+                    {
+                      "children": [],
+                      "description": "",
+                      "ipn": "RES-001",
+                      "qty": 1
+                    },
+                    {
+                      "children": [
+                        {
+                          "children": [],
+                          "description": "",
+                          "ipn": "RES-001",
+                          "qty": 1
+                        },
+                        {
+                          "children": [
+                            {
+                              "children": [],
+                              "description": "",
+                              "ipn": "RES-001",
+                              "qty": 1
+                            },
+                            {
+                              "children": [
+                                {
+                                  "children": [],
+                                  "description": "",
+                                  "ipn": "RES-001",
+                                  "qty": 1
+                                },
+                                {
+                                  "children": [],
+                                  "description": "(max depth reached)",
+                                  "ipn": "PCA-CIRCLE",
+                                  "qty": 1
+                                }
+                              ],
+                              "description": "",
+                              "ipn": "PCA-CIRCLE",
+                              "qty": 1
+                            }
+                          ],
+                          "description": "",
+                          "ipn": "PCA-CIRCLE",
+                          "qty": 1
+                        }
+                      ],
+                      "description": "",
+                      "ipn": "PCA-CIRCLE",
+                      "qty": 1
+                    }
+                  ],
+                  "description": "",
+                  "ipn": "PCA-CIRCLE",
+                  "qty": 1
+                }
+              ],
+              "description": "",
+              "ipn": "PCA-CIRCLE",
+              "qty": 1
+            }
+          ],
+          "description": "",
+          "ipn": "PCA-CIRCLE"
+        }
+--- PASS: TestCircularBOM_RejectOrLimit (0.00s)
+=== RUN   TestCostRollup_Calculation
+=== RUN   TestCostRollup_Calculation/simple_costs
+=== RUN   TestCostRollup_Calculation/zero_overhead
+=== RUN   TestCostRollup_Calculation/all_zeros
+=== RUN   TestCostRollup_Calculation/high_precision
+--- PASS: TestCostRollup_Calculation (0.00s)
+    --- PASS: TestCostRollup_Calculation/simple_costs (0.00s)
+    --- PASS: TestCostRollup_Calculation/zero_overhead (0.00s)
+    --- PASS: TestCostRollup_Calculation/all_zeros (0.00s)
+    --- PASS: TestCostRollup_Calculation/high_precision (0.00s)
+=== RUN   TestCostRollup_MarginCalculation
+=== RUN   TestCostRollup_MarginCalculation/50%_margin
+=== RUN   TestCostRollup_MarginCalculation/25%_margin
+=== RUN   TestCostRollup_MarginCalculation/zero_margin_(break_even)
+=== RUN   TestCostRollup_MarginCalculation/negative_margin_(loss)
+--- PASS: TestCostRollup_MarginCalculation (0.00s)
+    --- PASS: TestCostRollup_MarginCalculation/50%_margin (0.00s)
+    --- PASS: TestCostRollup_MarginCalculation/25%_margin (0.00s)
+    --- PASS: TestCostRollup_MarginCalculation/zero_margin_(break_even) (0.00s)
+    --- PASS: TestCostRollup_MarginCalculation/negative_margin_(loss) (0.00s)
+=== RUN   TestCostRollup_NoPricing
+--- PASS: TestCostRollup_NoPricing (0.00s)
+=== RUN   TestCostRollup_ComponentValidation
+--- PASS: TestCostRollup_ComponentValidation (0.00s)
+=== RUN   TestCostRollup_Upsert
+--- PASS: TestCostRollup_Upsert (0.00s)
+=== RUN   TestCostRollup_LargeNumbers
+--- PASS: TestCostRollup_LargeNumbers (0.00s)
+=== RUN   TestCostRollup_MaterialLaborBreakdown
+=== RUN   TestCostRollup_MaterialLaborBreakdown/material_heavy_(70%)
+=== RUN   TestCostRollup_MaterialLaborBreakdown/labor_heavy_(60%)
+=== RUN   TestCostRollup_MaterialLaborBreakdown/balanced
+--- PASS: TestCostRollup_MaterialLaborBreakdown (0.00s)
+    --- PASS: TestCostRollup_MaterialLaborBreakdown/material_heavy_(70%) (0.00s)
+    --- PASS: TestCostRollup_MaterialLaborBreakdown/labor_heavy_(60%) (0.00s)
+    --- PASS: TestCostRollup_MaterialLaborBreakdown/balanced (0.00s)
+=== RUN   TestHandleListDevices
+--- PASS: TestHandleListDevices (0.00s)
+=== RUN   TestHandleListDevices_Empty
+--- PASS: TestHandleListDevices_Empty (0.00s)
+=== RUN   TestHandleGetDevice
+--- PASS: TestHandleGetDevice (0.00s)
+=== RUN   TestHandleGetDevice_NotFound
+--- PASS: TestHandleGetDevice_NotFound (0.00s)
+=== RUN   TestHandleCreateDevice
+--- PASS: TestHandleCreateDevice (0.00s)
+=== RUN   TestHandleCreateDevice_DefaultStatus
+--- PASS: TestHandleCreateDevice_DefaultStatus (0.00s)
+=== RUN   TestHandleCreateDevice_MissingSerialNumber
+--- PASS: TestHandleCreateDevice_MissingSerialNumber (0.00s)
+=== RUN   TestHandleCreateDevice_MissingIPN
+--- PASS: TestHandleCreateDevice_MissingIPN (0.00s)
+=== RUN   TestHandleCreateDevice_InvalidJSON
+--- PASS: TestHandleCreateDevice_InvalidJSON (0.00s)
+=== RUN   TestHandleUpdateDevice
+--- PASS: TestHandleUpdateDevice (0.00s)
+=== RUN   TestHandleExportDevices
+--- PASS: TestHandleExportDevices (0.00s)
+=== RUN   TestHandleImportDevices
+--- PASS: TestHandleImportDevices (0.00s)
+=== RUN   TestHandleImportDevices_SkipInvalidRows
+--- PASS: TestHandleImportDevices_SkipInvalidRows (0.00s)
+=== RUN   TestHandleImportDevices_MissingFile
+--- PASS: TestHandleImportDevices_MissingFile (0.00s)
+=== RUN   TestHandleDeviceHistory
+--- PASS: TestHandleDeviceHistory (0.00s)
+=== RUN   TestHandleDeviceHistory_NoHistory
+--- PASS: TestHandleDeviceHistory_NoHistory (0.00s)
+=== RUN   TestDocVersionCRUD
+    handler_doc_versions_test.go:53: create doc: 500 {"error":"SQL logic error: no such table: documents (1)"}
+--- FAIL: TestDocVersionCRUD (0.05s)
+=== RUN   TestDocRelease
+    handler_doc_versions_test.go:99: release: 404 {"error":"not found"}
+--- FAIL: TestDocRelease (0.05s)
+=== RUN   TestDocRevert
+    handler_doc_versions_test.go:138: revert: 404 {"error":"version not found"}
+--- FAIL: TestDocRevert (0.05s)
+=== RUN   TestDocDiff
+    handler_doc_versions_test.go:173: diff: 404 {"error":"from revision not found"}
+--- FAIL: TestDocDiff (0.05s)
+=== RUN   TestDocDiffMissingParams
+--- PASS: TestDocDiffMissingParams (0.05s)
+=== RUN   TestGetDocVersionByRevision
+    handler_doc_versions_test.go:225: get version: 404 {"error":"version not found"}
+--- FAIL: TestGetDocVersionByRevision (0.05s)
+=== RUN   TestNextRevision
+--- PASS: TestNextRevision (0.00s)
+=== RUN   TestGitDocsSettings
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_doc_versions_test.go:284: expected repo URL, got 
+    handler_doc_versions_test.go:287: expected masked token, got 
+--- FAIL: TestGitDocsSettings (0.05s)
+=== RUN   TestPushDocToGitNoConfig
+--- PASS: TestPushDocToGitNoConfig (0.05s)
+=== RUN   TestComputeDiff
+--- PASS: TestComputeDiff (0.00s)
+=== RUN   TestHandleListDocs_Empty
+--- PASS: TestHandleListDocs_Empty (0.00s)
+=== RUN   TestHandleListDocs_WithData
+--- PASS: TestHandleListDocs_WithData (0.00s)
+=== RUN   TestHandleGetDoc_Success
+--- PASS: TestHandleGetDoc_Success (0.00s)
+=== RUN   TestHandleGetDoc_NotFound
+--- PASS: TestHandleGetDoc_NotFound (0.00s)
+=== RUN   TestHandleCreateDoc_Success
+--- PASS: TestHandleCreateDoc_Success (0.00s)
+=== RUN   TestHandleCreateDoc_MissingTitle
+--- PASS: TestHandleCreateDoc_MissingTitle (0.00s)
+=== RUN   TestHandleCreateDoc_InvalidStatus
+--- PASS: TestHandleCreateDoc_InvalidStatus (0.00s)
+=== RUN   TestHandleCreateDoc_DefaultValues
+--- PASS: TestHandleCreateDoc_DefaultValues (0.00s)
+=== RUN   TestHandleUpdateDoc_Success
+--- PASS: TestHandleUpdateDoc_Success (0.00s)
+=== RUN   TestHandleUpdateDoc_NotFound
+--- PASS: TestHandleUpdateDoc_NotFound (0.00s)
+=== RUN   TestHandleUpdateDoc_PreservesStatus
+--- PASS: TestHandleUpdateDoc_PreservesStatus (0.00s)
+=== RUN   TestHandleApproveDoc_Success
+--- PASS: TestHandleApproveDoc_Success (0.00s)
+=== RUN   TestHandleApproveDoc_NotFound
+--- PASS: TestHandleApproveDoc_NotFound (0.00s)
+=== RUN   TestHandleDocs_InvalidJSON
+--- PASS: TestHandleDocs_InvalidJSON (0.00s)
+=== RUN   TestHandleDocs_SQLInjectionAttempt
+--- PASS: TestHandleDocs_SQLInjectionAttempt (0.00s)
+=== RUN   TestHandleDocs_FilePathValidation
+=== RUN   TestHandleDocs_FilePathValidation/Valid_file_path
+=== RUN   TestHandleDocs_FilePathValidation/Path_traversal_attempt
+=== RUN   TestHandleDocs_FilePathValidation/Absolute_path
+--- PASS: TestHandleDocs_FilePathValidation (0.00s)
+    --- PASS: TestHandleDocs_FilePathValidation/Valid_file_path (0.00s)
+    --- PASS: TestHandleDocs_FilePathValidation/Path_traversal_attempt (0.00s)
+    --- PASS: TestHandleDocs_FilePathValidation/Absolute_path (0.00s)
+=== RUN   TestHandleDocs_CategoryFilter
+--- PASS: TestHandleDocs_CategoryFilter (0.00s)
+=== RUN   TestECOPartRevisionCascade
+    handler_eco_cascade_test.go:485: Step 1: Creating component part RES-100 v1.0
+    handler_eco_cascade_test.go:499: Step 2: Creating assembly PCA-001 with RES-100 in BOM
+    handler_eco_cascade_test.go:519: Step 3: Creating ECO-001 to update RES-100 to v1.1
+    handler_eco_cascade_test.go:544: Created ECO: ECO-2026-001
+    handler_eco_cascade_test.go:547: Step 4: Approving ECO
+    handler_eco_cascade_test.go:565: Step 5: Implementing ECO - should update part and cascade to BOMs
+    handler_eco_cascade_test.go:587: Step 6: Verifying part revision updated to v1.1
+    handler_eco_cascade_test.go:594: Step 7: Verifying BOM references remain intact
+    handler_eco_cascade_test.go:604: Step 8: Verifying audit trail
+    handler_eco_cascade_test.go:612: Step 9: Verifying change history
+    handler_eco_cascade_test.go:616: Warning: Expected at least 1 change record, got 0
+    handler_eco_cascade_test.go:619: ✅ ECO part revision cascade test completed successfully
+--- PASS: TestECOPartRevisionCascade (0.00s)
+=== RUN   TestECOMultipleBOMCascade
+    handler_eco_cascade_test.go:637: Creating component CAP-300 v1.0
+    handler_eco_cascade_test.go:643: Creating multiple assemblies using CAP-300
+    handler_eco_cascade_test.go:659: Updating CAP-300 to v2.0
+    handler_eco_cascade_test.go:665: Verifying all BOMs still reference CAP-300
+    handler_eco_cascade_test.go:687: ✅ Multiple BOM cascade test completed successfully
+--- PASS: TestECOMultipleBOMCascade (0.00s)
+=== RUN   TestECORevisionHistoryPreservation
+    handler_eco_cascade_test.go:752: ✅ Revision history preservation test completed successfully
+--- PASS: TestECORevisionHistoryPreservation (0.00s)
+=== RUN   TestHandleListECOs_Empty
+--- PASS: TestHandleListECOs_Empty (0.00s)
+=== RUN   TestHandleListECOs_WithData
+--- PASS: TestHandleListECOs_WithData (0.00s)
+=== RUN   TestHandleListECOs_FilterByStatus
+--- PASS: TestHandleListECOs_FilterByStatus (0.00s)
+=== RUN   TestHandleGetECO_Success
+--- PASS: TestHandleGetECO_Success (0.00s)
+=== RUN   TestHandleGetECO_NotFound
+--- PASS: TestHandleGetECO_NotFound (0.00s)
+=== RUN   TestHandleCreateECO_Success
+--- PASS: TestHandleCreateECO_Success (0.00s)
+=== RUN   TestHandleCreateECO_MissingTitle
+--- PASS: TestHandleCreateECO_MissingTitle (0.00s)
+=== RUN   TestHandleCreateECO_InvalidStatus
+--- PASS: TestHandleCreateECO_InvalidStatus (0.00s)
+=== RUN   TestHandleCreateECO_DefaultValues
+--- PASS: TestHandleCreateECO_DefaultValues (0.00s)
+=== RUN   TestHandleUpdateECO_Success
+--- PASS: TestHandleUpdateECO_Success (0.00s)
+=== RUN   TestHandleUpdateECO_NotFound
+--- PASS: TestHandleUpdateECO_NotFound (0.00s)
+=== RUN   TestHandleUpdateECO_ValidationError
+--- PASS: TestHandleUpdateECO_ValidationError (0.00s)
+=== RUN   TestHandleApproveECO_Success
+--- PASS: TestHandleApproveECO_Success (0.00s)
+=== RUN   TestHandleImplementECO_Success
+    handler_eco_test.go:555: Expected status 'implemented', got 
+    handler_eco_test.go:562: Expected revision status 'implemented', got 
+--- FAIL: TestHandleImplementECO_Success (0.00s)
+=== RUN   TestHandleListECORevisions_Empty
+--- PASS: TestHandleListECORevisions_Empty (0.00s)
+=== RUN   TestHandleListECORevisions_WithData
+--- PASS: TestHandleListECORevisions_WithData (0.00s)
+=== RUN   TestHandleCreateECORevision_Success
+--- PASS: TestHandleCreateECORevision_Success (0.00s)
+=== RUN   TestHandleGetECORevision_Success
+--- PASS: TestHandleGetECORevision_Success (0.00s)
+=== RUN   TestHandleGetECORevision_NotFound
+--- PASS: TestHandleGetECORevision_NotFound (0.00s)
+=== RUN   TestHandleGetEmailConfig_Default
+--- PASS: TestHandleGetEmailConfig_Default (0.00s)
+=== RUN   TestHandleGetEmailConfig_Existing
+--- PASS: TestHandleGetEmailConfig_Existing (0.00s)
+=== RUN   TestHandleUpdateEmailConfig_New
+--- PASS: TestHandleUpdateEmailConfig_New (0.00s)
+=== RUN   TestHandleUpdateEmailConfig_PreservePassword
+--- PASS: TestHandleUpdateEmailConfig_PreservePassword (0.00s)
+=== RUN   TestHandleUpdateEmailConfig_DefaultPort
+--- PASS: TestHandleUpdateEmailConfig_DefaultPort (0.00s)
+=== RUN   TestHandleUpdateEmailConfig_InvalidJSON
+--- PASS: TestHandleUpdateEmailConfig_InvalidJSON (0.00s)
+=== RUN   TestHandleTestEmail_Success
+--- PASS: TestHandleTestEmail_Success (0.00s)
+=== RUN   TestHandleTestEmail_TestEmailField
+--- PASS: TestHandleTestEmail_TestEmailField (0.00s)
+=== RUN   TestHandleTestEmail_MissingRecipient
+--- PASS: TestHandleTestEmail_MissingRecipient (0.00s)
+=== RUN   TestHandleTestEmail_SendFailure
+--- PASS: TestHandleTestEmail_SendFailure (0.00s)
+=== RUN   TestHandleListEmailLog
+--- PASS: TestHandleListEmailLog (0.00s)
+=== RUN   TestHandleListEmailLog_Empty
+--- PASS: TestHandleListEmailLog_Empty (0.00s)
+=== RUN   TestSendEmail_LogsSuccess
+--- PASS: TestSendEmail_LogsSuccess (0.00s)
+=== RUN   TestSendEmail_LogsFailure
+--- PASS: TestSendEmail_LogsFailure (0.00s)
+=== RUN   TestHandleGetEmailSubscriptions_Default
+--- PASS: TestHandleGetEmailSubscriptions_Default (0.00s)
+=== RUN   TestHandleGetEmailSubscriptions_Custom
+--- PASS: TestHandleGetEmailSubscriptions_Custom (0.05s)
+=== RUN   TestHandleUpdateEmailSubscriptions
+--- PASS: TestHandleUpdateEmailSubscriptions (0.05s)
+=== RUN   TestIsUserSubscribed_Default
+--- PASS: TestIsUserSubscribed_Default (0.00s)
+=== RUN   TestIsUserSubscribed_Disabled
+--- PASS: TestIsUserSubscribed_Disabled (0.00s)
+=== RUN   TestIsUserSubscribed_Enabled
+--- PASS: TestIsUserSubscribed_Enabled (0.00s)
+=== RUN   TestIsValidEmail
+--- PASS: TestIsValidEmail (0.00s)
+=== RUN   TestEmailConfigEnabled
+--- PASS: TestEmailConfigEnabled (0.00s)
+=== RUN   TestSendEmailWithEvent_HTMLInjection
+--- PASS: TestSendEmailWithEvent_HTMLInjection (0.00s)
+=== RUN   TestHandleExportParts_CSV
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExportParts_CSV (0.00s)
+=== RUN   TestHandleExportParts_Excel
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExportParts_Excel (0.00s)
+=== RUN   TestHandleExportParts_WithSearch
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExportParts_WithSearch (0.00s)
+=== RUN   TestHandleExportParts_WithCategory
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExportParts_WithCategory (0.00s)
+=== RUN   TestHandleExportInventory_CSV
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExportInventory_CSV (0.00s)
+=== RUN   TestHandleExportInventory_LowStock
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExportInventory_LowStock (0.00s)
+=== RUN   TestHandleExportWorkOrders_CSV
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExportWorkOrders_CSV (0.00s)
+=== RUN   TestHandleExportWorkOrders_StatusFilter
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExportWorkOrders_StatusFilter (0.00s)
+=== RUN   TestHandleExportECOs_CSV
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExportECOs_CSV (0.00s)
+=== RUN   TestHandleExportVendors_CSV
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExportVendors_CSV (0.00s)
+=== RUN   TestHandleExport_LargeDataset
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExport_LargeDataset (0.01s)
+=== RUN   TestHandleExport_SQLInjection
+=== RUN   TestHandleExport_SQLInjection/SQL_Injection_';_DROP_TABLE_parts;_--
+audit log error: SQL logic error: no such table: audit_log (1)
+=== RUN   TestHandleExport_SQLInjection/SQL_Injection_'_OR_'1'='1
+audit log error: SQL logic error: no such table: audit_log (1)
+=== RUN   TestHandleExport_SQLInjection/SQL_Injection_PART-001';_DELETE_FROM_parts_WHERE_'1'='1
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExport_SQLInjection (0.00s)
+    --- PASS: TestHandleExport_SQLInjection/SQL_Injection_';_DROP_TABLE_parts;_-- (0.00s)
+    --- PASS: TestHandleExport_SQLInjection/SQL_Injection_'_OR_'1'='1 (0.00s)
+    --- PASS: TestHandleExport_SQLInjection/SQL_Injection_PART-001';_DELETE_FROM_parts_WHERE_'1'='1 (0.00s)
+=== RUN   TestHandleExport_FormatValidation
+=== RUN   TestHandleExport_FormatValidation/Default_to_CSV
+audit log error: SQL logic error: no such table: audit_log (1)
+=== RUN   TestHandleExport_FormatValidation/Explicit_CSV
+audit log error: SQL logic error: no such table: audit_log (1)
+=== RUN   TestHandleExport_FormatValidation/Excel_format
+audit log error: SQL logic error: no such table: audit_log (1)
+=== RUN   TestHandleExport_FormatValidation/Invalid_format_defaults_to_CSV
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExport_FormatValidation (0.00s)
+    --- PASS: TestHandleExport_FormatValidation/Default_to_CSV (0.00s)
+    --- PASS: TestHandleExport_FormatValidation/Explicit_CSV (0.00s)
+    --- PASS: TestHandleExport_FormatValidation/Excel_format (0.00s)
+    --- PASS: TestHandleExport_FormatValidation/Invalid_format_defaults_to_CSV (0.00s)
+=== RUN   TestHandleExport_EmptyResults
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExport_EmptyResults (0.00s)
+=== RUN   TestHandleExport_XSSInData
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExport_XSSInData (0.00s)
+=== RUN   TestHandleExport_SpecialCharacters
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExport_SpecialCharacters (0.00s)
+=== RUN   TestHandleExport_ExcelMultipleSheets
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestHandleExport_ExcelMultipleSheets (0.00s)
+=== RUN   TestExportCSV_DirectFunction
+--- PASS: TestExportCSV_DirectFunction (0.00s)
+=== RUN   TestExportExcel_DirectFunction
+--- PASS: TestExportExcel_DirectFunction (0.00s)
+=== RUN   TestLogDataExport
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_export_test.go:911: Expected 1 export log entry, got 0
+--- FAIL: TestLogDataExport (0.00s)
+=== RUN   TestFieldReportCRUD
+--- PASS: TestFieldReportCRUD (0.00s)
+=== RUN   TestFieldReportGetNotFound
+--- PASS: TestFieldReportGetNotFound (0.00s)
+=== RUN   TestFieldReportCreateInvalidBody
+--- PASS: TestFieldReportCreateInvalidBody (0.00s)
+=== RUN   TestFieldReportCreateMissingTitle
+--- PASS: TestFieldReportCreateMissingTitle (0.00s)
+=== RUN   TestFieldReportValidationMaxLength
+=== RUN   TestFieldReportValidationMaxLength/title_too_long
+=== RUN   TestFieldReportValidationMaxLength/description_too_long
+=== RUN   TestFieldReportValidationMaxLength/customer_name_too_long
+=== RUN   TestFieldReportValidationMaxLength/valid_lengths
+--- PASS: TestFieldReportValidationMaxLength (0.00s)
+    --- PASS: TestFieldReportValidationMaxLength/title_too_long (0.00s)
+    --- PASS: TestFieldReportValidationMaxLength/description_too_long (0.00s)
+    --- PASS: TestFieldReportValidationMaxLength/customer_name_too_long (0.00s)
+    --- PASS: TestFieldReportValidationMaxLength/valid_lengths (0.00s)
+=== RUN   TestFieldReportFilters
+--- PASS: TestFieldReportFilters (0.00s)
+=== RUN   TestFieldReportResolve
+--- PASS: TestFieldReportResolve (0.00s)
+=== RUN   TestFieldReportCreateNCR
+--- PASS: TestFieldReportCreateNCR (0.00s)
+=== RUN   TestFieldReportCreateNCRNotFound
+--- PASS: TestFieldReportCreateNCRNotFound (0.00s)
+=== RUN   TestFieldReportCreateNCRSeverityMapping
+=== RUN   TestFieldReportCreateNCRSeverityMapping/priority_critical
+=== RUN   TestFieldReportCreateNCRSeverityMapping/priority_high
+=== RUN   TestFieldReportCreateNCRSeverityMapping/priority_medium
+=== RUN   TestFieldReportCreateNCRSeverityMapping/priority_low
+--- PASS: TestFieldReportCreateNCRSeverityMapping (0.00s)
+    --- PASS: TestFieldReportCreateNCRSeverityMapping/priority_critical (0.00s)
+    --- PASS: TestFieldReportCreateNCRSeverityMapping/priority_high (0.00s)
+    --- PASS: TestFieldReportCreateNCRSeverityMapping/priority_medium (0.00s)
+    --- PASS: TestFieldReportCreateNCRSeverityMapping/priority_low (0.00s)
+=== RUN   TestFieldReportECOLink
+--- PASS: TestFieldReportECOLink (0.00s)
+=== RUN   TestFieldReportLocationData
+--- PASS: TestFieldReportLocationData (0.00s)
+=== RUN   TestFieldReportDefaults
+--- PASS: TestFieldReportDefaults (0.00s)
+=== RUN   TestFieldReportUpdateNotFound
+--- PASS: TestFieldReportUpdateNotFound (0.00s)
+=== RUN   TestFieldReportDeleteNotFound
+--- PASS: TestFieldReportDeleteNotFound (0.00s)
+=== RUN   TestFieldReportDateRangeFilter
+--- PASS: TestFieldReportDateRangeFilter (0.00s)
+=== RUN   TestHandleListCampaigns_Empty
+--- PASS: TestHandleListCampaigns_Empty (0.00s)
+=== RUN   TestHandleListCampaigns_WithData
+--- PASS: TestHandleListCampaigns_WithData (0.00s)
+=== RUN   TestHandleGetCampaign_Success
+--- PASS: TestHandleGetCampaign_Success (0.00s)
+=== RUN   TestHandleGetCampaign_NotFound
+--- PASS: TestHandleGetCampaign_NotFound (0.00s)
+=== RUN   TestHandleCreateCampaign_Success
+--- PASS: TestHandleCreateCampaign_Success (0.00s)
+=== RUN   TestHandleCreateCampaign_ValidationErrors
+=== RUN   TestHandleCreateCampaign_ValidationErrors/Missing_name
+=== RUN   TestHandleCreateCampaign_ValidationErrors/Missing_version
+=== RUN   TestHandleCreateCampaign_ValidationErrors/Invalid_body
+--- PASS: TestHandleCreateCampaign_ValidationErrors (0.00s)
+    --- PASS: TestHandleCreateCampaign_ValidationErrors/Missing_name (0.00s)
+    --- PASS: TestHandleCreateCampaign_ValidationErrors/Missing_version (0.00s)
+    --- PASS: TestHandleCreateCampaign_ValidationErrors/Invalid_body (0.00s)
+=== RUN   TestHandleUpdateCampaign_Success
+--- PASS: TestHandleUpdateCampaign_Success (0.00s)
+=== RUN   TestHandleLaunchCampaign_Success
+    handler_firmware_test.go:419: Expected 2 campaign devices, got 0
+--- FAIL: TestHandleLaunchCampaign_Success (0.00s)
+=== RUN   TestHandleCampaignProgress
+--- PASS: TestHandleCampaignProgress (0.00s)
+=== RUN   TestHandleMarkCampaignDevice_Success
+=== RUN   TestHandleMarkCampaignDevice_Success/Mark_as_updated
+=== RUN   TestHandleMarkCampaignDevice_Success/Mark_as_failed
+--- PASS: TestHandleMarkCampaignDevice_Success (0.00s)
+    --- PASS: TestHandleMarkCampaignDevice_Success/Mark_as_updated (0.00s)
+    --- PASS: TestHandleMarkCampaignDevice_Success/Mark_as_failed (0.00s)
+=== RUN   TestHandleMarkCampaignDevice_ValidationErrors
+=== RUN   TestHandleMarkCampaignDevice_ValidationErrors/Invalid_status
+=== RUN   TestHandleMarkCampaignDevice_ValidationErrors/Missing_status
+--- PASS: TestHandleMarkCampaignDevice_ValidationErrors (0.00s)
+    --- PASS: TestHandleMarkCampaignDevice_ValidationErrors/Invalid_status (0.00s)
+    --- PASS: TestHandleMarkCampaignDevice_ValidationErrors/Missing_status (0.00s)
+=== RUN   TestHandleMarkCampaignDevice_NotFound
+--- PASS: TestHandleMarkCampaignDevice_NotFound (0.00s)
+=== RUN   TestHandleCampaignDevices
+--- PASS: TestHandleCampaignDevices (0.00s)
+=== RUN   TestHandleCampaignDevices_Empty
+--- PASS: TestHandleCampaignDevices_Empty (0.00s)
+=== RUN   TestGetGeneralSettingsDefaults
+--- PASS: TestGetGeneralSettingsDefaults (0.00s)
+=== RUN   TestPutGeneralSettings
+    handler_general_settings_test.go:56: expected 200, got 500: SQL logic error: no such table: app_settings (1)
+--- FAIL: TestPutGeneralSettings (0.00s)
+=== RUN   TestHandleGetGitPLMConfig_NoConfig
+--- PASS: TestHandleGetGitPLMConfig_NoConfig (0.00s)
+=== RUN   TestHandleGetGitPLMConfig_WithConfig
+    handler_gitplm_granular_test.go:86: Expected URL 'https://gitplm.example.com', got ""
+--- FAIL: TestHandleGetGitPLMConfig_WithConfig (0.00s)
+=== RUN   TestHandleUpdateGitPLMConfig_Create
+    handler_gitplm_granular_test.go:114: Expected URL 'https://gitplm.example.com', got ""
+--- FAIL: TestHandleUpdateGitPLMConfig_Create (0.00s)
+=== RUN   TestHandleUpdateGitPLMConfig_TrimSlash
+    handler_gitplm_granular_test.go:142: Expected trailing slash trimmed, got ""
+--- FAIL: TestHandleUpdateGitPLMConfig_TrimSlash (0.00s)
+=== RUN   TestHandleGetGitPLMURL_NotConfigured
+--- PASS: TestHandleGetGitPLMURL_NotConfigured (0.00s)
+=== RUN   TestHandleGetGitPLMURL_Configured
+    handler_gitplm_granular_test.go:195: Expected Configured=true
+    handler_gitplm_granular_test.go:200: Expected URL "https://gitplm.example.com/parts/RES-0001", got ""
+--- FAIL: TestHandleGetGitPLMURL_Configured (0.00s)
+=== RUN   TestGetGitPLMConfigDefault
+--- PASS: TestGetGitPLMConfigDefault (0.05s)
+=== RUN   TestUpdateAndGetGitPLMConfig
+    handler_gitplm_test.go:38: expected 200, got 500: {"error":"failed to save setting"}
+--- FAIL: TestUpdateAndGetGitPLMConfig (0.05s)
+=== RUN   TestUpdateGitPLMConfigOverwrite
+    handler_gitplm_test.go:87: expected overwritten URL, got ""
+--- FAIL: TestUpdateGitPLMConfigOverwrite (0.05s)
+=== RUN   TestGetGitPLMURLNotConfigured
+--- PASS: TestGetGitPLMURLNotConfigured (0.05s)
+=== RUN   TestGetGitPLMURLConfigured
+    handler_gitplm_test.go:135: expected configured=true
+    handler_gitplm_test.go:138: expected 'https://plm.acme.com/parts/IPN-001', got ""
+--- FAIL: TestGetGitPLMURLConfigured (0.05s)
+=== RUN   TestVendorNameLengthValidation
+=== RUN   TestVendorNameLengthValidation/Empty_name
+=== RUN   TestVendorNameLengthValidation/Single_char
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestVendorNameLengthValidation/Max_valid_(255)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestVendorNameLengthValidation/Over_max_(256)
+=== RUN   TestVendorNameLengthValidation/Way_over_max_(10k)
+--- PASS: TestVendorNameLengthValidation (0.00s)
+    --- PASS: TestVendorNameLengthValidation/Empty_name (0.00s)
+    --- PASS: TestVendorNameLengthValidation/Single_char (0.00s)
+    --- PASS: TestVendorNameLengthValidation/Max_valid_(255) (0.00s)
+    --- PASS: TestVendorNameLengthValidation/Over_max_(256) (0.00s)
+    --- PASS: TestVendorNameLengthValidation/Way_over_max_(10k) (0.00s)
+=== RUN   TestVendorNotesLengthValidation
+=== RUN   TestVendorNotesLengthValidation/Empty_notes
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestVendorNotesLengthValidation/Single_char
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestVendorNotesLengthValidation/Max_valid_(10000)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestVendorNotesLengthValidation/Over_max_(10001)
+=== RUN   TestVendorNotesLengthValidation/Way_over_(50k)
+--- PASS: TestVendorNotesLengthValidation (0.00s)
+    --- PASS: TestVendorNotesLengthValidation/Empty_notes (0.00s)
+    --- PASS: TestVendorNotesLengthValidation/Single_char (0.00s)
+    --- PASS: TestVendorNotesLengthValidation/Max_valid_(10000) (0.00s)
+    --- PASS: TestVendorNotesLengthValidation/Over_max_(10001) (0.00s)
+    --- PASS: TestVendorNotesLengthValidation/Way_over_(50k) (0.00s)
+=== RUN   TestDeviceNotesLengthValidation
+=== RUN   TestDeviceNotesLengthValidation/Empty_notes
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestDeviceNotesLengthValidation/Single_char
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestDeviceNotesLengthValidation/Max_valid_(10000)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestDeviceNotesLengthValidation/Over_max_(10001)
+--- PASS: TestDeviceNotesLengthValidation (0.00s)
+    --- PASS: TestDeviceNotesLengthValidation/Empty_notes (0.00s)
+    --- PASS: TestDeviceNotesLengthValidation/Single_char (0.00s)
+    --- PASS: TestDeviceNotesLengthValidation/Max_valid_(10000) (0.00s)
+    --- PASS: TestDeviceNotesLengthValidation/Over_max_(10001) (0.00s)
+=== RUN   TestNCRDescriptionLengthValidation
+=== RUN   TestNCRDescriptionLengthValidation/Empty_description
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestNCRDescriptionLengthValidation/Single_char
+    handler_input_validation_test.go:367: Expected success for Single char, got 500: {"error":"SQL logic error: no such table: ncrs (1)"}
+=== RUN   TestNCRDescriptionLengthValidation/Max_valid_(1000)
+    handler_input_validation_test.go:367: Expected success for Max valid (1000), got 500: {"error":"SQL logic error: no such table: ncrs (1)"}
+=== RUN   TestNCRDescriptionLengthValidation/Over_max_(1001)
+=== RUN   TestNCRDescriptionLengthValidation/Way_over_(10k)
+--- FAIL: TestNCRDescriptionLengthValidation (0.00s)
+    --- PASS: TestNCRDescriptionLengthValidation/Empty_description (0.00s)
+    --- FAIL: TestNCRDescriptionLengthValidation/Single_char (0.00s)
+    --- FAIL: TestNCRDescriptionLengthValidation/Max_valid_(1000) (0.00s)
+    --- PASS: TestNCRDescriptionLengthValidation/Over_max_(1001) (0.00s)
+    --- PASS: TestNCRDescriptionLengthValidation/Way_over_(10k) (0.00s)
+=== RUN   TestNCRTitleLengthValidation
+=== RUN   TestNCRTitleLengthValidation/Empty_title
+=== RUN   TestNCRTitleLengthValidation/Single_char
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestNCRTitleLengthValidation/Max_valid_(255)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestNCRTitleLengthValidation/Over_max_(256)
+--- PASS: TestNCRTitleLengthValidation (0.00s)
+    --- PASS: TestNCRTitleLengthValidation/Empty_title (0.00s)
+    --- PASS: TestNCRTitleLengthValidation/Single_char (0.00s)
+    --- PASS: TestNCRTitleLengthValidation/Max_valid_(255) (0.00s)
+    --- PASS: TestNCRTitleLengthValidation/Over_max_(256) (0.00s)
+=== RUN   TestWorkOrderNotesLengthValidation
+=== RUN   TestWorkOrderNotesLengthValidation/Empty_notes
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestWorkOrderNotesLengthValidation/Max_valid_(10000)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestWorkOrderNotesLengthValidation/Over_max_(10001)
+--- PASS: TestWorkOrderNotesLengthValidation (0.00s)
+    --- PASS: TestWorkOrderNotesLengthValidation/Empty_notes (0.00s)
+    --- PASS: TestWorkOrderNotesLengthValidation/Max_valid_(10000) (0.00s)
+    --- PASS: TestWorkOrderNotesLengthValidation/Over_max_(10001) (0.00s)
+=== RUN   TestFieldReportTitleLengthValidation
+=== RUN   TestFieldReportTitleLengthValidation/Empty_title
+=== RUN   TestFieldReportTitleLengthValidation/Max_valid_(255)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestFieldReportTitleLengthValidation/Over_max_(256)
+--- PASS: TestFieldReportTitleLengthValidation (0.00s)
+    --- PASS: TestFieldReportTitleLengthValidation/Empty_title (0.00s)
+    --- PASS: TestFieldReportTitleLengthValidation/Max_valid_(255) (0.00s)
+    --- PASS: TestFieldReportTitleLengthValidation/Over_max_(256) (0.00s)
+=== RUN   TestFieldReportDescriptionLengthValidation
+=== RUN   TestFieldReportDescriptionLengthValidation/Empty_description
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestFieldReportDescriptionLengthValidation/Max_valid_(1000)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestFieldReportDescriptionLengthValidation/Over_max_(1001)
+--- PASS: TestFieldReportDescriptionLengthValidation (0.00s)
+    --- PASS: TestFieldReportDescriptionLengthValidation/Empty_description (0.00s)
+    --- PASS: TestFieldReportDescriptionLengthValidation/Max_valid_(1000) (0.00s)
+    --- PASS: TestFieldReportDescriptionLengthValidation/Over_max_(1001) (0.00s)
+=== RUN   TestECOTitleLengthValidation
+=== RUN   TestECOTitleLengthValidation/Empty_title
+=== RUN   TestECOTitleLengthValidation/Max_valid_(255)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestECOTitleLengthValidation/Over_max_(256)
+--- PASS: TestECOTitleLengthValidation (0.00s)
+    --- PASS: TestECOTitleLengthValidation/Empty_title (0.00s)
+    --- PASS: TestECOTitleLengthValidation/Max_valid_(255) (0.00s)
+    --- PASS: TestECOTitleLengthValidation/Over_max_(256) (0.00s)
+=== RUN   TestECODescriptionLengthValidation
+=== RUN   TestECODescriptionLengthValidation/Empty_description
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestECODescriptionLengthValidation/Max_valid_(1000)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestECODescriptionLengthValidation/Over_max_(1001)
+--- PASS: TestECODescriptionLengthValidation (0.00s)
+    --- PASS: TestECODescriptionLengthValidation/Empty_description (0.00s)
+    --- PASS: TestECODescriptionLengthValidation/Max_valid_(1000) (0.00s)
+    --- PASS: TestECODescriptionLengthValidation/Over_max_(1001) (0.00s)
+=== RUN   TestCAPATitleLengthValidation
+=== RUN   TestCAPATitleLengthValidation/Empty_title
+=== RUN   TestCAPATitleLengthValidation/Max_valid_(255)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestCAPATitleLengthValidation/Over_max_(256)
+--- PASS: TestCAPATitleLengthValidation (0.00s)
+    --- PASS: TestCAPATitleLengthValidation/Empty_title (0.00s)
+    --- PASS: TestCAPATitleLengthValidation/Max_valid_(255) (0.00s)
+    --- PASS: TestCAPATitleLengthValidation/Over_max_(256) (0.00s)
+=== RUN   TestRMADefectDescriptionLengthValidation
+=== RUN   TestRMADefectDescriptionLengthValidation/Empty_description
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestRMADefectDescriptionLengthValidation/Max_valid_(1000)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestRMADefectDescriptionLengthValidation/Over_max_(1001)
+--- PASS: TestRMADefectDescriptionLengthValidation (0.00s)
+    --- PASS: TestRMADefectDescriptionLengthValidation/Empty_description (0.00s)
+    --- PASS: TestRMADefectDescriptionLengthValidation/Max_valid_(1000) (0.00s)
+    --- PASS: TestRMADefectDescriptionLengthValidation/Over_max_(1001) (0.00s)
+=== RUN   TestUserEmailValidation
+=== RUN   TestUserEmailValidation/Empty_email
+    handler_input_validation_test.go:732: Expected success for Empty email, got 401: {"error":"Unauthorized"}
+=== RUN   TestUserEmailValidation/Valid_email
+    handler_input_validation_test.go:732: Expected success for Valid email, got 401: {"error":"Unauthorized"}
+=== RUN   TestUserEmailValidation/Invalid_format
+=== RUN   TestUserEmailValidation/Very_long_valid_email
+    handler_input_validation_test.go:732: Expected success for Very long valid email, got 401: {"error":"Unauthorized"}
+=== RUN   TestUserEmailValidation/Exceeds_max_(255)
+--- FAIL: TestUserEmailValidation (0.00s)
+    --- FAIL: TestUserEmailValidation/Empty_email (0.00s)
+    --- FAIL: TestUserEmailValidation/Valid_email (0.00s)
+    --- PASS: TestUserEmailValidation/Invalid_format (0.00s)
+    --- FAIL: TestUserEmailValidation/Very_long_valid_email (0.00s)
+    --- PASS: TestUserEmailValidation/Exceeds_max_(255) (0.00s)
+=== RUN   TestIPNLengthValidation
+=== RUN   TestIPNLengthValidation/Empty_IPN
+=== RUN   TestIPNLengthValidation/Single_char
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestIPNLengthValidation/Max_valid_(100)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestIPNLengthValidation/Over_max_(101)
+=== RUN   TestIPNLengthValidation/Way_over_(1000)
+--- PASS: TestIPNLengthValidation (0.00s)
+    --- PASS: TestIPNLengthValidation/Empty_IPN (0.00s)
+    --- PASS: TestIPNLengthValidation/Single_char (0.00s)
+    --- PASS: TestIPNLengthValidation/Max_valid_(100) (0.00s)
+    --- PASS: TestIPNLengthValidation/Over_max_(101) (0.00s)
+    --- PASS: TestIPNLengthValidation/Way_over_(1000) (0.00s)
+=== RUN   TestAllTextFieldLimits
+=== RUN   TestAllTextFieldLimits/Name_fields_max_255
+=== RUN   TestAllTextFieldLimits/Description_fields_max_1000
+=== RUN   TestAllTextFieldLimits/Notes/Comments_fields_max_10000
+=== RUN   TestAllTextFieldLimits/IPN_fields_max_100
+--- PASS: TestAllTextFieldLimits (0.00s)
+    --- PASS: TestAllTextFieldLimits/Name_fields_max_255 (0.00s)
+    --- PASS: TestAllTextFieldLimits/Description_fields_max_1000 (0.00s)
+    --- PASS: TestAllTextFieldLimits/Notes/Comments_fields_max_10000 (0.00s)
+    --- PASS: TestAllTextFieldLimits/IPN_fields_max_100 (0.00s)
+=== RUN   TestValidationErrorResponseFormat
+--- PASS: TestValidationErrorResponseFormat (0.00s)
+=== RUN   TestWorkOrderKitting_BasicReservation
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestWorkOrderKitting_BasicReservation (0.00s)
+=== RUN   TestWorkOrderKitting_MultipleWOsCompetingInventory
+audit log error: SQL logic error: no such table: audit_log (1)
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestWorkOrderKitting_MultipleWOsCompetingInventory (0.00s)
+=== RUN   TestWorkOrderKitting_CompletionReleasesReservation
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_inventory_kitting_test.go:196: SQL logic error: no such table: inventory (1)
+--- FAIL: TestWorkOrderKitting_CompletionReleasesReservation (0.00s)
+=== RUN   TestWorkOrderKitting_CancellationReleasesReservation
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestWorkOrderKitting_CancellationReleasesReservation (0.00s)
+=== RUN   TestWorkOrderKitting_ReservedInventoryNotAvailableForOtherWOs
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestWorkOrderKitting_ReservedInventoryNotAvailableForOtherWOs (0.00s)
+=== RUN   TestWorkOrderKitting_SecondWOProceedsAfterFirstCompletes
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_inventory_kitting_test.go:377: After kitting WO-500: PART-006 on_hand=10, reserved=5
+audit log error: SQL logic error: no such table: audit_log (1)
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_inventory_kitting_test.go:459: All inventory after WO-500 completion: [PART-006: on_hand=0, reserved=0 ASY-500: on_hand=5, reserved=0]
+    handler_inventory_kitting_test.go:474: Simplified implementation doesn't track per-WO reservations
+--- SKIP: TestWorkOrderKitting_SecondWOProceedsAfterFirstCompletes (0.00s)
+=== RUN   TestHandleListInventory_Empty
+--- PASS: TestHandleListInventory_Empty (0.00s)
+=== RUN   TestHandleListInventory_WithData
+--- PASS: TestHandleListInventory_WithData (0.00s)
+=== RUN   TestHandleListInventory_LowStock
+--- PASS: TestHandleListInventory_LowStock (0.00s)
+=== RUN   TestHandleGetInventory_Success
+--- PASS: TestHandleGetInventory_Success (0.00s)
+=== RUN   TestHandleGetInventory_NotFound
+--- PASS: TestHandleGetInventory_NotFound (0.00s)
+=== RUN   TestHandleInventoryTransact_Receive
+--- PASS: TestHandleInventoryTransact_Receive (0.00s)
+=== RUN   TestHandleInventoryTransact_Issue
+--- PASS: TestHandleInventoryTransact_Issue (0.00s)
+=== RUN   TestHandleInventoryTransact_Adjust
+--- PASS: TestHandleInventoryTransact_Adjust (0.00s)
+=== RUN   TestHandleInventoryTransact_NewItem
+--- PASS: TestHandleInventoryTransact_NewItem (0.00s)
+=== RUN   TestHandleInventoryTransact_MissingIPN
+--- PASS: TestHandleInventoryTransact_MissingIPN (0.00s)
+=== RUN   TestHandleInventoryTransact_MissingType
+--- PASS: TestHandleInventoryTransact_MissingType (0.00s)
+=== RUN   TestHandleInventoryTransact_InvalidType
+--- PASS: TestHandleInventoryTransact_InvalidType (0.00s)
+=== RUN   TestHandleInventoryTransact_NegativeQty
+--- PASS: TestHandleInventoryTransact_NegativeQty (0.00s)
+=== RUN   TestHandleInventoryHistory_Empty
+--- PASS: TestHandleInventoryHistory_Empty (0.00s)
+=== RUN   TestHandleInventoryHistory_WithData
+--- PASS: TestHandleInventoryHistory_WithData (0.00s)
+=== RUN   TestHandleBulkDeleteInventory_Success
+--- PASS: TestHandleBulkDeleteInventory_Success (0.00s)
+=== RUN   TestHandleBulkDeleteInventory_EmptyList
+--- PASS: TestHandleBulkDeleteInventory_EmptyList (0.00s)
+=== RUN   TestHandleBulkDeleteInventory_NonexistentIPNs
+--- PASS: TestHandleBulkDeleteInventory_NonexistentIPNs (0.00s)
+=== RUN   TestCreateInvoiceFromSalesOrder
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestCreateInvoiceFromSalesOrder (0.00s)
+=== RUN   TestCreateInvoiceFromNonShippedOrder
+--- PASS: TestCreateInvoiceFromNonShippedOrder (0.00s)
+=== RUN   TestCreateInvoiceAlreadyExists
+--- PASS: TestCreateInvoiceAlreadyExists (0.00s)
+=== RUN   TestListInvoices
+--- PASS: TestListInvoices (0.00s)
+=== RUN   TestGetInvoice
+--- PASS: TestGetInvoice (0.00s)
+=== RUN   TestSendInvoice
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestSendInvoice (0.00s)
+=== RUN   TestMarkInvoicePaid
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestMarkInvoicePaid (0.00s)
+=== RUN   TestUpdateInvoiceOverdueStatus
+--- PASS: TestUpdateInvoiceOverdueStatus (0.00s)
+=== RUN   TestGenerateInvoiceNumber
+--- PASS: TestGenerateInvoiceNumber (0.00s)
+=== RUN   TestInvoicePDFGeneration
+audit log error: SQL logic error: no such table: audit_log (1)
+--- PASS: TestInvoicePDFGeneration (0.00s)
+=== RUN   TestLowStockAlerts_NoAlert_WhenAboveThreshold
+--- PASS: TestLowStockAlerts_NoAlert_WhenAboveThreshold (0.00s)
+=== RUN   TestLowStockAlerts_AlertGenerated_WhenBelowThreshold
+--- PASS: TestLowStockAlerts_AlertGenerated_WhenBelowThreshold (0.00s)
+=== RUN   TestLowStockAlerts_EndpointReturnsAlerts
+--- PASS: TestLowStockAlerts_EndpointReturnsAlerts (0.00s)
+=== RUN   TestLowStockAlerts_AlertClears_WhenReplenished
+--- PASS: TestLowStockAlerts_AlertClears_WhenReplenished (0.00s)
+=== RUN   TestLowStockAlerts_MultipleAlerts_MultipleParts
+--- PASS: TestLowStockAlerts_MultipleAlerts_MultipleParts (0.00s)
+=== RUN   TestLowStockAlerts_NoAlert_AtExactThreshold
+--- PASS: TestLowStockAlerts_NoAlert_AtExactThreshold (0.00s)
+=== RUN   TestLowStockAlerts_NoAlert_ZeroReorderPoint
+--- PASS: TestLowStockAlerts_NoAlert_ZeroReorderPoint (0.00s)
+=== RUN   TestLowStockAlerts_EmptyArray_NoLowStock
+--- PASS: TestLowStockAlerts_EmptyArray_NoLowStock (0.00s)
+=== RUN   TestLowStockAlerts_Sequential_ReplenishAndDeplete
+--- PASS: TestLowStockAlerts_Sequential_ReplenishAndDeplete (0.00s)
+=== RUN   TestHandleCreateCAPAFromNCR_Success
+    handler_ncr_integration_test.go:174: Expected title 'CAPA for NCR-001', got 
+    handler_ncr_integration_test.go:178: Expected linked_ncr_id 'NCR-001', got 
+    handler_ncr_integration_test.go:182: Expected type 'corrective', got 
+    handler_ncr_integration_test.go:186: Expected owner 'john.doe', got 
+    handler_ncr_integration_test.go:190: Expected status 'open', got 
+--- FAIL: TestHandleCreateCAPAFromNCR_Success (0.00s)
+=== RUN   TestHandleCreateCAPAFromNCR_AutoPopulate
+    handler_ncr_integration_test.go:231: Expected auto-populated title 'CAPA for NCR NCR-002: Paint Defect', got 
+    handler_ncr_integration_test.go:236: Expected root_cause 'Spray gun malfunction', got 
+    handler_ncr_integration_test.go:241: Expected action_plan 'Replace spray nozzle', got 
+    handler_ncr_integration_test.go:246: Expected default type 'corrective', got 
+--- FAIL: TestHandleCreateCAPAFromNCR_AutoPopulate (0.00s)
+=== RUN   TestHandleCreateCAPAFromNCR_EmptyBody
+    handler_ncr_integration_test.go:280: Expected auto-populated title 'CAPA for NCR NCR-003: Test Defect', got 
+--- FAIL: TestHandleCreateCAPAFromNCR_EmptyBody (0.00s)
+=== RUN   TestHandleCreateCAPAFromNCR_NCRNotFound
+--- PASS: TestHandleCreateCAPAFromNCR_NCRNotFound (0.00s)
+=== RUN   TestHandleCreateCAPAFromNCR_InvalidJSON
+--- PASS: TestHandleCreateCAPAFromNCR_InvalidJSON (0.00s)
+=== RUN   TestHandleCreateECOFromNCR_Success
+--- FAIL: TestHandleCreateECOFromNCR_Success (0.00s)
+panic: interface conversion: interface {} is nil, not string [recovered]
+	panic: interface conversion: interface {} is nil, not string
+
+goroutine 1516 [running]:
+testing.tRunner.func1.2({0x1031c08e0, 0x140003980f0})
+	/opt/homebrew/Cellar/go/1.24.5/libexec/src/testing/testing.go:1734 +0x1ac
+testing.tRunner.func1()
+	/opt/homebrew/Cellar/go/1.24.5/libexec/src/testing/testing.go:1737 +0x334
+panic({0x1031c08e0?, 0x140003980f0?})
+	/opt/homebrew/Cellar/go/1.24.5/libexec/src/runtime/panic.go:792 +0x124
+zrp.TestHandleCreateECOFromNCR_Success(0x14000afbdc0)
+	/Users/jsnapoli1/.openclaw/workspace/zrp/handler_ncr_integration_test.go:366 +0x7bc
+testing.tRunner(0x14000afbdc0, 0x10328c0e0)
+	/opt/homebrew/Cellar/go/1.24.5/libexec/src/testing/testing.go:1792 +0xe4
+created by testing.(*T).Run in goroutine 1
+	/opt/homebrew/Cellar/go/1.24.5/libexec/src/testing/testing.go:1851 +0x374
+FAIL	zrp	6.114s
+FAIL

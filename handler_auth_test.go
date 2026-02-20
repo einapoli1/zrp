@@ -36,7 +36,7 @@ func setupAuthTestDB(t *testing.T) func() {
 			last_login TIMESTAMP,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			failed_login_attempts INTEGER DEFAULT 0,
-			account_locked_until TIMESTAMP
+			locked_until TIMESTAMP
 		)
 	`)
 	if err != nil {
@@ -508,11 +508,14 @@ func TestHandleMeUpdatesLastActivity(t *testing.T) {
 
 	userID := createTestUser(t, db, "testuser", "password123", "user", true)
 	token := generateToken()
-	expires := time.Now().Add(24 * time.Hour)
-	oldActivity := time.Now().Add(-5 * time.Minute).Format("2006-01-02 15:04:05")
+	expires := time.Now().UTC().Add(24 * time.Hour)
+	oldActivity := time.Now().UTC().Add(-5 * time.Minute).Format("2006-01-02 15:04:05")
 	
-	db.Exec("INSERT INTO sessions (token, user_id, expires_at, last_activity) VALUES (?, ?, ?, ?)",
+	_, err := db.Exec("INSERT INTO sessions (token, user_id, expires_at, last_activity) VALUES (?, ?, ?, ?)",
 		token, userID, expires.Format("2006-01-02 15:04:05"), oldActivity)
+	if err != nil {
+		t.Fatalf("Failed to insert session: %v", err)
+	}
 
 	req := httptest.NewRequest("GET", "/api/v1/me", nil)
 	req.AddCookie(&http.Cookie{Name: "zrp_session", Value: token})
@@ -521,7 +524,7 @@ func TestHandleMeUpdatesLastActivity(t *testing.T) {
 	handleMe(w, req)
 
 	if w.Code != 200 {
-		t.Fatalf("Expected status 200, got %d", w.Code)
+		t.Fatalf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
 	// Verify last_activity was updated

@@ -759,7 +759,12 @@ func runMigrations() error {
 	}
 	for _, idx := range indexes {
 		if _, err := db.Exec(idx); err != nil {
-			return fmt.Errorf("index creation: %w\nSQL: %s", err, idx)
+			// Ignore "no such column" errors - table/column may not exist in older backups
+			if !strings.Contains(err.Error(), "no such column") && !strings.Contains(err.Error(), "no such table") {
+				return fmt.Errorf("index creation: %w\nSQL: %s", err, idx)
+			}
+			// Log but continue - index will be created when schema is updated
+			log.Printf("Skipping index creation (table/column may not exist): %s - %v", idx, err)
 		}
 	}
 

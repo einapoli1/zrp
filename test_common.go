@@ -321,6 +321,61 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create bom table: %v", err)
 	}
 
+	// Create documents table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS documents (
+			id TEXT PRIMARY KEY,
+			title TEXT NOT NULL,
+			category TEXT DEFAULT '',
+			ipn TEXT DEFAULT '',
+			content TEXT DEFAULT '',
+			revision TEXT DEFAULT '',
+			status TEXT DEFAULT 'draft',
+			file_path TEXT DEFAULT '',
+			created_by TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			approved_at DATETIME,
+			approved_by TEXT DEFAULT ''
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create documents table: %v", err)
+	}
+
+	// Create document_versions table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS document_versions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			document_id TEXT NOT NULL,
+			revision TEXT NOT NULL,
+			content TEXT DEFAULT '',
+			file_path TEXT DEFAULT '',
+			change_summary TEXT DEFAULT '',
+			status TEXT DEFAULT 'draft',
+			created_by TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			comment TEXT DEFAULT '',
+			eco_id TEXT DEFAULT '',
+			FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create document_versions table: %v", err)
+	}
+
+	// Create app_settings table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS app_settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create app_settings table: %v", err)
+	}
+
 	return testDB
 }
 
