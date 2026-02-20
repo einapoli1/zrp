@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -229,7 +230,7 @@ func TestSQLInjection_PartsListSearch(t *testing.T) {
 
 	for _, payload := range sqlInjectionPayloads {
 		t.Run(fmt.Sprintf("Payload: %s", payload), func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/api/v1/parts?q="+payload, nil)
+			req := httptest.NewRequest("GET", "/api/v1/parts?q="+url.QueryEscape(payload), nil)
 			w := httptest.NewRecorder()
 			handleListParts(w, req)
 
@@ -320,7 +321,7 @@ func TestSQLInjection_Vendors(t *testing.T) {
 
 	for _, payload := range sqlInjectionPayloads {
 		t.Run(fmt.Sprintf("Search: %s", payload), func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/api/v1/vendors?search="+payload, nil)
+			req := httptest.NewRequest("GET", "/api/v1/vendors?search="+url.QueryEscape(payload), nil)
 			w := httptest.NewRecorder()
 			handleListVendors(w, req)
 
@@ -407,7 +408,7 @@ func TestSQLInjection_WorkOrders(t *testing.T) {
 		})
 
 		t.Run(fmt.Sprintf("WO Search: %s", payload), func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/api/v1/work-orders?search="+payload, nil)
+			req := httptest.NewRequest("GET", "/api/v1/work-orders?search="+url.QueryEscape(payload), nil)
 			w := httptest.NewRecorder()
 			handleListWorkOrders(w, req)
 
@@ -585,7 +586,7 @@ func TestSQLInjection_Invoices(t *testing.T) {
 		})
 
 		t.Run(fmt.Sprintf("Invoice Search: %s", payload), func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/api/v1/invoices?search="+payload, nil)
+			req := httptest.NewRequest("GET", "/api/v1/invoices?search="+url.QueryEscape(payload), nil)
 			w := httptest.NewRecorder()
 			handleListInvoices(w, req)
 
@@ -653,7 +654,7 @@ func TestSQLInjection_AuditLog(t *testing.T) {
 
 	for _, payload := range sqlInjectionPayloads {
 		t.Run(fmt.Sprintf("Audit Search: %s", payload), func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/api/v1/audit?search="+payload, nil)
+			req := httptest.NewRequest("GET", "/api/v1/audit?search="+url.QueryEscape(payload), nil)
 			w := httptest.NewRecorder()
 			handleAuditLog(w, req)
 
@@ -728,7 +729,7 @@ func TestSQLInjection_UNIONAttacks(t *testing.T) {
 
 	for _, payload := range unionPayloads {
 		t.Run(fmt.Sprintf("UNION: %s", payload), func(t *testing.T) {
-			req := httptest.NewRequest("GET", "/api/v1/parts?q="+payload, nil)
+			req := httptest.NewRequest("GET", "/api/v1/parts?q="+url.QueryEscape(payload), nil)
 			w := httptest.NewRecorder()
 			handleListParts(w, req)
 
