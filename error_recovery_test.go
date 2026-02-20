@@ -67,6 +67,16 @@ func setupErrorTestDB(t *testing.T) *sql.DB {
 			location TEXT DEFAULT '',
 			FOREIGN KEY (ipn) REFERENCES parts(ipn) ON DELETE CASCADE
 		);
+
+		CREATE TABLE audit_log (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+			username TEXT,
+			action TEXT,
+			table_name TEXT,
+			record_id TEXT,
+			details TEXT
+		);
 	`
 
 	if _, err := testDB.Exec(schema); err != nil {
