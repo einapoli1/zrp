@@ -1268,10 +1268,19 @@ func TestReportLowStock_OrderingByShortage(t *testing.T) {
 	handleReportLowStock(w, req)
 
 	var items []LowStockItem
-	json.NewDecoder(w.Body).Decode(&items)
+	if err := json.NewDecoder(w.Body).Decode(&items); err != nil {
+		t.Fatalf("Failed to decode response: %v", err)
+	}
+
+	if len(items) == 0 {
+		t.Fatalf("Expected items to be returned, got empty slice")
+	}
 
 	// Should be ordered by shortage DESC: ITEM-B (90), ITEM-C (40), ITEM-A (10)
 	expectedOrder := []string{"ITEM-B", "ITEM-C", "ITEM-A"}
+	if len(items) != len(expectedOrder) {
+		t.Fatalf("Expected %d items, got %d", len(expectedOrder), len(items))
+	}
 	for i, expected := range expectedOrder {
 		if items[i].IPN != expected {
 			t.Errorf("Expected item[%d] = '%s', got '%s'", i, expected, items[i].IPN)
