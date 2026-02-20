@@ -91,7 +91,28 @@ func handleInventoryTransact(w http.ResponseWriter, r *http.Request) {
 	if err = tx.Commit(); err != nil { jsonErr(w, err.Error(), 500); return }
 
 	logAudit(db, getUsername(r), t.Type, "inventory", t.IPN, "Inventory "+t.Type+": "+t.IPN)
-	go emailOnLowStock(t.IPN)
+	// Capture db and ipn to avoid race with test cleanup
+	currentDB := db
+	ipnCopy := t.IPN
+	go func() {
+		if currentDB == nil || db == nil {
+			return
+		}
+		// Check email config enabled
+		var enabled int
+		if err := currentDB.QueryRow("SELECT enabled FROM email_config WHERE id=1").Scan(&enabled); err != nil || enabled != 1 {
+			return
+		}
+		// Check inventory levels
+		var qtyOnHand, reorderPoint int
+		if err := currentDB.QueryRow("SELECT qty_on_hand, reorder_point FROM inventory WHERE ipn=?", ipnCopy).Scan(&qtyOnHand, &reorderPoint); err != nil || reorderPoint <= 0 || qtyOnHand > reorderPoint {
+			return
+		}
+		// Send low stock email (only if global db still valid)
+		if db != nil {
+			emailOnLowStock(ipnCopy)
+		}
+	}()
 	jsonResp(w, map[string]string{"status": "ok"})
 }
 
