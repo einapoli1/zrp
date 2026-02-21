@@ -406,6 +406,200 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create audit_log table: %v", err)
 	}
 
+	// Create vendors table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS vendors (
+			id TEXT PRIMARY KEY,
+			name TEXT NOT NULL,
+			website TEXT,
+			contact_name TEXT,
+			contact_email TEXT,
+			contact_phone TEXT,
+			address TEXT DEFAULT '',
+			payment_terms TEXT DEFAULT '',
+			notes TEXT,
+			status TEXT DEFAULT 'active' CHECK(status IN ('active','preferred','inactive','blocked')),
+			lead_time_days INTEGER DEFAULT 0 CHECK(lead_time_days >= 0),
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create vendors table: %v", err)
+	}
+
+	// Create shipments table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS shipments (
+			id TEXT PRIMARY KEY,
+			type TEXT NOT NULL DEFAULT 'outbound' CHECK(type IN ('inbound','outbound','transfer')),
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','packed','shipped','delivered','cancelled')),
+			tracking_number TEXT DEFAULT '',
+			carrier TEXT DEFAULT '',
+			ship_date DATETIME,
+			delivery_date DATETIME,
+			from_address TEXT DEFAULT '',
+			to_address TEXT DEFAULT '',
+			notes TEXT DEFAULT '',
+			created_by TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create shipments table: %v", err)
+	}
+
+	// Create shipment_lines table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS shipment_lines (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			shipment_id TEXT NOT NULL,
+			ipn TEXT DEFAULT '',
+			serial_number TEXT DEFAULT '',
+			qty INTEGER DEFAULT 1 CHECK(qty > 0),
+			work_order_id TEXT DEFAULT '',
+			rma_id TEXT DEFAULT '',
+			FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create shipment_lines table: %v", err)
+	}
+
+	// Create pack_lists table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS pack_lists (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			shipment_id TEXT NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create pack_lists table: %v", err)
+	}
+
+	// Create part_changes table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS part_changes (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			part_ipn TEXT NOT NULL,
+			eco_id TEXT DEFAULT '',
+			field_name TEXT NOT NULL,
+			old_value TEXT DEFAULT '',
+			new_value TEXT DEFAULT '',
+			status TEXT DEFAULT 'draft',
+			created_by TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create part_changes table: %v", err)
+	}
+
+	// Create product_pricing table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS product_pricing (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			product_ipn TEXT NOT NULL,
+			pricing_tier TEXT NOT NULL DEFAULT 'standard' CHECK(pricing_tier IN ('standard','volume','distributor','oem')),
+			min_qty INTEGER DEFAULT 0 CHECK(min_qty >= 0),
+			max_qty INTEGER DEFAULT 0 CHECK(max_qty >= 0),
+			unit_price REAL NOT NULL DEFAULT 0 CHECK(unit_price >= 0),
+			currency TEXT DEFAULT 'USD',
+			effective_date TEXT DEFAULT '',
+			expiry_date TEXT DEFAULT '',
+			notes TEXT DEFAULT '',
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create product_pricing table: %v", err)
+	}
+
+	// Create password_reset_tokens table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS password_reset_tokens (
+			token TEXT PRIMARY KEY,
+			user_id INTEGER NOT NULL,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			expires_at DATETIME NOT NULL,
+			used INTEGER DEFAULT 0,
+			FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create password_reset_tokens table: %v", err)
+	}
+
+	// Create notifications table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS notifications (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			type TEXT NOT NULL,
+			severity TEXT DEFAULT 'info',
+			title TEXT NOT NULL,
+			message TEXT,
+			record_id TEXT,
+			module TEXT,
+			user_id TEXT DEFAULT '',
+			emailed INTEGER DEFAULT 0,
+			read_at DATETIME,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create notifications table: %v", err)
+	}
+
+	// Create market_pricing table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS market_pricing (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			part_ipn TEXT NOT NULL,
+			mpn TEXT NOT NULL,
+			distributor TEXT NOT NULL,
+			distributor_pn TEXT DEFAULT '',
+			manufacturer TEXT DEFAULT '',
+			description TEXT DEFAULT '',
+			stock_qty INTEGER DEFAULT 0,
+			lead_time_days INTEGER DEFAULT 0,
+			currency TEXT DEFAULT 'USD',
+			price_breaks TEXT DEFAULT '[]',
+			product_url TEXT DEFAULT '',
+			datasheet_url TEXT DEFAULT '',
+			fetched_at TEXT NOT NULL,
+			UNIQUE(part_ipn, distributor)
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create market_pricing table: %v", err)
+	}
+
+	// Create eco_revisions table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS eco_revisions (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			eco_id TEXT NOT NULL,
+			revision TEXT NOT NULL DEFAULT 'A',
+			status TEXT NOT NULL DEFAULT 'created',
+			changes_summary TEXT,
+			created_by TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			approved_by TEXT,
+			approved_at DATETIME,
+			implemented_by TEXT,
+			implemented_at DATETIME,
+			effectivity_date TEXT,
+			notes TEXT,
+			FOREIGN KEY (eco_id) REFERENCES ecos(id)
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create eco_revisions table: %v", err)
+	}
+
 	return testDB
 }
 
