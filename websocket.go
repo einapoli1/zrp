@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"sync"
@@ -43,7 +44,14 @@ func (h *Hub) unregister(c *client) {
 	h.mu.Lock()
 	delete(h.clients, c)
 	h.mu.Unlock()
-	c.conn.Close()
+	if c.conn != nil {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("ws: close panic: %v", r)
+			}
+		}()
+		_ = c.conn.Close()
+	}
 }
 
 // Broadcast sends an event to all connected clients.
@@ -62,11 +70,19 @@ func (h *Hub) Broadcast(evt WSEvent) {
 
 	for _, c := range clients {
 		c.mu.Lock()
-		_ = c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-		err := c.conn.WriteMessage(websocket.TextMessage, data)
+		writeErr := func() (writeErr error) {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Printf("ws: write panic: %v", r)
+					writeErr = fmt.Errorf("ws: write panic: %v", r)
+				}
+			}()
+			_ = c.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+			return c.conn.WriteMessage(websocket.TextMessage, data)
+		}()
 		c.mu.Unlock()
 		
-		if err != nil {
+		if writeErr != nil {
 			h.unregister(c)
 		}
 	}
