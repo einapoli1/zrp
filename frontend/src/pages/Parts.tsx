@@ -39,7 +39,8 @@ import {
   ChevronRight,
   RotateCcw,
   Plus,
-  Download
+  Download,
+  Package
 } from "lucide-react";
 import { api, type Part, type Category, type ApiResponse } from "../lib/api";
 import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTable";
@@ -583,6 +584,20 @@ function Parts() {
                   searchQuery || selectedCategory !== "all"
                     ? "No parts found matching your criteria"
                     : "No parts available"
+                }
+                emptyIcon={Package}
+                emptyDescription={
+                  searchQuery || selectedCategory !== "all"
+                    ? "Try adjusting your search or filters."
+                    : "Get started by adding your first part."
+                }
+                emptyAction={
+                  searchQuery || selectedCategory !== "all" ? undefined : (
+                    <Button onClick={() => setCreateDialogOpen(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Part
+                    </Button>
+                  )
                 }
               />
 
