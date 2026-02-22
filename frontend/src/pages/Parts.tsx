@@ -372,9 +372,10 @@ function Parts() {
         <div className="flex gap-2 w-full sm:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="min-h-[44px] flex-1 sm:flex-none">
-                <Download className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Export</span>
+              <Button variant="outline" className="min-h-[44px] flex-1 sm:flex-none" aria-label="Export parts data">
+                <Download className="h-4 w-4 sm:mr-2" aria-hidden="true" />
+                <span className="hidden sm:inline" aria-hidden="true">Export</span>
+                <span className="sr-only">Export parts data</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -441,8 +442,8 @@ function Parts() {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button type="button" variant="outline" size="icon" onClick={() => setNewCatDialogOpen(true)} title="New Category">
-                    <Plus className="h-4 w-4" />
+                  <Button type="button" variant="outline" size="icon" onClick={() => setNewCatDialogOpen(true)} aria-label="Add new category" title="Add new category">
+                    <Plus className="h-4 w-4" aria-hidden="true" />
                   </Button>
                 </div>
               </div>
@@ -581,8 +582,8 @@ function Parts() {
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="outline" onClick={handleReset}>
-              <RotateCcw className="h-4 w-4" />
+            <Button variant="outline" onClick={handleReset} aria-label="Reset filters">
+              <RotateCcw className="h-4 w-4" aria-hidden="true" />
             </Button>
           </div>
         </CardContent>
@@ -615,6 +616,8 @@ function Parts() {
                 data={displayParts}
                 rowKey={(part) => part.ipn}
                 onRowClick={(part) => handleRowClick(part.ipn)}
+                ariaLabel="Parts inventory list"
+                caption="List of all parts with IPN, category, description, cost, and stock levels"
                 emptyMessage={
                   searchQuery || selectedCategory !== "all"
                     ? "No parts found matching your criteria"

@@ -397,9 +397,10 @@ function WorkOrders() {
         <div className="flex gap-2 w-full sm:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="min-h-[44px] flex-1 sm:flex-none">
-                <Download className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Export</span>
+              <Button variant="outline" className="min-h-[44px] flex-1 sm:flex-none" aria-label="Export work orders data">
+                <Download className="h-4 w-4 sm:mr-2" aria-hidden="true" />
+                <span className="hidden sm:inline" aria-hidden="true">Export</span>
+                <span className="sr-only">Export work orders data</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -609,6 +610,8 @@ function WorkOrders() {
               columns={woColumns}
               data={workOrders}
               rowKey={(wo) => wo.id}
+              ariaLabel="Work orders list"
+              caption="List of all work orders with status, priority, assembly details, and actions"
               emptyMessage="No work orders found"
               emptyIcon={ClipboardList}
               emptyDescription="Get started by creating your first work order."
@@ -623,12 +626,14 @@ function WorkOrders() {
                   <Checkbox
                     checked={selectedItems.size === workOrders.length && workOrders.length > 0}
                     onCheckedChange={toggleSelectAll}
+                    aria-label="Select all work orders"
                   />
                 ),
                 cell: (wo) => (
                   <Checkbox
                     checked={selectedItems.has(wo.id)}
                     onCheckedChange={() => toggleSelectItem(wo.id)}
+                    aria-label={`Select work order ${wo.id}`}
                   />
                 ),
                 className: "w-12",

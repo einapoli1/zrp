@@ -212,7 +212,7 @@ function Dashboard() {
         {/* ECO Status Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>ECO Status</CardTitle>
+            <CardTitle level={2}>ECO Status</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[200px] flex items-center justify-center text-muted-foreground">
@@ -226,7 +226,7 @@ function Dashboard() {
         {/* Recent Activity */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle level={2}>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">

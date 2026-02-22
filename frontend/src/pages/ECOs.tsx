@@ -192,9 +192,10 @@ function ECOs() {
         <div className="flex gap-2 w-full sm:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="min-h-[44px] flex-1 sm:flex-none">
-                <Download className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Export</span>
+              <Button variant="outline" className="min-h-[44px] flex-1 sm:flex-none" aria-label="Export ECOs data">
+                <Download className="h-4 w-4 sm:mr-2" aria-hidden="true" />
+                <span className="hidden sm:inline" aria-hidden="true">Export</span>
+                <span className="sr-only">Export ECOs data</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -341,15 +342,16 @@ function ECOs() {
                 />
               ) : (
                 <div className="overflow-x-auto">
-                  <Table>
+                  <Table aria-label="Engineering Change Orders list">
+                  <caption className="sr-only">List of engineering change orders with ID, title, status, creator, and dates</caption>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ECO ID</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created By</TableHead>
-                      <TableHead>Created Date</TableHead>
-                      <TableHead>Updated Date</TableHead>
+                      <TableHead scope="col">ECO ID</TableHead>
+                      <TableHead scope="col">Title</TableHead>
+                      <TableHead scope="col">Status</TableHead>
+                      <TableHead scope="col">Created By</TableHead>
+                      <TableHead scope="col">Created Date</TableHead>
+                      <TableHead scope="col">Updated Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
