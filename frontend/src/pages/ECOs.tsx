@@ -37,11 +37,12 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
-import { Skeleton } from "../components/ui/skeleton";
 import { FileText, Plus, Calendar, User, Download } from "lucide-react";
 import { api, type ECO } from "../lib/api";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { LoadingState } from "../components/LoadingState";
+import { EmptyState } from "../components/EmptyState";
 interface CreateECOData {
   title: string;
   description: string;
@@ -61,7 +62,7 @@ function ECOs() {
   const navigate = useNavigate();
   const [ecos, setECOs] = useState<ECO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('all');
+    const [activeTab, setActiveTab] = useState('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
@@ -306,13 +307,10 @@ function ECOs() {
 
             <TabsContent value={activeTab} className="mt-6">
               {loading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
+                <LoadingState variant="table" rows={5} />
               ) : (
-                <Table>
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>ECO ID</TableHead>
@@ -326,11 +324,23 @@ function ECOs() {
                   <TableBody>
                     {filteredECOs.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          {activeTab === 'all' 
-                            ? 'No ECOs found' 
-                            : `No ${activeTab} ECOs found`
-                          }
+                        <TableCell colSpan={6} className="p-0">
+                          <EmptyState
+                            icon={FileText}
+                            title={activeTab === 'all' ? 'No ECOs found' : `No ${activeTab} ECOs found`}
+                            description={activeTab === 'all' 
+                              ? "Get started by creating your first Engineering Change Order" 
+                              : `Try switching to another tab or create a new ECO`
+                            }
+                            action={
+                              activeTab === 'all' ? (
+                                <Button onClick={() => setCreateDialogOpen(true)}>
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Create ECO
+                                </Button>
+                              ) : null
+                            }
+                          />
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -387,6 +397,7 @@ function ECOs() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </TabsContent>
           </Tabs>

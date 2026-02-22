@@ -17,6 +17,8 @@ import {
 } from "./ui/dropdown-menu";
 import { Button } from "./ui/button";
 import { Settings2, ArrowUp, ArrowDown, RotateCcw, ArrowUpNarrowWide, ArrowDownWideNarrow } from "lucide-react";
+import { EmptyState } from "./EmptyState";
+import type { LucideIcon } from "lucide-react";
 
 export interface ColumnDef<T> {
   id: string;
@@ -45,6 +47,12 @@ interface ConfigurableTableProps<T> {
   onRowClick?: (row: T) => void;
   rowClassName?: (row: T) => string;
   emptyMessage?: string;
+  /** Icon for EmptyState (if provided, EmptyState component will be used) */
+  emptyIcon?: LucideIcon;
+  /** Description for EmptyState */
+  emptyDescription?: string;
+  /** Action button/element for EmptyState */
+  emptyAction?: ReactNode;
   extraRowContent?: (row: T) => ReactNode;
   /** Extra column rendered before configurable columns (e.g. checkbox) */
   leadingColumn?: {
@@ -83,6 +91,9 @@ export function ConfigurableTable<T>({
   onRowClick,
   rowClassName,
   emptyMessage = "No data found",
+  emptyIcon,
+  emptyDescription,
+  emptyAction,
   leadingColumn,
   ariaLabel,
   caption,
@@ -350,9 +361,18 @@ export function ConfigurableTable<T>({
             <TableRow>
               <TableCell
                 colSpan={visibleColumns.length + (leadingColumn ? 2 : 1)}
-                className="text-center py-8 text-muted-foreground"
+                className={emptyIcon ? "p-0" : "text-center py-8 text-muted-foreground"}
               >
-                {emptyMessage}
+                {emptyIcon ? (
+                  <EmptyState
+                    icon={emptyIcon}
+                    title={emptyMessage}
+                    description={emptyDescription}
+                    action={emptyAction}
+                  />
+                ) : (
+                  emptyMessage
+                )}
               </TableCell>
             </TableRow>
           ) : (
