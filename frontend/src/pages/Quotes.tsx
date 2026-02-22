@@ -12,10 +12,15 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { FileText, Plus, Trash2 } from "lucide-react";
 import { api, type Quote, type QuoteLine } from "../lib/api";
 import { toast } from "sonner";
+import { EmptyState } from "../components/EmptyState";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
+
 function Quotes() {
   const navigate = useNavigate();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     customer: "",
@@ -24,18 +29,21 @@ function Quotes() {
     lines: [] as Array<Omit<QuoteLine, 'id' | 'quote_id'>>,
   });
 
-  useEffect(() => {
-    const fetchQuotes = async () => {
-      try {
-        const data = await api.getQuotes();
-        setQuotes(data);
-      } catch (error) {
-        toast.error("Failed to fetch quotes"); console.error("Failed to fetch quotes:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchQuotes = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getQuotes();
+      setQuotes(data);
+    } catch (err) {
+      setError("Failed to load quotes. Please try again.");
+      console.error("Failed to fetch quotes:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchQuotes();
   }, []);
 
@@ -116,17 +124,6 @@ function Quotes() {
     }
   }, []);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading quotes...</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -196,7 +193,8 @@ function Quotes() {
                 </div>
 
                 <div className="border rounded-lg overflow-hidden">
-                  <Table>
+                  <div className="overflow-x-auto">
+                    <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>IPN *</TableHead>
@@ -275,6 +273,7 @@ function Quotes() {
                       </TableRow>
                     </TableBody>
                   </Table>
+                  </div>
                 </div>
               </div>
 
@@ -297,54 +296,76 @@ function Quotes() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Quote ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Total</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Valid Until</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {quotes.length === 0 ? (
+          {error ? (
+            <ErrorState 
+              title="Failed to Load Quotes"
+              message={error}
+              onRetry={fetchQuotes}
+            />
+          ) : loading ? (
+            <LoadingState variant="table" rows={5} />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <div className="text-muted-foreground">
-                      No quotes found. Create your first quote to get started.
-                    </div>
-                  </TableCell>
+                  <TableHead>Quote ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Total</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Valid Until</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ) : (
-                quotes.map((quote) => (
-                  <TableRow key={quote.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/quotes/${quote.id}`)}>
-                    <TableCell className="font-medium">{quote.id}</TableCell>
-                    <TableCell>{quote.customer}</TableCell>
-                    <TableCell className="font-medium">
-                      ${calculateQuoteTotal(quote).toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(quote.status)}>
-                        {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(quote.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      {quote.valid_until ? new Date(quote.valid_until).toLocaleDateString() : "—"}
-                    </TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/quotes/${quote.id}`); }}>
-                        View Details
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {quotes.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="p-0">
+                      <EmptyState
+                        icon={FileText}
+                        title="No quotes found"
+                        description="Create your first quote to send to customers"
+                        action={
+                          <DialogTrigger asChild>
+                            <Button>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Create Quote
+                            </Button>
+                          </DialogTrigger>
+                        }
+                      />
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  quotes.map((quote) => (
+                    <TableRow key={quote.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/quotes/${quote.id}`)}>
+                      <TableCell className="font-medium">{quote.id}</TableCell>
+                      <TableCell>{quote.customer}</TableCell>
+                      <TableCell className="font-medium">
+                        ${calculateQuoteTotal(quote).toFixed(2)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(quote.status)}>
+                          {quote.status.charAt(0).toUpperCase() + quote.status.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(quote.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        {quote.valid_until ? new Date(quote.valid_until).toLocaleDateString() : "—"}
+                      </TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/quotes/${quote.id}`); }}>
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
