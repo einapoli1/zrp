@@ -7,6 +7,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { ShoppingCart } from "lucide-react";
 import { api, type SalesOrder } from "../lib/api";
 import { toast } from "sonner";
+import { EmptyState } from "../components/EmptyState";
+import { LoadingState } from "../components/LoadingState";
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-800",
@@ -38,8 +40,6 @@ function SalesOrders() {
     };
     fetchOrders();
   }, [statusFilter]);
-
-  if (loading) return <div className="p-8">Loading...</div>;
 
   return (
     <div className="p-6 space-y-6">
@@ -74,12 +74,17 @@ function SalesOrders() {
           <CardTitle>Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          {orders.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No sales orders found. Convert an accepted quote to create one.
-            </p>
+          {loading ? (
+            <LoadingState variant="table" rows={5} />
+          ) : orders.length === 0 ? (
+            <EmptyState
+              icon={ShoppingCart}
+              title="No sales orders found"
+              description="Sales orders are created when quotes are accepted"
+            />
           ) : (
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Order ID</TableHead>
@@ -109,6 +114,7 @@ function SalesOrders() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>
