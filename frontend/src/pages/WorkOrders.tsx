@@ -8,7 +8,8 @@ import {
   CheckCircle,
   AlertTriangle,
   Calendar,
-  Download
+  Download,
+  ClipboardList
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
@@ -572,6 +573,14 @@ function WorkOrders() {
             data={workOrders}
             rowKey={(wo) => wo.id}
             emptyMessage="No work orders found"
+            emptyIcon={ClipboardList}
+            emptyDescription="Get started by creating your first work order."
+            emptyAction={
+              <Button onClick={() => setCreateDialogOpen(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Create Work Order
+              </Button>
+            }
             leadingColumn={{
               header: (
                 <Checkbox
