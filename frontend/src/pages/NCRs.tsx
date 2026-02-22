@@ -13,6 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { AlertTriangle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api, type NCR } from "../lib/api";
+import { EmptyState } from "../components/EmptyState";
+import { LoadingState } from "../components/LoadingState";
 
 function NCRs() {
   const navigate = useNavigate();
@@ -77,17 +79,6 @@ function NCRs() {
         return "bg-yellow-500";
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading NCRs...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -177,53 +168,69 @@ function NCRs() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>NCR ID</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Severity</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {ncrs.length === 0 ? (
+          {loading ? (
+            <LoadingState variant="table" rows={5} />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
-                    <div className="text-muted-foreground">
-                      No NCRs found. Create your first NCR to get started.
-                    </div>
-                  </TableCell>
+                  <TableHead>NCR ID</TableHead>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Severity</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ) : (
-                ncrs.map((ncr) => (
-                  <TableRow key={ncr.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/ncrs/${ncr.id}`)}>
-                    <TableCell className="font-medium">{ncr.id}</TableCell>
-                    <TableCell>{ncr.title}</TableCell>
-                    <TableCell>
-                      <Badge variant={getSeverityBadgeVariant(ncr.severity)} className="flex items-center gap-1 w-fit">
-                        <div className={`w-2 h-2 rounded-full ${getSeverityColor(ncr.severity)}`} />
-                        {ncr.severity.charAt(0).toUpperCase() + ncr.severity.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={ncr.status === "closed" || ncr.status === "resolved" ? "default" : "secondary"}>
-                        {ncr.status.charAt(0).toUpperCase() + ncr.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(ncr.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/ncrs/${ncr.id}`); }}>
-                        View Details
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {ncrs.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="p-0">
+                      <EmptyState
+                        icon={AlertTriangle}
+                        title="No NCRs found"
+                        description="Create your first Non-Conformance Report to track quality issues"
+                        action={
+                          <DialogTrigger asChild>
+                            <Button>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Create NCR
+                            </Button>
+                          </DialogTrigger>
+                        }
+                      />
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  ncrs.map((ncr) => (
+                    <TableRow key={ncr.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/ncrs/${ncr.id}`)}>
+                      <TableCell className="font-medium">{ncr.id}</TableCell>
+                      <TableCell>{ncr.title}</TableCell>
+                      <TableCell>
+                        <Badge variant={getSeverityBadgeVariant(ncr.severity)} className="flex items-center gap-1 w-fit">
+                          <div className={`w-2 h-2 rounded-full ${getSeverityColor(ncr.severity)}`} />
+                          {ncr.severity.charAt(0).toUpperCase() + ncr.severity.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={ncr.status === "closed" || ncr.status === "resolved" ? "default" : "secondary"}>
+                          {ncr.status.charAt(0).toUpperCase() + ncr.status.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(ncr.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/ncrs/${ncr.id}`); }}>
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
