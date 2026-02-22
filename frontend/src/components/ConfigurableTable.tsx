@@ -243,7 +243,7 @@ export function ConfigurableTable<T>({
   );
 
   return (
-    <div>
+    <div className="overflow-x-auto">
       <Table aria-label={ariaLabel || `${tableName} table`}>
         {caption && <caption className="sr-only">{caption}</caption>}
         <TableHeader>

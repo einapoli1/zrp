@@ -183,7 +183,7 @@ function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {kpiCards.map((card) => {
           const Icon = card.icon;
           const value = stats?.[card.key as keyof ExtendedDashboardStats] || 0;

@@ -298,26 +298,28 @@ function Inventory() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Inventory</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Manage your inventory levels and stock tracking.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <Button
             variant={showLowStock ? "default" : "outline"}
+            className="min-h-[44px] flex-1 sm:flex-none"
             onClick={() => setShowLowStock(!showLowStock)}
           >
-            <AlertTriangle className="h-4 w-4 mr-2" />
-            {showLowStock ? "Show All" : "Low Stock"}
+            <AlertTriangle className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{showLowStock ? "Show All" : "Low Stock"}</span>
+            <span className="sm:hidden">{showLowStock ? "All" : "Low"}</span>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export
+              <Button variant="outline" className="min-h-[44px] flex-1 sm:flex-none">
+                <Download className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -331,9 +333,10 @@ function Inventory() {
           </DropdownMenu>
           <Dialog open={receiveDialogOpen} onOpenChange={setReceiveDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Quick Receive
+              <Button className="min-h-[44px] flex-1 sm:flex-none">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Quick Receive</span>
+                <span className="sm:hidden">Receive</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
