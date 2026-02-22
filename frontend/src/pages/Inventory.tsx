@@ -508,6 +508,20 @@ function Inventory() {
             rowKey={(item) => item.ipn}
             rowClassName={(item) => isLowStock(item) ? "bg-destructive/5" : ""}
             emptyMessage={showLowStock ? "No low stock items found" : "No inventory items found"}
+            emptyIcon={Package}
+            emptyDescription={
+              showLowStock
+                ? "All inventory levels are healthy."
+                : "Get started by receiving your first items."
+            }
+            emptyAction={
+              showLowStock ? undefined : (
+                <Button onClick={() => setReceiveDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Quick Receive
+                </Button>
+              )
+            }
             leadingColumn={{
               header: (
                 <Checkbox
