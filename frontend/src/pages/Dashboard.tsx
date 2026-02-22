@@ -18,6 +18,7 @@ import { LoadingState } from "../components/LoadingState";
 import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
 import { toast } from "sonner";
+import { KeyboardShortcutsHelp } from '../components/KeyboardShortcutsHelp';
 interface ExtendedDashboardStats extends DashboardStats {
   open_ecos: number;
   open_pos: number;
@@ -256,6 +257,12 @@ function Dashboard() {
           </CardContent>
         </Card>
       </div>
+      
+      <KeyboardShortcutsHelp 
+        shortcuts={[
+          { key: '?', description: 'Show keyboard shortcuts help' },
+        ]}
+      />
     </div>
   );
 }

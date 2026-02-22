@@ -44,6 +44,8 @@ import { toast } from "sonner";
 import { LoadingState } from "../components/LoadingState";
 import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
+import { useHotkeys } from 'react-hotkeys-hook';
+import { KeyboardShortcutsHelp } from '../components/KeyboardShortcutsHelp';
 interface CreateECOData {
   title: string;
   description: string;
@@ -75,6 +77,19 @@ function ECOs() {
       reason: '',
       affected_ipns: '',
     },
+  });
+
+  // Keyboard shortcuts
+  useHotkeys('n', () => setCreateDialogOpen(true), { 
+    enableOnFormTags: false,
+    preventDefault: true 
+  });
+
+  useHotkeys('escape', () => {
+    if (createDialogOpen) setCreateDialogOpen(false);
+  }, {
+    enableOnFormTags: true,
+    preventDefault: true
   });
 
   useEffect(() => {
@@ -419,6 +434,13 @@ function ECOs() {
           </Tabs>
         </CardContent>
       </Card>
+      
+      <KeyboardShortcutsHelp 
+        shortcuts={[
+          { key: 'n', description: 'Create new ECO' },
+          { key: 'Esc', description: 'Close dialogs' },
+        ]}
+      />
     </div>
   );
 }

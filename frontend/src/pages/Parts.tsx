@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, lazy, Suspense } from "react";
+import { useEffect, useState, useMemo, lazy, Suspense, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Badge } from "../components/ui/badge";
@@ -49,6 +49,8 @@ const BarcodeScanner = lazy(() => import("../components/BarcodeScanner").then(m 
 import { useGitPLM } from "../hooks/useGitPLM";
 import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
+import { useHotkeys } from 'react-hotkeys-hook';
+import { KeyboardShortcutsHelp } from '../components/KeyboardShortcutsHelp';
 interface PartWithFields extends Part {
   category?: string;
   description?: string;
@@ -88,6 +90,29 @@ function Parts() {
   const [newCatData, setNewCatData] = useState<NewCategoryData>({ title: "", prefix: "" });
   const [creatingCategory, setCreatingCategory] = useState(false);
   const pageSize = 50;
+  
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcuts
+  useHotkeys('n', () => setCreateDialogOpen(true), { 
+    enableOnFormTags: false,
+    preventDefault: true 
+  });
+  
+  useHotkeys('/', () => {
+    searchInputRef.current?.focus();
+  }, { 
+    enableOnFormTags: false,
+    preventDefault: true 
+  });
+
+  useHotkeys('escape', () => {
+    if (createDialogOpen) setCreateDialogOpen(false);
+    if (newCatDialogOpen) setNewCatDialogOpen(false);
+  }, {
+    enableOnFormTags: true,
+    preventDefault: true
+  });
 
   const [partForm, setPartForm] = useState<CreatePartData>({
     ipn: "",
@@ -525,7 +550,8 @@ function Parts() {
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Search parts by IPN, description..."
+                  ref={searchInputRef}
+                  placeholder="Search parts by IPN, description... (Press / to focus)"
                   value={searchQuery}
                   onChange={(e) => handleSearch(e.target.value)}
                   className="pl-10"
@@ -644,6 +670,14 @@ function Parts() {
           )}
         </CardContent>
       </Card>
+      
+      <KeyboardShortcutsHelp 
+        shortcuts={[
+          { key: 'n', description: 'Create new part' },
+          { key: '/', description: 'Focus search input' },
+          { key: 'Esc', description: 'Close dialogs' },
+        ]}
+      />
     </div>
   );
 }

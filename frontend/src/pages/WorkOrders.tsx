@@ -48,6 +48,8 @@ import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { LoadingState } from "../components/LoadingState";
 import { ErrorState } from "../components/ErrorState";
+import { useHotkeys } from 'react-hotkeys-hook';
+import { KeyboardShortcutsHelp } from '../components/KeyboardShortcutsHelp';
 function WorkOrders() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
@@ -63,6 +65,20 @@ function WorkOrders() {
     status: "open",
     priority: "medium",
     notes: "",
+  });
+
+  // Keyboard shortcuts
+  useHotkeys('n', () => setCreateDialogOpen(true), { 
+    enableOnFormTags: false,
+    preventDefault: true 
+  });
+
+  useHotkeys('escape', () => {
+    if (createDialogOpen) setCreateDialogOpen(false);
+    if (bulkEditOpen) setBulkEditOpen(false);
+  }, {
+    enableOnFormTags: true,
+    preventDefault: true
   });
 
   useEffect(() => {
@@ -628,6 +644,13 @@ function WorkOrders() {
         selectedCount={selectedItems.size}
         onSubmit={handleBulkUpdate}
         title="Bulk Edit Work Orders"
+      />
+      
+      <KeyboardShortcutsHelp 
+        shortcuts={[
+          { key: 'n', description: 'Create new work order' },
+          { key: 'Esc', description: 'Close dialogs' },
+        ]}
       />
     </div>
   );
