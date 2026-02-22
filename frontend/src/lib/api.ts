@@ -544,6 +544,11 @@ export interface DashboardStats {
   active_work_orders: number;
   pending_ecos: number;
   total_inventory_value: number;
+  open_ecos: number;
+  open_pos: number;
+  open_ncrs: number;
+  total_devices: number;
+  open_rmas: number;
 }
 
 export interface CalendarEvent {
@@ -672,6 +677,35 @@ class ApiClient {
       return json.data as T;
     }
     return json as T;
+  }
+
+  // Generic HTTP methods for direct API access
+  async get<T = any>(endpoint: string): Promise<{ data: T }> {
+    const result = await this.request<T>(endpoint);
+    return { data: result };
+  }
+
+  async post<T = any>(endpoint: string, body?: any): Promise<{ data: T }> {
+    const result = await this.request<T>(endpoint, {
+      method: 'POST',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return { data: result };
+  }
+
+  async put<T = any>(endpoint: string, body?: any): Promise<{ data: T }> {
+    const result = await this.request<T>(endpoint, {
+      method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return { data: result };
+  }
+
+  async delete<T = any>(endpoint: string): Promise<{ data: T }> {
+    const result = await this.request<T>(endpoint, {
+      method: 'DELETE',
+    });
+    return { data: result };
   }
 
   /** Like request(), but returns the full envelope including meta */
