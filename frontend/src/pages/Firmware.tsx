@@ -14,11 +14,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Cpu, Plus, Play, Pause } from "lucide-react";
 import { api, type FirmwareCampaign } from "../lib/api";
 import { toast } from "sonner";
+import { EmptyState } from "../components/EmptyState";
+import { LoadingState } from "../components/LoadingState";
 function Firmware() {
   const navigate = useNavigate();
   const [campaigns, setCampaigns] = useState<FirmwareCampaign[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     version: "",
@@ -64,7 +66,7 @@ function Firmware() {
     switch (status) {
       case "completed":
         return "default";
-      case "running":
+      case "active":
         return "secondary";
       case "paused":
         return "outline";
@@ -81,7 +83,7 @@ function Firmware() {
     switch (status) {
       case "completed":
         return "text-green-600";
-      case "running":
+      case "active":
         return "text-blue-600";
       case "paused":
         return "text-yellow-600";
@@ -99,7 +101,7 @@ function Firmware() {
     if (campaign.status === "completed") return 100;
     if (campaign.status === "draft") return 0;
     if (campaign.status === "failed") return 30; // Example failed at 30%
-    if (campaign.status === "running") return 65; // Example progress
+    if (campaign.status === "active") return 65; // Example progress
     if (campaign.status === "paused") return 45; // Example paused at 45%
     return 0;
   };
@@ -112,17 +114,6 @@ function Firmware() {
     "Critical Patch",
     "Beta Release",
   ];
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading firmware campaigns...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -229,93 +220,109 @@ function Firmware() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Campaign ID</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Version</TableHead>
-                <TableHead>Progress</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {campaigns.length === 0 ? (
+          {loading ? (
+            <LoadingState variant="table" rows={5} />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <div className="text-muted-foreground">
-                      No firmware campaigns found. Create your first campaign to get started.
-                    </div>
-                  </TableCell>
+                  <TableHead>Campaign ID</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Version</TableHead>
+                  <TableHead>Progress</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ) : (
-                campaigns.map((campaign) => {
-                  const progress = getProgress(campaign);
-                  
-                  return (
-                    <TableRow key={campaign.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/firmware/${campaign.id}`)}>
-                      <TableCell className="font-medium">{campaign.id}</TableCell>
-                      <TableCell>{campaign.name}</TableCell>
-                      <TableCell className="font-mono">{campaign.version}</TableCell>
-                      <TableCell className="w-32">
-                        <div className="flex items-center gap-2">
-                          <Progress value={progress} className="flex-1" />
-                          <span className="text-sm text-muted-foreground w-10">{progress}%</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(campaign.status)} className={getStatusColor(campaign.status)}>
-                          {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{new Date(campaign.created_at).toLocaleDateString()}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          {campaign.status === "running" ? (
-                            <Button variant="outline" size="sm" onClick={async (e) => {
-                              e.stopPropagation();
-                              try {
-                                const updated = await api.updateFirmwareCampaign(campaign.id, { status: "paused" });
-                                setCampaigns(campaigns.map(c => c.id === campaign.id ? updated : c));
-                              } catch (error) {
-                                toast.error("Failed to pause campaign"); console.error("Failed to pause campaign:", error);
-                              }
-                            }}>
-                              <Pause className="h-3 w-3" />
+              </TableHeader>
+              <TableBody>
+                {campaigns.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="p-0">
+                      <EmptyState
+                        icon={Cpu}
+                        title="No firmware campaigns"
+                        description="Create a campaign to update firmware across your device fleet"
+                        action={
+                          <DialogTrigger asChild>
+                            <Button>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Create Campaign
                             </Button>
-                          ) : campaign.status === "paused" || campaign.status === "draft" ? (
-                            <Button variant="outline" size="sm" onClick={async (e) => {
-                              e.stopPropagation();
-                              try {
-                                const updated = await api.updateFirmwareCampaign(campaign.id, { status: "running" });
-                                setCampaigns(campaigns.map(c => c.id === campaign.id ? updated : c));
-                              } catch (error) {
-                                toast.error("Failed to start campaign"); console.error("Failed to start campaign:", error);
-                              }
-                            }}>
-                              <Play className="h-3 w-3" />
+                          </DialogTrigger>
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  campaigns.map((campaign) => {
+                    const progress = getProgress(campaign);
+                    
+                    return (
+                      <TableRow key={campaign.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/firmware/${campaign.id}`)}>
+                        <TableCell className="font-medium">{campaign.id}</TableCell>
+                        <TableCell>{campaign.name}</TableCell>
+                        <TableCell className="font-mono">{campaign.version}</TableCell>
+                        <TableCell className="w-32">
+                          <div className="flex items-center gap-2">
+                            <Progress value={progress} className="flex-1" />
+                            <span className="text-sm text-muted-foreground w-10">{progress}%</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(campaign.status)} className={getStatusColor(campaign.status)}>
+                            {campaign.status.charAt(0).toUpperCase() + campaign.status.slice(1)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{new Date(campaign.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            {campaign.status === "active" ? (
+                              <Button variant="outline" size="sm" onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  const updated = await api.updateFirmwareCampaign(campaign.id, { status: "paused" });
+                                  setCampaigns(campaigns.map(c => c.id === campaign.id ? updated : c));
+                                } catch (error) {
+                                  toast.error("Failed to pause campaign"); console.error("Failed to pause campaign:", error);
+                                }
+                              }}>
+                                <Pause className="h-3 w-3" />
+                              </Button>
+                            ) : campaign.status === "paused" || campaign.status === "draft" ? (
+                              <Button variant="outline" size="sm" onClick={async (e) => {
+                                e.stopPropagation();
+                                try {
+                                  const updated = await api.updateFirmwareCampaign(campaign.id, { status: "active" });
+                                  setCampaigns(campaigns.map(c => c.id === campaign.id ? updated : c));
+                                } catch (error) {
+                                  toast.error("Failed to start campaign"); console.error("Failed to start campaign:", error);
+                                }
+                              }}>
+                                <Play className="h-3 w-3" />
+                              </Button>
+                            ) : null}
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={(e) => { 
+                                e.stopPropagation(); 
+                                navigate(`/firmware/${campaign.id}`); 
+                              }}
+                            >
+                              View
                             </Button>
-                          ) : null}
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
-                              navigate(`/firmware/${campaign.id}`); 
-                            }}
-                          >
-                            View
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -341,10 +348,10 @@ function Firmware() {
               <Play className="h-8 w-8 text-green-600" />
             </div>
             <div className="text-3xl font-bold text-green-600 text-center">
-              {campaigns.filter(c => c.status === "running").length}
+              {campaigns.filter(c => c.status === "active").length}
             </div>
             <div className="text-sm text-muted-foreground text-center mt-1">
-              Running
+              Active
             </div>
           </CardContent>
         </Card>
