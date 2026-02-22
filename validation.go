@@ -228,7 +228,7 @@ var (
 	validWOPriorities          = []string{"low", "normal", "high", "critical"}
 	validNCRSeverities         = []string{"minor", "major", "critical"}
 	validNCRStatuses           = []string{"open", "investigating", "resolved", "closed"}
-	validRMAStatuses           = []string{"open", "received", "diagnosing", "repairing", "resolved", "closed", "scrapped"}
+	validRMAStatuses           = []string{"open", "received", "diagnosing", "repairing", "resolved", "shipped", "closed", "scrapped"}
 	validQuoteStatuses         = []string{"draft", "sent", "accepted", "rejected", "expired", "cancelled"}
 	validShipmentTypes         = []string{"inbound", "outbound", "transfer"}
 	validShipmentStatuses      = []string{"draft", "packed", "shipped", "delivered", "cancelled"}

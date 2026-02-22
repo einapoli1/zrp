@@ -382,7 +382,8 @@ function Vendors() {
           <CardTitle>Vendor Directory</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Company</TableHead>
@@ -485,6 +486,7 @@ function Vendors() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

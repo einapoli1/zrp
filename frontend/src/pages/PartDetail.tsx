@@ -6,7 +6,6 @@ import { Button } from "../components/ui/button";
 import { Separator } from "../components/ui/separator";
 import { Skeleton } from "../components/ui/skeleton";
 import { 
-  ArrowLeft, 
   Package, 
   ChevronDown, 
   ChevronRight,
@@ -31,6 +30,9 @@ import { api, type Part, type BOMNode, type PartCost, type WhereUsedEntry, type 
 import { useGitPLM } from "../hooks/useGitPLM";
 import { ExternalLink, Edit, Trash2, FilePlus } from "lucide-react";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
+
 interface PartWithDetails extends Part {
   category?: string;
   description?: string;
@@ -378,29 +380,16 @@ function PartDetail() {
   const isAssembly = ipn && (ipn.toUpperCase().startsWith('PCA-') || ipn.toUpperCase().startsWith('ASY-'));
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Skeleton className="h-10 w-10" />
-          <Skeleton className="h-8 w-64" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Skeleton className="h-96" />
-          <Skeleton className="h-96" />
-        </div>
-      </div>
-    );
+    return <LoadingState variant="spinner" message="Loading part..." />;
   }
 
   if (!part) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => navigate('/parts')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Parts
-          </Button>
-        </div>
+        <Breadcrumb items={[
+          { label: "Parts", href: "/parts" },
+          { label: "Not Found" }
+        ]} />
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="h-12 w-12 text-muted-foreground mb-4" />
@@ -416,19 +405,18 @@ function PartDetail() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[
+        { label: "Parts", href: "/parts" },
+        { label: part.ipn }
+      ]} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => navigate('/parts')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Parts
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight font-mono">{part.ipn}</h1>
-            <p className="text-muted-foreground">
-              {part.description || 'No description available'}
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight font-mono">{part.ipn}</h1>
+          <p className="text-muted-foreground">
+            {part.description || 'No description available'}
+          </p>
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant="secondary" className="capitalize">
@@ -506,7 +494,8 @@ function PartDetail() {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Field</TableHead>
@@ -547,6 +536,7 @@ function PartDetail() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       )}
@@ -776,7 +766,8 @@ function PartDetail() {
                       </div>
                     </div>
                     {result.price_breaks && result.price_breaks.length > 0 && (
-                      <Table>
+                      <div className="overflow-x-auto">
+                        <Table>
                         <TableHeader>
                           <TableRow>
                             <TableHead>Qty</TableHead>
@@ -794,6 +785,7 @@ function PartDetail() {
                           ))}
                         </TableBody>
                       </Table>
+                      </div>
                     )}
                     {result.product_url && (
                       <a
@@ -846,7 +838,8 @@ function PartDetail() {
               ))}
             </div>
           ) : whereUsed.length > 0 ? (
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Assembly</TableHead>
@@ -883,6 +876,7 @@ function PartDetail() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           ) : (
             <div className="text-center py-8 text-muted-foreground">
               <GitBranch className="h-8 w-8 mx-auto mb-2 opacity-50" />

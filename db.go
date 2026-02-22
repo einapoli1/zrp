@@ -218,7 +218,7 @@ func runMigrations() error {
 		`CREATE TABLE IF NOT EXISTS rmas (
 			id TEXT PRIMARY KEY, serial_number TEXT NOT NULL,
 			customer TEXT, reason TEXT,
-			status TEXT DEFAULT 'open' CHECK(status IN ('open','received','diagnosing','repairing','resolved','closed','scrapped')),
+			status TEXT DEFAULT 'open' CHECK(status IN ('open','received','diagnosing','repairing','resolved','shipped','closed','scrapped')),
 			defect_description TEXT, resolution TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			received_at DATETIME, resolved_at DATETIME

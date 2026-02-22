@@ -97,13 +97,13 @@ func handleLaunchCampaign(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 func handleCampaignProgress(w http.ResponseWriter, r *http.Request, id string) {
-	var pending, sent, updated, failed int
+	var pending, inProgress, success, failed int
 	db.QueryRow("SELECT COUNT(*) FROM campaign_devices WHERE campaign_id=? AND status='pending'", id).Scan(&pending)
-	db.QueryRow("SELECT COUNT(*) FROM campaign_devices WHERE campaign_id=? AND status='sent'", id).Scan(&sent)
-	db.QueryRow("SELECT COUNT(*) FROM campaign_devices WHERE campaign_id=? AND status='updated'", id).Scan(&updated)
+	db.QueryRow("SELECT COUNT(*) FROM campaign_devices WHERE campaign_id=? AND status='in_progress'", id).Scan(&inProgress)
+	db.QueryRow("SELECT COUNT(*) FROM campaign_devices WHERE campaign_id=? AND status='success'", id).Scan(&success)
 	db.QueryRow("SELECT COUNT(*) FROM campaign_devices WHERE campaign_id=? AND status='failed'", id).Scan(&failed)
-	total := pending + sent + updated + failed
-	jsonResp(w, map[string]int{"total": total, "pending": pending, "sent": sent, "updated": updated, "failed": failed})
+	total := pending + inProgress + success + failed
+	jsonResp(w, map[string]int{"total": total, "pending": pending, "in_progress": inProgress, "success": success, "failed": failed})
 }
 
 func handleCampaignStream(w http.ResponseWriter, r *http.Request, id string) {
@@ -116,19 +116,19 @@ func handleCampaignStream(w http.ResponseWriter, r *http.Request, id string) {
 		return
 	}
 	for {
-		var pending, sent, updated, failed int
+		var pending, inProgress, success, failed int
 		db.QueryRow("SELECT COUNT(*) FROM campaign_devices WHERE campaign_id=? AND status='pending'", id).Scan(&pending)
-		db.QueryRow("SELECT COUNT(*) FROM campaign_devices WHERE campaign_id=? AND status='sent'", id).Scan(&sent)
-		db.QueryRow("SELECT COUNT(*) FROM campaign_devices WHERE campaign_id=? AND status='updated'", id).Scan(&updated)
+		db.QueryRow("SELECT COUNT(*) FROM campaign_devices WHERE campaign_id=? AND status='in_progress'", id).Scan(&inProgress)
+		db.QueryRow("SELECT COUNT(*) FROM campaign_devices WHERE campaign_id=? AND status='success'", id).Scan(&success)
 		db.QueryRow("SELECT COUNT(*) FROM campaign_devices WHERE campaign_id=? AND status='failed'", id).Scan(&failed)
-		total := pending + sent + updated + failed
+		total := pending + inProgress + success + failed
 		pct := 0
 		if total > 0 {
-			pct = (updated + failed) * 100 / total
+			pct = (success + failed) * 100 / total
 		}
-		fmt.Fprintf(w, "data: {\"pending\":%d,\"sent\":%d,\"updated\":%d,\"failed\":%d,\"total\":%d,\"pct\":%d}\n\n", pending, sent, updated, failed, total, pct)
+		fmt.Fprintf(w, "data: {\"pending\":%d,\"in_progress\":%d,\"success\":%d,\"failed\":%d,\"total\":%d,\"pct\":%d}\n\n", pending, inProgress, success, failed, total, pct)
 		flusher.Flush()
-		if total > 0 && (updated+failed) >= total {
+		if total > 0 && (success+failed) >= total {
 			break
 		}
 		select {
@@ -143,8 +143,16 @@ func handleMarkCampaignDevice(w http.ResponseWriter, r *http.Request, campaignID
 	var body struct {
 		Status string `json:"status"`
 	}
-	if err := decodeBody(r, &body); err != nil || (body.Status != "updated" && body.Status != "failed") {
-		jsonErr(w, "status must be 'updated' or 'failed'", 400)
+	if err := decodeBody(r, &body); err != nil {
+		jsonErr(w, "invalid body", 400)
+		return
+	}
+	
+	// Validate status - use validCampaignDevStatuses from validation.go
+	ve := &ValidationErrors{}
+	validateEnum(ve, "status", body.Status, validCampaignDevStatuses)
+	if ve.HasErrors() {
+		jsonErr(w, ve.Error(), 400)
 		return
 	}
 	now := time.Now().Format("2006-01-02 15:04:05")

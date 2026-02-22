@@ -80,7 +80,18 @@ func handleInventoryTransact(w http.ResponseWriter, r *http.Request) {
 	switch t.Type {
 	case "receive", "return":
 		_, err = tx.Exec("UPDATE inventory SET qty_on_hand=qty_on_hand+?,updated_at=? WHERE ipn=?", t.Qty, now, t.IPN)
-	case "issue":
+	case "issue", "scrap", "transfer":
+		// Check available stock (on_hand - reserved) before issuing
+		var onHand, reserved float64
+		err = tx.QueryRow("SELECT qty_on_hand, qty_reserved FROM inventory WHERE ipn=?", t.IPN).Scan(&onHand, &reserved)
+		if err != nil { jsonErr(w, err.Error(), 500); return }
+		
+		available := onHand - reserved
+		if t.Qty > available {
+			jsonErr(w, "Insufficient available stock (some units are reserved)", 400)
+			return
+		}
+		
 		_, err = tx.Exec("UPDATE inventory SET qty_on_hand=qty_on_hand-?,updated_at=? WHERE ipn=?", t.Qty, now, t.IPN)
 	case "adjust":
 		_, err = tx.Exec("UPDATE inventory SET qty_on_hand=?,updated_at=? WHERE ipn=?", t.Qty, now, t.IPN)

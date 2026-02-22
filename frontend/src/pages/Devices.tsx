@@ -15,11 +15,16 @@ import { Checkbox } from "../components/ui/checkbox";
 import { api, type Device } from "../lib/api";
 import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog";
 import { toast } from "sonner";
+import { EmptyState } from "../components/EmptyState";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
+
 function Devices() {
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importResult, setImportResult] = useState<{ success: number; errors: string[] } | null>(null);
@@ -52,18 +57,21 @@ function Devices() {
     }
   };
 
-  useEffect(() => {
-    const fetchDevices = async () => {
-      try {
-        const data = await api.getDevices();
-        setDevices(data);
-      } catch (error) {
-        toast.error("Failed to fetch devices"); console.error("Failed to fetch devices:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const fetchDevices = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.getDevices();
+      setDevices(data);
+    } catch (err) {
+      setError("Failed to load devices. Please try again.");
+      console.error("Failed to fetch devices:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchDevices();
   }, []);
 
@@ -164,12 +172,21 @@ function Devices() {
   };
 
   if (loading) {
+    return <LoadingState variant="spinner" message="Loading devices..." />;
+  }
+
+  if (error) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading devices...</p>
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Device Registry</h1>
+          <p className="text-muted-foreground">Track and manage all devices</p>
         </div>
+        <ErrorState 
+          title="Failed to Load Devices"
+          message={error}
+          onRetry={fetchDevices}
+        />
       </div>
     );
   }
@@ -375,7 +392,8 @@ function Devices() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-12">
@@ -397,10 +415,26 @@ function Devices() {
             <TableBody>
               {devices.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
-                    <div className="text-muted-foreground">
-                      No devices found. Add devices manually or import from CSV.
-                    </div>
+                  <TableCell colSpan={9} className="p-0">
+                    <EmptyState
+                      icon={Smartphone}
+                      title="No devices registered"
+                      description="Import devices from CSV or create them individually"
+                      action={
+                        <div className="flex gap-2">
+                          <DialogTrigger asChild>
+                            <Button>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Add Device
+                            </Button>
+                          </DialogTrigger>
+                          <Button variant="outline" onClick={() => setImportDialogOpen(true)}>
+                            <Upload className="h-4 w-4 mr-2" />
+                            Import CSV
+                          </Button>
+                        </div>
+                      }
+                    />
                   </TableCell>
                 </TableRow>
               ) : (
@@ -435,6 +469,7 @@ function Devices() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

@@ -8,9 +8,11 @@ import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { FileText, ArrowLeft, Save, Download, Plus, Trash2, ShoppingCart } from "lucide-react";
+import { FileText, Save, Download, Plus, Trash2, ShoppingCart } from "lucide-react";
 import { api, type Quote, type QuoteLine, type Part } from "../lib/api";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
 function QuoteDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -129,25 +131,16 @@ function QuoteDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading quote...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState variant="spinner" message="Loading quote..." />;
   }
 
   if (!quote) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/quotes")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Quotes
-          </Button>
-        </div>
+        <Breadcrumb items={[
+          { label: "Quotes", href: "/quotes" },
+          { label: "Not Found" }
+        ]} />
         <div className="text-center py-8">
           <h2 className="text-2xl font-semibold mb-2">Quote Not Found</h2>
           <p className="text-muted-foreground">The requested quote could not be found.</p>
@@ -160,16 +153,15 @@ function QuoteDetail() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[
+        { label: "Quotes", href: "/quotes" },
+        { label: `Quote ${quote.id}` }
+      ]} />
+      
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/quotes")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Quotes
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{quote.id}</h1>
-            <p className="text-muted-foreground">{quote.customer}</p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{quote.id}</h1>
+          <p className="text-muted-foreground">{quote.customer}</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExportPDF}>
@@ -310,7 +302,8 @@ function QuoteDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>IPN</TableHead>
@@ -413,6 +406,7 @@ function QuoteDetail() {
                   })}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </div>

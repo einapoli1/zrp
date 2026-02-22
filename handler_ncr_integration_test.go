@@ -137,8 +137,9 @@ func setupNCRIntegrationTestDB(t *testing.T) *sql.DB {
 
 func TestHandleCreateCAPAFromNCR_Success(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, ipn, severity, root_cause, corrective_action, created_at) VALUES 
@@ -199,8 +200,9 @@ func TestHandleCreateCAPAFromNCR_Success(t *testing.T) {
 
 func TestHandleCreateCAPAFromNCR_AutoPopulate(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR with root cause and corrective action
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, severity, root_cause, corrective_action, created_at) VALUES 
@@ -261,8 +263,9 @@ func TestHandleCreateCAPAFromNCR_AutoPopulate(t *testing.T) {
 
 func TestHandleCreateCAPAFromNCR_EmptyBody(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, severity, created_at) VALUES 
@@ -301,8 +304,9 @@ func TestHandleCreateCAPAFromNCR_EmptyBody(t *testing.T) {
 
 func TestHandleCreateCAPAFromNCR_NCRNotFound(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	body := `{
 		"title": "CAPA for missing NCR",
@@ -322,8 +326,9 @@ func TestHandleCreateCAPAFromNCR_NCRNotFound(t *testing.T) {
 
 func TestHandleCreateCAPAFromNCR_InvalidJSON(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, severity, created_at) VALUES 
@@ -348,8 +353,9 @@ func TestHandleCreateCAPAFromNCR_InvalidJSON(t *testing.T) {
 
 func TestHandleCreateECOFromNCR_Success(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, ipn, severity, corrective_action, created_at) VALUES 
@@ -405,8 +411,9 @@ func TestHandleCreateECOFromNCR_Success(t *testing.T) {
 
 func TestHandleCreateECOFromNCR_AutoPopulate(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, ipn, severity, corrective_action, created_at) VALUES 
@@ -460,8 +467,9 @@ func TestHandleCreateECOFromNCR_AutoPopulate(t *testing.T) {
 
 func TestHandleCreateECOFromNCR_PriorityMapping(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	testCases := []struct {
 		name             string
@@ -529,8 +537,9 @@ func TestHandleCreateECOFromNCR_PriorityMapping(t *testing.T) {
 
 func TestHandleCreateECOFromNCR_DescriptionFallback(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert NCR with description but no corrective_action
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, severity, created_at) VALUES 
@@ -572,8 +581,9 @@ func TestHandleCreateECOFromNCR_DescriptionFallback(t *testing.T) {
 
 func TestHandleCreateECOFromNCR_NCRNotFound(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	body := `{
 		"title": "ECO for missing NCR"
@@ -592,8 +602,9 @@ func TestHandleCreateECOFromNCR_NCRNotFound(t *testing.T) {
 
 func TestHandleCreateECOFromNCR_InvalidJSON(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, severity, created_at) VALUES 
@@ -618,8 +629,9 @@ func TestHandleCreateECOFromNCR_InvalidJSON(t *testing.T) {
 
 func TestHandleCreateCAPAFromNCR_DataIntegrity(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, root_cause, corrective_action, created_at) VALUES 
@@ -670,8 +682,9 @@ func TestHandleCreateCAPAFromNCR_DataIntegrity(t *testing.T) {
 
 func TestHandleCreateECOFromNCR_DataIntegrity(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, ipn, severity, created_at) VALUES 
@@ -737,8 +750,9 @@ func TestHandleCreateECOFromNCR_DataIntegrity(t *testing.T) {
 
 func TestHandleCreateCAPAFromNCR_AuditLog(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, severity, created_at) VALUES 
@@ -768,8 +782,9 @@ func TestHandleCreateCAPAFromNCR_AuditLog(t *testing.T) {
 
 func TestHandleCreateECOFromNCR_AuditLog(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, severity, created_at) VALUES 
@@ -799,8 +814,9 @@ func TestHandleCreateECOFromNCR_AuditLog(t *testing.T) {
 
 func TestHandleCreateCAPAFromNCR_ChangeTracking(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, severity, created_at) VALUES 
@@ -830,8 +846,9 @@ func TestHandleCreateCAPAFromNCR_ChangeTracking(t *testing.T) {
 
 func TestHandleCreateECOFromNCR_ChangeTracking(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, severity, created_at) VALUES 
@@ -861,8 +878,9 @@ func TestHandleCreateECOFromNCR_ChangeTracking(t *testing.T) {
 
 func TestHandleCreateCAPAFromNCR_StatusPropagation(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Test that CAPA is created with correct initial status
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, severity, status, created_at) VALUES 
@@ -903,8 +921,9 @@ func TestHandleCreateCAPAFromNCR_StatusPropagation(t *testing.T) {
 
 func TestHandleCreateECOFromNCR_StatusPropagation(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Test that ECO is created with correct initial status
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, severity, status, created_at) VALUES 
@@ -945,8 +964,9 @@ func TestHandleCreateECOFromNCR_StatusPropagation(t *testing.T) {
 
 func TestHandleCreateCAPAFromNCR_MultipleFromSameNCR(t *testing.T) {
 	oldDB := db
-	db = setupNCRIntegrationTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRIntegrationTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Insert test NCR
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, severity, created_at) VALUES 

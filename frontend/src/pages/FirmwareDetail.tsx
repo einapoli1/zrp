@@ -7,10 +7,13 @@ import { Progress } from "../components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Separator } from "../components/ui/separator";
 import { Label } from "../components/ui/label";
-import { Cpu, ArrowLeft, Play, Pause, RotateCcw } from "lucide-react";
+import { Cpu, Play, Pause, RotateCcw } from "lucide-react";
 import { api, type FirmwareCampaign, type CampaignDevice } from "../lib/api";
 import { useWSSubscription } from "../contexts/WebSocketContext";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
+
 function FirmwareDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -69,7 +72,7 @@ function FirmwareDetail() {
       case "completed":
       case "success":
         return "default";
-      case "running":
+      case "active":
       case "in_progress":
         return "secondary";
       case "pending":
@@ -87,7 +90,7 @@ function FirmwareDetail() {
       case "completed":
       case "success":
         return "text-green-600";
-      case "running":
+      case "active":
       case "in_progress":
         return "text-blue-600";
       case "pending":
@@ -102,41 +105,32 @@ function FirmwareDetail() {
 
   const calculateProgress = () => {
     if (devices.length === 0) return 0;
-    const completedDevices = devices.filter(d => d.status === "completed" || d.status === "success").length;
+    const completedDevices = devices.filter(d => d.status === "success").length;
     return Math.round((completedDevices / devices.length) * 100);
   };
 
   const getDeviceStats = () => {
     const stats = {
       total: devices.length,
-      completed: devices.filter(d => d.status === "completed" || d.status === "success").length,
-      in_progress: devices.filter(d => d.status === "in_progress" || d.status === "running").length,
+      completed: devices.filter(d => d.status === "success").length,
+      in_progress: devices.filter(d => d.status === "in_progress").length,
       pending: devices.filter(d => d.status === "pending").length,
-      failed: devices.filter(d => d.status === "failed" || d.status === "error").length,
+      failed: devices.filter(d => d.status === "failed").length,
     };
     return stats;
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading campaign...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState variant="spinner" message="Loading campaign..." />;
   }
 
   if (!campaign) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/firmware")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Firmware
-          </Button>
-        </div>
+        <Breadcrumb items={[
+          { label: "Firmware", href: "/firmware" },
+          { label: "Not Found" }
+        ]} />
         <div className="text-center py-8">
           <h2 className="text-2xl font-semibold mb-2">Campaign Not Found</h2>
           <p className="text-muted-foreground">The requested firmware campaign could not be found.</p>
@@ -150,21 +144,20 @@ function FirmwareDetail() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[
+        { label: "Firmware", href: "/firmware" },
+        { label: campaign.name }
+      ]} />
+
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/firmware")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Firmware
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{campaign.name}</h1>
-            <p className="text-muted-foreground">
-              Target Version: <span className="font-mono">{campaign.version}</span>
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{campaign.name}</h1>
+          <p className="text-muted-foreground">
+            Target Version: <span className="font-mono">{campaign.version}</span>
+          </p>
         </div>
         <div className="flex gap-2">
-          {campaign.status === "running" ? (
+          {campaign.status === "active" ? (
             <Button variant="outline" onClick={async () => {
               try {
                 const updated = await api.updateFirmwareCampaign(campaign.id, { status: "paused" });
@@ -179,7 +172,7 @@ function FirmwareDetail() {
           ) : campaign.status === "paused" || campaign.status === "draft" ? (
             <Button onClick={async () => {
               try {
-                const updated = await api.updateFirmwareCampaign(campaign.id, { status: "running" });
+                const updated = await api.updateFirmwareCampaign(campaign.id, { status: "active" });
                 setCampaign(updated);
               } catch (error) {
                 toast.error("Failed to start campaign"); console.error("Failed to start campaign:", error);
@@ -193,7 +186,7 @@ function FirmwareDetail() {
           {campaign.status === "failed" && (
             <Button variant="outline" onClick={async () => {
               try {
-                const updated = await api.updateFirmwareCampaign(campaign.id, { status: "running" });
+                const updated = await api.updateFirmwareCampaign(campaign.id, { status: "active" });
                 setCampaign(updated);
               } catch (error) {
                 toast.error("Failed to retry campaign"); console.error("Failed to retry campaign:", error);
@@ -252,7 +245,8 @@ function FirmwareDetail() {
               <CardTitle>Device Update Status</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Serial Number</TableHead>
@@ -304,6 +298,7 @@ function FirmwareDetail() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </div>

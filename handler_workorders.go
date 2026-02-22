@@ -109,8 +109,8 @@ func handleUpdateWorkOrder(w http.ResponseWriter, r *http.Request, id string) {
 	validateMaxLength(ve, "notes", wo.Notes, 10000)
 	if wo.Status != "" {
 		validateEnum(ve, "status", wo.Status, validWOStatuses)
-		// Enforce status state machine transitions
-		if !isValidStatusTransition(currentWO.Status, wo.Status) {
+		// Enforce status state machine transitions (allow same-status updates for field changes)
+		if currentWO.Status != wo.Status && !isValidStatusTransition(currentWO.Status, wo.Status) {
 			ve.Add("status", fmt.Sprintf("invalid transition from %s to %s", currentWO.Status, wo.Status))
 		}
 	}

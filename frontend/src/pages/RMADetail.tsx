@@ -8,9 +8,12 @@ import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Label } from "../components/ui/label";
 import { Separator } from "../components/ui/separator";
-import { RotateCcw, ArrowLeft, Save, Truck, CheckCircle } from "lucide-react";
+import { RotateCcw, Save, Truck, CheckCircle } from "lucide-react";
 import { api, type RMA } from "../lib/api";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
+
 function RMADetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -85,25 +88,16 @@ function RMADetail() {
   ];
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading RMA...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState variant="spinner" message="Loading RMA..." />;
   }
 
   if (!rma) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/rmas")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to RMAs
-          </Button>
-        </div>
+        <Breadcrumb items={[
+          { label: "RMAs", href: "/rmas" },
+          { label: "Not Found" }
+        ]} />
         <div className="text-center py-8">
           <h2 className="text-2xl font-semibold mb-2">RMA Not Found</h2>
           <p className="text-muted-foreground">The requested RMA could not be found.</p>
@@ -116,16 +110,15 @@ function RMADetail() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[
+        { label: "RMAs", href: "/rmas" },
+        { label: `RMA-${rma.id}` }
+      ]} />
+
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/rmas")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to RMAs
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{rma.id}</h1>
-            <p className="text-muted-foreground">{rma.customer} - {rma.serial_number}</p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{rma.id}</h1>
+          <p className="text-muted-foreground">{rma.customer} - {rma.serial_number}</p>
         </div>
         <div className="flex gap-2">
           {editing ? (

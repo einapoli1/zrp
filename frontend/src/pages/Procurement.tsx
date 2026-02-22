@@ -460,7 +460,8 @@ function Procurement() {
           <CardTitle>Purchase Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>PO Number</TableHead>
@@ -508,6 +509,7 @@ function Procurement() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

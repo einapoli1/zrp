@@ -45,7 +45,7 @@ func handleListNotifications(w http.ResponseWriter, r *http.Request) {
 	if notifs == nil {
 		notifs = []Notification{}
 	}
-	jsonResp(w, notifs)
+	json.NewEncoder(w).Encode(notifs)
 }
 
 func handleMarkNotificationRead(w http.ResponseWriter, r *http.Request, id string) {

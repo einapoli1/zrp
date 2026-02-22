@@ -8,9 +8,12 @@ import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Label } from "../components/ui/label";
 import { Checkbox } from "../components/ui/checkbox";
-import { AlertTriangle, ArrowLeft, FileText, Save } from "lucide-react";
+import { AlertTriangle, FileText, Save } from "lucide-react";
 import { api, type NCR } from "../lib/api";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
 function NCRDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -74,45 +77,36 @@ function NCRDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading NCR...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState variant="spinner" message="Loading NCR..." />;
   }
 
   if (!ncr) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/ncrs")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to NCRs
-          </Button>
-        </div>
-        <div className="text-center py-8">
-          <h2 className="text-2xl font-semibold mb-2">NCR Not Found</h2>
-          <p className="text-muted-foreground">The requested NCR could not be found.</p>
-        </div>
+        <Breadcrumb items={[
+          { label: "NCRs", href: "/ncrs" },
+          { label: "Not Found" }
+        ]} />
+        <ErrorState 
+          title="NCR Not Found" 
+          message="The requested NCR could not be found."
+          onRetry={() => navigate("/ncrs")}
+        />
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[
+        { label: "NCRs", href: "/ncrs" },
+        { label: `NCR-${ncr.id}` }
+      ]} />
+      
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => navigate("/ncrs")}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to NCRs
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{ncr.id}</h1>
-            <p className="text-muted-foreground">{ncr.title}</p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{ncr.id}</h1>
+          <p className="text-muted-foreground">{ncr.title}</p>
         </div>
         <div className="flex gap-2">
           {editing ? (

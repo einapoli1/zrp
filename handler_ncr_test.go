@@ -111,8 +111,9 @@ func setupNCRTestDB(t *testing.T) *sql.DB {
 
 func TestHandleListNCRs_Empty(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	req := httptest.NewRequest("GET", "/api/v1/ncrs", nil)
 	w := httptest.NewRecorder()
@@ -138,8 +139,9 @@ func TestHandleListNCRs_Empty(t *testing.T) {
 
 func TestHandleListNCRs_WithData(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, severity, status, created_at) VALUES 
 		('NCR-001', 'Defect 1', 'Description 1', 'minor', 'open', '2026-01-01 10:00:00'),
@@ -174,8 +176,9 @@ func TestHandleListNCRs_WithData(t *testing.T) {
 
 func TestHandleGetNCR_Success(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, ipn, severity, status) VALUES 
 		('NCR-001', 'Test NCR', 'Test Description', 'IPN-001', 'major', 'open')
@@ -214,8 +217,9 @@ func TestHandleGetNCR_Success(t *testing.T) {
 
 func TestHandleGetNCR_NotFound(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	req := httptest.NewRequest("GET", "/api/v1/ncrs/NCR-999", nil)
 	w := httptest.NewRecorder()
@@ -229,8 +233,9 @@ func TestHandleGetNCR_NotFound(t *testing.T) {
 
 func TestHandleCreateNCR_Success(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	reqBody := `{
 		"title": "New NCR",
@@ -278,8 +283,9 @@ func TestHandleCreateNCR_Success(t *testing.T) {
 
 func TestHandleCreateNCR_MissingTitle(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	reqBody := `{
 		"description": "Test description",
@@ -297,8 +303,9 @@ func TestHandleCreateNCR_MissingTitle(t *testing.T) {
 
 func TestHandleCreateNCR_InvalidSeverity(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	reqBody := `{
 		"title": "Test NCR",
@@ -316,8 +323,9 @@ func TestHandleCreateNCR_InvalidSeverity(t *testing.T) {
 
 func TestHandleCreateNCR_DefaultValues(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	reqBody := `{"title": "Test NCR"}`
 	req := httptest.NewRequest("POST", "/api/v1/ncrs", bytes.NewBufferString(reqBody))
@@ -343,8 +351,9 @@ func TestHandleCreateNCR_DefaultValues(t *testing.T) {
 
 func TestHandleUpdateNCR_Success(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	_, err := db.Exec(`INSERT INTO ncrs (id, title, description, severity, status) VALUES 
 		('NCR-001', 'Original Title', 'Original Description', 'minor', 'open')
@@ -386,8 +395,9 @@ func TestHandleUpdateNCR_Success(t *testing.T) {
 
 func TestHandleUpdateNCR_ResolveSetsTimestamp(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	db.Exec(`INSERT INTO ncrs (id, title, status) VALUES ('NCR-001', 'Test NCR', 'investigating')`)
 
@@ -413,8 +423,9 @@ func TestHandleUpdateNCR_ResolveSetsTimestamp(t *testing.T) {
 
 func TestHandleUpdateNCR_AutoCreateECO(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	db.Exec(`INSERT INTO ncrs (id, title, ipn, status) VALUES 
 		('NCR-001', 'Test NCR', 'IPN-001', 'investigating')
@@ -475,8 +486,9 @@ func TestHandleUpdateNCR_AutoCreateECO(t *testing.T) {
 
 func TestHandleUpdateNCR_NoECOWithoutCreateFlag(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	db.Exec(`INSERT INTO ncrs (id, title, status) VALUES ('NCR-001', 'Test NCR', 'investigating')`)
 
@@ -510,8 +522,9 @@ func TestHandleUpdateNCR_NoECOWithoutCreateFlag(t *testing.T) {
 
 func TestHandleUpdateNCR_NoECOWithoutCorrectiveAction(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	db.Exec(`INSERT INTO ncrs (id, title, status) VALUES ('NCR-001', 'Test NCR', 'investigating')`)
 
@@ -537,8 +550,9 @@ func TestHandleUpdateNCR_NoECOWithoutCorrectiveAction(t *testing.T) {
 
 func TestHandleUpdateNCR_AllFields(t *testing.T) {
 	oldDB := db
-	db = setupNCRTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupNCRTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	db.Exec(`INSERT INTO ncrs (id, title) VALUES ('NCR-001', 'Test')`)
 

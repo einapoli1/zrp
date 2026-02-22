@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { 
-  ArrowLeft, 
   Package, 
   Plus,
   Minus,
@@ -41,6 +40,9 @@ import {
 } from "../components/ui/select";
 import { api, type InventoryItem, type InventoryTransaction } from "../lib/api";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
+
 function InventoryDetail() {
   const { ipn } = useParams<{ ipn: string }>();
   const [item, setItem] = useState<InventoryItem | null>(null);
@@ -159,27 +161,16 @@ function InventoryDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading inventory item...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState variant="spinner" message="Loading inventory item..." />;
   }
 
   if (!item) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/inventory">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Inventory
-            </Link>
-          </Button>
-        </div>
+        <Breadcrumb items={[
+          { label: "Inventory", href: "/inventory" },
+          { label: "Not Found" }
+        ]} />
         <Card>
           <CardContent className="p-8 text-center">
             <h3 className="text-lg font-semibold mb-2">Inventory Item Not Found</h3>
@@ -194,20 +185,17 @@ function InventoryDetail() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[
+        { label: "Inventory", href: "/inventory" },
+        { label: item.ipn }
+      ]} />
+
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/inventory">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Inventory
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{item.ipn}</h1>
-            <p className="text-muted-foreground">
-              {item.description || "No description available"}
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{item.ipn}</h1>
+          <p className="text-muted-foreground">
+            {item.description || "No description available"}
+          </p>
         </div>
         <Dialog open={transactionDialogOpen} onOpenChange={setTransactionDialogOpen}>
           <DialogTrigger asChild>
@@ -395,7 +383,8 @@ function InventoryDetail() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>
@@ -434,6 +423,7 @@ function InventoryDetail() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

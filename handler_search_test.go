@@ -185,9 +185,9 @@ func insertTestSearchData(t *testing.T, db *sql.DB) {
 
 func TestHandleGlobalSearch_EmptyQuery(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupSearchTestDB(t)
-	defer db.Close()
+	testDB := setupSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	req := httptest.NewRequest("GET", "/api/search?q=", nil)
 	w := httptest.NewRecorder()
@@ -215,9 +215,9 @@ func TestHandleGlobalSearch_EmptyQuery(t *testing.T) {
 
 func TestHandleGlobalSearch_BasicSearch(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupSearchTestDB(t)
-	defer db.Close()
+	testDB := setupSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertTestSearchData(t, db)
 
@@ -299,9 +299,9 @@ func TestHandleGlobalSearch_BasicSearch(t *testing.T) {
 
 func TestHandleGlobalSearch_Limit(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupSearchTestDB(t)
-	defer db.Close()
+	testDB := setupSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertTestSearchData(t, db)
 
@@ -365,9 +365,9 @@ func TestHandleGlobalSearch_Limit(t *testing.T) {
 
 func TestHandleGlobalSearch_SQLInjection(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupSearchTestDB(t)
-	defer db.Close()
+	testDB := setupSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertTestSearchData(t, db)
 
@@ -403,9 +403,9 @@ func TestHandleGlobalSearch_SQLInjection(t *testing.T) {
 
 func TestHandleGlobalSearch_CaseInsensitive(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupSearchTestDB(t)
-	defer db.Close()
+	testDB := setupSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertTestSearchData(t, db)
 
@@ -446,9 +446,9 @@ func TestHandleGlobalSearch_CaseInsensitive(t *testing.T) {
 
 func TestHandleGlobalSearch_PartialMatch(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupSearchTestDB(t)
-	defer db.Close()
+	testDB := setupSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertTestSearchData(t, db)
 
@@ -495,9 +495,9 @@ func TestHandleGlobalSearch_PartialMatch(t *testing.T) {
 
 func TestHandleGlobalSearch_MetadataResponse(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupSearchTestDB(t)
-	defer db.Close()
+	testDB := setupSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertTestSearchData(t, db)
 
@@ -528,9 +528,9 @@ func TestHandleGlobalSearch_MetadataResponse(t *testing.T) {
 
 func TestHandleGlobalSearch_XSSInResults(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupSearchTestDB(t)
-	defer db.Close()
+	testDB := setupSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	// Insert data with potential XSS
 	xssPayload := "<script>alert('xss')</script>"

@@ -86,7 +86,7 @@ func setupFieldReportsTestDB(t *testing.T) func() {
 	db = testDB
 
 	return func() {
-		db.Close()
+		testDB.Close() // Close the specific DB we created, not whatever db currently points to
 		db = origDB
 	}
 }

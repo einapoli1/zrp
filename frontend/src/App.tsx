@@ -2,7 +2,7 @@ import React, { Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AppLayout } from "./layouts/AppLayout";
-import { LoadingSpinner } from "./components/LoadingSpinner";
+import { LoadingState } from "./components/LoadingState";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
 import { PermissionsProvider } from "./contexts/PermissionsContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -76,7 +76,7 @@ function App() {
       <ErrorBoundary>
       <WebSocketProvider>
       <PermissionsProvider>
-      <Suspense fallback={<LoadingSpinner />}>
+      <Suspense fallback={<LoadingState />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           {/* Print routes - outside AppLayout for clean printing */}

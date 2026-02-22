@@ -313,7 +313,8 @@ function APIKeys() {
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>
@@ -408,6 +409,7 @@ function APIKeys() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
         </CardContent>
       </Card>

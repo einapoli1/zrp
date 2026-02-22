@@ -1,6 +1,65 @@
-Warning: Failed to create index: SQL logic error: no such table: main.parts (1)
-Warning: Failed to create index: SQL logic error: no such table: main.parts (1)
-2026/02/19 13:53:31 [QueryProfiler] Enabled with threshold: 100ms
-2026/02/19 13:53:31 Query profiler enabled with 100ms threshold
-2026/02/19 13:53:31 ZRP server starting on http://localhost:9000
-2026/02/19 13:53:31 listen tcp :9000: bind: address already in use
+2026/02/21 05:56:42 [QueryProfiler] Enabled with threshold: 100ms
+2026/02/21 05:56:42 Query profiler enabled with 100ms threshold
+2026/02/21 05:56:42 ZRP server starting on http://localhost:9000
+2026/02/21 05:56:47 Generating notifications (filtered)...
+2026/02/21 05:56:48 GET /api/v1/health 118.417µs
+2026/02/21 05:56:54 POST /auth/login 67.974041ms
+2026/02/21 05:57:01 POST /auth/login 70.253542ms
+2026/02/21 05:57:01 POST /api/v1/vendors 116.708µs
+2026/02/21 05:57:01 POST /api/v1/inventory/transact 248.667µs
+2026/02/21 05:57:01 POST /api/v1/inventory/transact 34.875µs
+2026/02/21 05:57:01 POST /api/v1/inventory/transact 14.625µs
+2026/02/21 05:57:01 POST /api/v1/bom 65.709µs
+2026/02/21 05:57:01 POST /api/v1/bom 140.625µs
+2026/02/21 05:57:01 POST /api/v1/workorders 153.375µs
+2026/02/21 05:57:01 POST /api/v1/pos 17.042µs
+2026/02/21 05:59:40 POST /auth/login 56.106416ms
+2026/02/21 05:59:40 POST /api/v1/vendors 26.083µs
+2026/02/21 05:59:40 POST /api/v1/inventory/transact 238.459µs
+2026/02/21 05:59:40 POST /api/v1/inventory/transact 12.5µs
+2026/02/21 05:59:40 GET /api/v1/inventory/RES-INT-API-1771682380569067000 10.125µs
+2026/02/21 05:59:40 GET /api/v1/inventory/CAP-INT-API-1771682380569067000 16.666µs
+2026/02/21 05:59:40 POST /api/v1/pos 240.208µs
+2026/02/21 05:59:40 POST /auth/login 56.366ms
+2026/02/21 05:59:40 POST /api/v1/inventory/transact 25.125µs
+2026/02/21 05:59:40 GET /api/v1/inventory/ASY-WO-API-1771682380628415000 13.417µs
+2026/02/21 05:59:40 POST /api/v1/workorders 607.375µs
+2026/02/21 05:59:40 PUT /api/v1/workorders/WO-INT-API-1771682380628415000 14.959µs
+2026/02/21 05:59:41 GET /api/v1/inventory/ASY-WO-API-1771682380628415000 22.166µs
+2026/02/21 06:00:11 POST /auth/login 54.623542ms
+2026/02/21 06:00:11 POST /api/v1/vendors 352.959µs
+2026/02/21 06:00:11 POST /api/v1/inventory/transact 16µs
+2026/02/21 06:00:11 POST /api/v1/inventory/transact 10.125µs
+2026/02/21 06:00:11 GET /api/v1/inventory/RES-INT-API-1771682411770803000 10.75µs
+2026/02/21 06:00:11 GET /api/v1/inventory/CAP-INT-API-1771682411770803000 135.667µs
+2026/02/21 06:00:11 POST /api/v1/pos 10.917µs
+2026/02/21 06:00:11 POST /auth/login 54.664375ms
+2026/02/21 06:00:11 POST /api/v1/inventory/transact 14.25µs
+2026/02/21 06:00:11 GET /api/v1/inventory/ASY-WO-API-1771682411827675000 183.875µs
+2026/02/21 06:00:11 POST /api/v1/workorders 93µs
+2026/02/21 06:00:11 PUT /api/v1/workorders/WO-INT-API-1771682411827675000 14.375µs
+2026/02/21 06:00:12 GET /api/v1/inventory/ASY-WO-API-1771682411827675000 27.875µs
+2026/02/21 06:00:31 POST /auth/login 56.29575ms
+2026/02/21 06:00:31 POST /api/v1/vendors 10.625µs
+2026/02/21 06:00:31 POST /api/v1/inventory/transact 11.75µs
+2026/02/21 06:00:31 POST /api/v1/inventory/transact 10.583µs
+2026/02/21 06:00:31 GET /api/v1/inventory/RES-INT-API-1771682431543303000 12.291µs
+2026/02/21 06:00:31 GET /api/v1/inventory/CAP-INT-API-1771682431543303000 329.334µs
+2026/02/21 06:00:31 POST /api/v1/pos 34.75µs
+2026/02/21 06:00:54 POST /auth/login 66.901708ms
+2026/02/21 06:00:54 POST /api/v1/vendors 48.916µs
+2026/02/21 06:00:54 POST /api/v1/inventory/transact 474.959µs
+2026/02/21 06:00:54 POST /api/v1/inventory/transact 37.583µs
+2026/02/21 06:00:54 POST /api/v1/pos 21.875µs
+2026/02/21 06:00:54 POST /auth/login 64.958834ms
+2026/02/21 06:00:54 PUT /api/v1/inventory/OLD-PART-1771682454547624000 385.791µs
+2026/02/21 06:00:54 PUT /api/v1/inventory/NEW-PART-1771682454547624000 31.166µs
+2026/02/21 06:00:54 PUT /api/v1/inventory/ASY-ECO-1771682454547624000 13.916µs
+2026/02/21 06:00:54 POST /api/v1/bom 16.416µs
+2026/02/21 06:00:54 POST /api/v1/ecos 623.292µs
+2026/02/21 06:00:54 PUT /api/v1/ecos/ECO-INT-1771682454551385000 23.166µs
+2026/02/21 06:00:54 DELETE /api/v1/bom 15.209µs
+2026/02/21 06:00:54 POST /api/v1/bom 87.5µs
+2026/02/21 06:00:54 GET /api/v1/bom 200.166µs
+2026/02/21 06:00:54 GET /api/v1/ecos/ECO-INT-1771682454551385000 28.708µs
+2026/02/21 06:01:47 Generating notifications (filtered)...

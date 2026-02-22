@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { 
-  ArrowLeft, 
   Building, 
   Phone,
   Mail,
@@ -25,6 +24,9 @@ import {
 } from "../components/ui/table";
 import { api, type Vendor, type PurchaseOrder } from "../lib/api";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
+
 interface PriceCatalogItem {
   ipn: string;
   mpn: string;
@@ -164,27 +166,16 @@ function VendorDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading vendor details...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState variant="spinner" message="Loading vendor details..." />;
   }
 
   if (!vendor) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/vendors">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Vendors
-            </Link>
-          </Button>
-        </div>
+        <Breadcrumb items={[
+          { label: "Vendors", href: "/vendors" },
+          { label: "Not Found" }
+        ]} />
         <Card>
           <CardContent className="p-8 text-center">
             <h3 className="text-lg font-semibold mb-2">Vendor Not Found</h3>
@@ -199,23 +190,20 @@ function VendorDetail() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[
+        { label: "Vendors", href: "/vendors" },
+        { label: vendor.name }
+      ]} />
+
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/vendors">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Vendors
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{vendor.name}</h1>
-            <div className="flex items-center gap-2 mt-1">
-              {getVendorStatusBadge(vendor.status)}
-              <span className="text-sm text-muted-foreground">•</span>
-              <span className="text-sm text-muted-foreground">
-                Added {formatDate(vendor.created_at)}
-              </span>
-            </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{vendor.name}</h1>
+          <div className="flex items-center gap-2 mt-1">
+            {getVendorStatusBadge(vendor.status)}
+            <span className="text-sm text-muted-foreground">•</span>
+            <span className="text-sm text-muted-foreground">
+              Added {formatDate(vendor.created_at)}
+            </span>
           </div>
         </div>
         <div className="flex gap-2">
@@ -383,7 +371,8 @@ function VendorDetail() {
               <CardTitle>Price Catalog</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>IPN</TableHead>
@@ -414,6 +403,7 @@ function VendorDetail() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -424,7 +414,8 @@ function VendorDetail() {
               <CardTitle>Purchase Order History</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>PO Number</TableHead>
@@ -472,6 +463,7 @@ function VendorDetail() {
                   )}
                 </TableBody>
               </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
-import { ArrowLeft, CheckCircle, Package, Truck, FileText, ClipboardList } from "lucide-react";
+import { CheckCircle, Package, Truck, FileText, ClipboardList } from "lucide-react";
 import { api, type SalesOrder } from "../lib/api";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
 
 const statusSteps = ["draft", "confirmed", "allocated", "picked", "shipped", "invoiced", "closed"];
 
@@ -23,7 +25,6 @@ const statusColors: Record<string, string> = {
 
 function SalesOrderDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [order, setOrder] = useState<SalesOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -65,8 +66,22 @@ function SalesOrderDetail() {
     }
   };
 
-  if (loading) return <div className="p-8">Loading...</div>;
-  if (!order) return <div className="p-8">Order not found</div>;
+  if (loading) return <LoadingState variant="spinner" message="Loading sales order..." />;
+  
+  if (!order) {
+    return (
+      <div className="space-y-6">
+        <Breadcrumb items={[
+          { label: "Sales Orders", href: "/sales-orders" },
+          { label: "Not Found" }
+        ]} />
+        <div className="text-center py-8">
+          <h2 className="text-2xl font-semibold mb-2">Sales Order Not Found</h2>
+          <p className="text-muted-foreground">The requested sales order could not be found.</p>
+        </div>
+      </div>
+    );
+  }
 
   const currentStep = statusSteps.indexOf(order.status);
   const total = (order.lines || []).reduce((sum, l) => sum + l.qty * l.unit_price, 0);
@@ -86,10 +101,12 @@ function SalesOrderDetail() {
 
   return (
     <div className="p-6 space-y-6">
+      <Breadcrumb items={[
+        { label: "Sales Orders", href: "/sales-orders" },
+        { label: order.id }
+      ]} />
+
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/sales-orders")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
         <div>
           <h1 className="text-2xl font-bold">{order.id}</h1>
           <p className="text-muted-foreground">{order.customer}</p>
@@ -186,7 +203,8 @@ function SalesOrderDetail() {
       <Card>
         <CardHeader><CardTitle>Order Lines</CardTitle></CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>IPN</TableHead>
@@ -214,6 +232,7 @@ function SalesOrderDetail() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

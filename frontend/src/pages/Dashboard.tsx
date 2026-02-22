@@ -101,11 +101,11 @@ function Dashboard() {
       // Extend the dashboard data with additional stats
       const extendedStats: ExtendedDashboardStats = {
         ...dashboardData,
-        open_ecos: chartsData?.eco_counts?.reduce((a: number, b: number) => a + b, 0) || 0,
-        open_pos: 12, // Mock data - replace with real API call
-        open_ncrs: 5, // Mock data - replace with real API call  
-        total_devices: 150, // Mock data - replace with real API call
-        open_rmas: 3, // Mock data - replace with real API call
+        open_ecos: chartsData?.eco_counts?.reduce((a: number, b: number) => a + b, 0) || dashboardData.open_ecos || 0,
+        open_pos: dashboardData.open_pos || 0,
+        open_ncrs: dashboardData.open_ncrs || 0,
+        total_devices: dashboardData.total_devices || 0,
+        open_rmas: dashboardData.open_rmas || 0,
       };
       
       setStats(extendedStats);

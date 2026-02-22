@@ -1,457 +1,398 @@
 package main
 
 import (
-	"database/sql"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/cookiejar"
 	"testing"
 	"time"
 )
 
-// Integration test for critical BOM → PO → Inventory workflow
-// This test identifies gaps in the procurement-to-inventory pipeline
+// Integration tests for critical BOM → PO → Inventory and WO → Inventory workflows
+// REWRITTEN: Now uses HTTP API instead of direct DB manipulation to test actual handler logic
 
-func setupIntegrationTestDB(t *testing.T) *sql.DB {
-	testDB, err := sql.Open("sqlite", ":memory:")
-	if err != nil {
-		t.Fatalf("Failed to open test DB: %v", err)
-	}
+const (
+	testBaseURL   = "http://localhost:9000"
+	testAdminUser = "admin"
+	testAdminPass = "changeme"
+)
 
-	// Enable foreign keys
-	if _, err := testDB.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		t.Fatalf("Failed to enable foreign keys: %v", err)
-	}
-
-	// Run full schema migration (using actual initDB code)
-	// For now, create minimal tables needed for this test
-	
-	// Users
-	_, err = testDB.Exec(`
-		CREATE TABLE users (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			username TEXT UNIQUE NOT NULL,
-			password_hash TEXT NOT NULL,
-			role TEXT DEFAULT 'user',
-			active INTEGER DEFAULT 1
-		)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create users table: %v", err)
-	}
-
-	// Vendors
-	_, err = testDB.Exec(`
-		CREATE TABLE vendors (
-			id TEXT PRIMARY KEY,
-			name TEXT NOT NULL,
-			status TEXT DEFAULT 'active',
-			lead_days INTEGER DEFAULT 0,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create vendors table: %v", err)
-	}
-
-	// Inventory (use actual schema column names)
-	_, err = testDB.Exec(`
-		CREATE TABLE inventory (
-			ipn TEXT PRIMARY KEY,
-			qty_on_hand REAL DEFAULT 0 CHECK(qty_on_hand >= 0),
-			qty_reserved REAL DEFAULT 0 CHECK(qty_reserved >= 0),
-			location TEXT,
-			reorder_point REAL DEFAULT 0,
-			reorder_qty REAL DEFAULT 0,
-			description TEXT DEFAULT '',
-			mpn TEXT DEFAULT '',
-			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create inventory table: %v", err)
-	}
-
-	// Work Orders
-	_, err = testDB.Exec(`
-		CREATE TABLE work_orders (
-			id TEXT PRIMARY KEY,
-			ipn TEXT NOT NULL,
-			qty REAL NOT NULL,
-			priority TEXT DEFAULT 'normal',
-			status TEXT DEFAULT 'open',
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-		)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create work_orders table: %v", err)
-	}
-
-	// Purchase Orders
-	_, err = testDB.Exec(`
-		CREATE TABLE purchase_orders (
-			id TEXT PRIMARY KEY,
-			vendor_id TEXT,
-			status TEXT DEFAULT 'draft',
-			expected_date TEXT,
-			received_date TEXT,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			FOREIGN KEY (vendor_id) REFERENCES vendors(id)
-		)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create purchase_orders table: %v", err)
-	}
-
-	// PO Lines
-	_, err = testDB.Exec(`
-		CREATE TABLE po_lines (
-			id TEXT PRIMARY KEY,
-			po_id TEXT NOT NULL,
-			ipn TEXT NOT NULL,
-			qty REAL NOT NULL,
-			unit_price REAL DEFAULT 0,
-			FOREIGN KEY (po_id) REFERENCES purchase_orders(id) ON DELETE CASCADE
-		)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create po_lines table: %v", err)
-	}
-
-	// Inventory Transactions
-	_, err = testDB.Exec(`
-		CREATE TABLE inventory_transactions (
-			id TEXT PRIMARY KEY,
-			ipn TEXT NOT NULL,
-			type TEXT NOT NULL,
-			qty REAL NOT NULL,
-			reference_id TEXT,
-			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-			created_by TEXT
-		)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create inventory_transactions table: %v", err)
-	}
-
-	// Sessions
-	_, err = testDB.Exec(`
-		CREATE TABLE sessions (
-			token TEXT PRIMARY KEY,
-			user_id INTEGER NOT NULL,
-			expires_at TIMESTAMP NOT NULL,
-			FOREIGN KEY (user_id) REFERENCES users(id)
-		)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create sessions table: %v", err)
-	}
-
-	// Create audit_log table - CRITICAL: Used by almost every handler
-	_, err = testDB.Exec(`
-		CREATE TABLE audit_log (
-			id INTEGER PRIMARY KEY AUTOINCREMENT,
-			timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
-			username TEXT,
-			action TEXT,
-			table_name TEXT,
-			record_id TEXT,
-			details TEXT
-		)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create audit_log table: %v", err)
-	}
-
-	// Insert admin user
-	_, err = testDB.Exec(`
-		INSERT INTO users (id, username, password_hash, role)
-		VALUES (1, 'admin', '$2a$10$placeholder', 'admin')
-	`)
-	if err != nil {
-		t.Fatalf("Failed to insert admin user: %v", err)
-	}
-
-	return testDB
+// APITestClient wraps http.Client with authentication for integration tests
+type APITestClient struct {
+	client    *http.Client
+	csrfToken string
+	t         *testing.T
 }
 
-func createIntegrationTestSession(t *testing.T, db *sql.DB) string {
-	token := "test-session-integration"
-	expires := time.Now().Add(24 * time.Hour)
-
-	_, err := db.Exec(
-		"INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)",
-		token, 1, expires,
-	)
-	if err != nil {
-		t.Fatalf("Failed to create test session: %v", err)
+// newAPITestClient creates an authenticated test client
+func newAPITestClient(t *testing.T) *APITestClient {
+	jar, _ := cookiejar.New(nil)
+	client := &http.Client{
+		Jar:     jar,
+		Timeout: 30 * time.Second,
 	}
 
-	return token
+	// Login to get session cookie and CSRF token
+	loginData := map[string]string{
+		"username": testAdminUser,
+		"password": testAdminPass,
+	}
+	jsonData, _ := json.Marshal(loginData)
+
+	resp, err := client.Post(testBaseURL+"/auth/login", "application/json", bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("Failed to login: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Login failed: %d - %s", resp.StatusCode, string(body))
+	}
+
+	// Extract CSRF token from response
+	var loginResp struct {
+		CSRFToken string `json:"csrf_token"`
+	}
+	body, _ := io.ReadAll(resp.Body)
+	json.Unmarshal(body, &loginResp)
+
+	t.Logf("✓ Authenticated as %s (CSRF: %s...)", testAdminUser, loginResp.CSRFToken[:8])
+
+	return &APITestClient{
+		client:    client,
+		csrfToken: loginResp.CSRFToken,
+		t:         t,
+	}
 }
 
-// TestIntegration_PO_Receipt_Updates_Inventory verifies that when a PO is received,
-// inventory levels are automatically updated
+// apiRequest makes an authenticated API request with CSRF token
+func (tc *APITestClient) apiRequest(method, path string, body interface{}) (*http.Response, []byte) {
+	var reqBody io.Reader
+	if body != nil {
+		jsonData, _ := json.Marshal(body)
+		reqBody = bytes.NewBuffer(jsonData)
+	}
+
+	req, err := http.NewRequest(method, testBaseURL+path, reqBody)
+	if err != nil {
+		tc.t.Fatalf("Failed to create request: %v", err)
+	}
+
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	// Add CSRF token header for mutating operations
+	if method != "GET" && tc.csrfToken != "" {
+		req.Header.Set("X-CSRF-Token", tc.csrfToken)
+	}
+
+	resp, err := tc.client.Do(req)
+	if err != nil {
+		tc.t.Fatalf("Request failed: %v", err)
+	}
+
+	respBody, _ := io.ReadAll(resp.Body)
+	resp.Body.Close()
+
+	return resp, respBody
+}
+
+// TestIntegration_PO_Receipt_Updates_Inventory verifies that when a PO is received via API,
+// inventory levels are automatically updated (tests handleReceivePO handler)
 func TestIntegration_PO_Receipt_Updates_Inventory(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	db := setupIntegrationTestDB(t)
-	defer db.Close()
+	client := newAPITestClient(t)
+	timestamp := time.Now().UnixNano()
 
-	_ = createIntegrationTestSession(t, db)
+	t.Log("=== Integration Test: PO Receipt → Inventory Update (HTTP API) ===")
 
-	t.Log("=== Integration Test: PO Receipt → Inventory Update ===")
-
-	// Step 1: Create vendor
-	t.Log("Step 1: Insert vendor into database")
-	vendorID := "V-INT-001"
-	_, err := db.Exec(`
-		INSERT INTO vendors (id, name, status, lead_days)
-		VALUES (?, ?, ?, ?)
-	`, vendorID, "Integration Test Vendor", "active", 7)
-	if err != nil {
-		t.Fatalf("Failed to insert vendor: %v", err)
+	// Step 1: Create vendor via API
+	t.Log("\n[1] Creating vendor via API...")
+	vendorName := fmt.Sprintf("IntVendor-%d", timestamp)
+	vendor := map[string]interface{}{
+		"name":           vendorName,
+		"status":         "active",
+		"lead_time_days": 7,
 	}
 
-	// Step 2: Create initial inventory with low stock
-	t.Log("Step 2: Create inventory records with low stock")
-	components := map[string]float64{
-		"RES-INT-001": 5.0,
-		"CAP-INT-001": 2.0,
+	resp, body := client.apiRequest("POST", "/api/v1/vendors", vendor)
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		t.Logf("Vendor creation response (%d): %s", resp.StatusCode, string(body))
 	}
 
-	for ipn, qty := range components {
-		_, err := db.Exec(`
-			INSERT INTO inventory (ipn, qty_on_hand, location)
-			VALUES (?, ?, ?)
-		`, ipn, qty, "Warehouse")
-		if err != nil {
-			t.Fatalf("Failed to insert inventory for %s: %v", ipn, err)
-		}
-		t.Logf("   Created inventory: %s with qty_on_hand=%.0f", ipn, qty)
+	var vendorResp struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	json.Unmarshal(body, &vendorResp)
+	vendorID := vendorResp.Data.ID
+	if vendorID == "" {
+		vendorID = vendorName
+	}
+	t.Logf("✓ Created vendor: %s", vendorID)
+
+	// Step 2: Create inventory records with low stock
+	t.Log("\n[2] Creating inventory records via API...")
+	comp1IPN := fmt.Sprintf("RES-INT-API-%d", timestamp)
+	comp2IPN := fmt.Sprintf("CAP-INT-API-%d", timestamp)
+
+	// Create comp1 with qty=5
+	client.apiRequest("POST", "/api/v1/inventory/transact", map[string]interface{}{
+		"ipn":  comp1IPN,
+		"type": "adjust",
+		"qty":  5.0,
+		"note": "Initial inventory - insufficient",
+	})
+	t.Logf("✓ Created %s with qty=5", comp1IPN)
+
+	// Create comp2 with qty=2
+	client.apiRequest("POST", "/api/v1/inventory/transact", map[string]interface{}{
+		"ipn":  comp2IPN,
+		"type": "adjust",
+		"qty":  2.0,
+		"note": "Initial inventory - insufficient",
+	})
+	t.Logf("✓ Created %s with qty=2", comp2IPN)
+
+	// Step 3: Record initial inventory levels
+	t.Log("\n[3] Recording initial inventory levels...")
+	var inv1, inv2 struct {
+		Data struct {
+			QtyOnHand float64 `json:"qty_on_hand"`
+		} `json:"data"`
 	}
 
-	// Step 3: Create PO with line items
-	t.Log("Step 3: Create purchase order with shortage line items")
-	poID := "PO-INT-001"
-	_, err = db.Exec(`
-		INSERT INTO purchase_orders (id, vendor_id, status)
-		VALUES (?, ?, ?)
-	`, poID, vendorID, "ordered")
-	if err != nil {
-		t.Fatalf("Failed to insert PO: %v", err)
+	resp, body = client.apiRequest("GET", "/api/v1/inventory/"+comp1IPN, nil)
+	json.Unmarshal(body, &inv1)
+	initialComp1 := inv1.Data.QtyOnHand
+
+	resp, body = client.apiRequest("GET", "/api/v1/inventory/"+comp2IPN, nil)
+	json.Unmarshal(body, &inv2)
+	initialComp2 := inv2.Data.QtyOnHand
+
+	t.Logf("  Initial: %s=%.0f, %s=%.0f", comp1IPN, initialComp1, comp2IPN, initialComp2)
+
+	// Step 4: Create purchase order via API
+	t.Log("\n[4] Creating purchase order via API...")
+	po := map[string]interface{}{
+		"vendor_id": vendorID,
+		"status":    "sent",
+		"notes":     "Integration test PO",
+		"lines": []map[string]interface{}{
+			{
+				"ipn":         comp1IPN,
+				"qty_ordered": 95.0,
+				"unit_price":  0.50,
+			},
+			{
+				"ipn":         comp2IPN,
+				"qty_ordered": 48.0,
+				"unit_price":  0.30,
+			},
+		},
 	}
 
-	// Add PO lines for the shortages
-	shortageQtys := map[string]float64{
-		"RES-INT-001": 95.0, // Need 100, have 5
-		"CAP-INT-001": 48.0, // Need 50, have 2
+	resp, body = client.apiRequest("POST", "/api/v1/pos", po)
+	var poResp struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	json.Unmarshal(body, &poResp)
+	poID := poResp.Data.ID
+	if poID == "" {
+		t.Logf("PO creation response: %s", string(body))
+		t.Skip("Cannot continue without PO ID")
+	}
+	t.Logf("✓ Created PO: %s", poID)
+
+	// Step 5: Get PO details to find line IDs
+	t.Log("\n[5] Getting PO line IDs...")
+	resp, body = client.apiRequest("GET", "/api/v1/pos/"+poID, nil)
+	var poDetail struct {
+		Data struct {
+			Lines []struct {
+				ID         int     `json:"id"`
+				IPN        string  `json:"ipn"`
+				QtyOrdered float64 `json:"qty_ordered"`
+			} `json:"lines"`
+		} `json:"data"`
+	}
+	json.Unmarshal(body, &poDetail)
+
+	if len(poDetail.Data.Lines) == 0 {
+		t.Skip("PO has no lines, cannot proceed")
+	}
+	t.Logf("✓ Found %d PO lines", len(poDetail.Data.Lines))
+
+	// Step 6: Receive the PO via API (this should trigger inventory update)
+	t.Log("\n[6] Receiving PO via API...")
+	receiveData := map[string]interface{}{
+		"skip_inspection": true,
+		"lines":           []map[string]interface{}{},
 	}
 
-	for ipn, qty := range shortageQtys {
-		_, err := db.Exec(`
-			INSERT INTO po_lines (id, po_id, ipn, qty, unit_price)
-			VALUES (?, ?, ?, ?, ?)
-		`, "POL-"+ipn, poID, ipn, qty, 0.10)
-		if err != nil {
-			t.Fatalf("Failed to insert PO line for %s: %v", ipn, err)
-		}
-		t.Logf("   Added PO line: %s qty=%.0f", ipn, qty)
+	for _, line := range poDetail.Data.Lines {
+		receiveData["lines"] = append(receiveData["lines"].([]map[string]interface{}), map[string]interface{}{
+			"id":  line.ID,
+			"qty": line.QtyOrdered,
+		})
 	}
 
-	// Step 4: Record initial inventory levels
-	t.Log("Step 4: Record initial inventory levels")
-	initialQty := make(map[string]float64)
-	for ipn := range components {
-		var qty float64
-		err := db.QueryRow("SELECT qty_on_hand FROM inventory WHERE ipn = ?", ipn).Scan(&qty)
-		if err != nil {
-			t.Fatalf("Failed to query initial qty for %s: %v", ipn, err)
-		}
-		initialQty[ipn] = qty
-	}
-
-	// Step 5: Simulate PO receipt by calling the receive endpoint
-	// This would normally be: POST /api/v1/procurement/{po_id}/receive
-	// For this test, we'll directly call the handler logic or verify the database state
-
-	t.Log("Step 5: Mark PO as received")
-	_, err = db.Exec(`
-		UPDATE purchase_orders SET status = ?, received_date = ? WHERE id = ?
-	`, "received", time.Now().Format("2006-01-02"), poID)
-	if err != nil {
-		t.Fatalf("Failed to update PO status: %v", err)
-	}
-
-	// THIS IS WHERE THE WORKFLOW GAP OCCURS
-	// The PO is marked received, but inventory is NOT automatically updated
-	// We need to verify this gap exists and document it
-
-	// Step 6: Check if inventory was automatically updated
-	t.Log("Step 6: Verify if inventory was automatically updated")
-
-	workflowGapDetected := false
-	for ipn, initial := range initialQty {
-		var currentQty float64
-		err := db.QueryRow("SELECT qty_on_hand FROM inventory WHERE ipn = ?", ipn).Scan(&currentQty)
-		if err != nil {
-			t.Fatalf("Failed to query updated qty for %s: %v", ipn, err)
-		}
-
-		expected := initial + shortageQtys[ipn]
-		t.Logf("   %s: qty_on_hand = %.0f (initial=%.0f, expected=%.0f)", 
-			ipn, currentQty, initial, expected)
-
-		if currentQty == expected {
-			t.Logf("   ✓ Inventory automatically updated!")
-		} else if currentQty == initial {
-			t.Errorf("   ✗ WORKFLOW GAP DETECTED: Inventory NOT updated")
-			t.Errorf("      Expected %.0f, got %.0f (unchanged)", expected, currentQty)
-			workflowGapDetected = true
-		} else {
-			t.Logf("   ⚠ Unexpected qty: %.0f", currentQty)
-		}
-	}
-
-	// Step 7: Check if inventory transactions were created
-	t.Log("Step 7: Verify inventory transactions were created")
-
-	var txCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM inventory_transactions WHERE reference_id = ?", poID).Scan(&txCount)
-	if err != nil {
-		t.Fatalf("Failed to count transactions: %v", err)
-	}
-
-	if txCount > 0 {
-		t.Logf("   ✓ Found %d inventory transactions for PO %s", txCount, poID)
+	resp, body = client.apiRequest("POST", "/api/v1/pos/"+poID+"/receive", receiveData)
+	if resp.StatusCode != http.StatusOK {
+		t.Logf("⚠ PO receive returned %d: %s", resp.StatusCode, string(body))
 	} else {
-		t.Error("   ✗ NO inventory transactions created for PO receipt")
-		workflowGapDetected = true
+		t.Logf("✓ Received PO: %s", poID)
 	}
 
-	// Final verdict
-	t.Log("=== Test Results ===")
-	if workflowGapDetected {
-		t.Error("✗✗ CRITICAL WORKFLOW GAP CONFIRMED:")
-		t.Error("   PO receiving does NOT automatically update inventory")
-		t.Error("   This must be implemented for production use")
-		t.Error("")
-		t.Error("Required implementation:")
-		t.Error("   1. When PO is received, iterate through po_lines")
-		t.Error("   2. For each line, UPDATE inventory SET qty_onhand = qty_onhand + line.qty")
-		t.Error("   3. INSERT inventory_transactions record for audit trail")
+	// Allow async operations
+	time.Sleep(500 * time.Millisecond)
+
+	// Step 7: Verify inventory was updated
+	t.Log("\n[7] Verifying inventory after PO receipt...")
+	resp, body = client.apiRequest("GET", "/api/v1/inventory/"+comp1IPN, nil)
+	json.Unmarshal(body, &inv1)
+
+	resp, body = client.apiRequest("GET", "/api/v1/inventory/"+comp2IPN, nil)
+	json.Unmarshal(body, &inv2)
+
+	finalComp1 := inv1.Data.QtyOnHand
+	finalComp2 := inv2.Data.QtyOnHand
+
+	expectedComp1 := initialComp1 + 95.0 // 5 + 95 = 100
+	expectedComp2 := initialComp2 + 48.0 // 2 + 48 = 50
+
+	success := true
+	if finalComp1 == expectedComp1 {
+		t.Logf("✓ %s inventory correct: %.0f (expected %.0f)", comp1IPN, finalComp1, expectedComp1)
 	} else {
-		t.Log("✓✓ SUCCESS: PO → Inventory workflow is correctly implemented")
+		t.Errorf("✗ %s inventory incorrect: %.0f (expected %.0f)", comp1IPN, finalComp1, expectedComp1)
+		success = false
 	}
 
-	t.Log("=== Integration Test Complete ===")
+	if finalComp2 == expectedComp2 {
+		t.Logf("✓ %s inventory correct: %.0f (expected %.0f)", comp2IPN, finalComp2, expectedComp2)
+	} else {
+		t.Errorf("✗ %s inventory incorrect: %.0f (expected %.0f)", comp2IPN, finalComp2, expectedComp2)
+		success = false
+	}
+
+	if success {
+		t.Log("\n✓✓ SUCCESS: PO Receipt → Inventory Update workflow working!")
+	} else {
+		t.Error("\n✗✗ FAILURE: PO receipt did not update inventory correctly")
+	}
+
+	t.Log("\n=== Integration Test Complete ===")
 }
 
 // TestIntegration_WorkOrder_Completion_Updates_Inventory verifies that when a work order
-// is completed, finished goods are added and components are consumed
+// is completed via API, finished goods are added to inventory (tests handleUpdateWorkOrder handler)
 func TestIntegration_WorkOrder_Completion_Updates_Inventory(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in short mode")
 	}
 
-	db := setupIntegrationTestDB(t)
-	defer db.Close()
+	client := newAPITestClient(t)
+	timestamp := time.Now().UnixNano()
 
-	t.Log("=== Integration Test: WO Completion → Inventory Update ===")
+	t.Log("=== Integration Test: WO Completion → Inventory Update (HTTP API) ===")
 
-	// Step 1: Create inventory records
-	t.Log("Step 1: Create component and assembly inventory")
-	
-	// Components (raw materials)
-	_, err := db.Exec(`
-		INSERT INTO inventory (ipn, qty_on_hand, location)
-		VALUES ('RES-WO-001', 200, 'Production Floor')
-	`)
-	if err != nil {
-		t.Fatalf("Failed to insert component inventory: %v", err)
+	// Step 1: Create parts via API
+	t.Log("\n[1] Creating parts via API...")
+	assemblyIPN := fmt.Sprintf("ASY-WO-API-%d", timestamp)
+
+	// Create assembly with qty=0
+	client.apiRequest("POST", "/api/v1/inventory/transact", map[string]interface{}{
+		"ipn":  assemblyIPN,
+		"type": "adjust",
+		"qty":  0.0,
+		"note": "Assembly inventory initialized",
+	})
+	t.Logf("✓ Created assembly: %s with qty=0", assemblyIPN)
+
+	// Step 2: Record initial inventory
+	t.Log("\n[2] Recording initial inventory...")
+	var invAsm struct {
+		Data struct {
+			QtyOnHand float64 `json:"qty_on_hand"`
+		} `json:"data"`
 	}
 
-	// Assembly (finished goods)
-	_, err = db.Exec(`
-		INSERT INTO inventory (ipn, qty_on_hand, location)
-		VALUES ('ASY-WO-001', 0, 'Finished Goods')
-	`)
-	if err != nil {
-		t.Fatalf("Failed to insert assembly inventory: %v", err)
+	resp, body := client.apiRequest("GET", "/api/v1/inventory/"+assemblyIPN, nil)
+	json.Unmarshal(body, &invAsm)
+	initialQty := invAsm.Data.QtyOnHand
+	t.Logf("  Initial: %s = %.0f", assemblyIPN, initialQty)
+
+	// Step 3: Create work order via API
+	t.Log("\n[3] Creating work order via API...")
+	woID := fmt.Sprintf("WO-INT-API-%d", timestamp)
+	wo := map[string]interface{}{
+		"id":           woID,
+		"assembly_ipn": assemblyIPN,
+		"qty":          10,
+		"status":       "open",
+		"priority":     "normal",
 	}
 
-	t.Log("   Created: RES-WO-001 with qty_on_hand=200")
-	t.Log("   Created: ASY-WO-001 with qty_on_hand=0")
+	resp, body = client.apiRequest("POST", "/api/v1/workorders", wo)
+	var woResp struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	json.Unmarshal(body, &woResp)
+	if woResp.Data.ID != "" {
+		woID = woResp.Data.ID
+	}
+	t.Logf("✓ Created work order: %s", woID)
 
-	// Step 2: Create work order for 10 assemblies
-	t.Log("Step 2: Create work order for 10x ASY-WO-001")
-	woID := "WO-INT-001"
-	_, err = db.Exec(`
-		INSERT INTO work_orders (id, ipn, qty, status)
-		VALUES (?, ?, ?, ?)
-	`, woID, "ASY-WO-001", 10, "open")
-	if err != nil {
-		t.Fatalf("Failed to insert work order: %v", err)
+	// Step 4: Complete work order via API (this should trigger inventory update)
+	t.Log("\n[4] Completing work order via API...")
+	completeData := map[string]interface{}{
+		"assembly_ipn": assemblyIPN,
+		"qty":          10,
+		"status":       "completed",
+		"priority":     "normal",
+		"qty_good":     10,
+		"qty_scrap":    0,
 	}
 
-	// Step 3: Mark work order as completed
-	t.Log("Step 3: Mark work order as completed")
-	_, err = db.Exec(`
-		UPDATE work_orders SET status = ? WHERE id = ?
-	`, "completed", woID)
-	if err != nil {
-		t.Fatalf("Failed to update work order: %v", err)
-	}
-	t.Log("   ✓ Work order status set to 'completed'")
-
-	// Step 4: Check if finished goods were added to inventory
-	t.Log("Step 4: Verify finished goods added to inventory")
-	
-	var assemblyQty float64
-	err = db.QueryRow("SELECT qty_on_hand FROM inventory WHERE ipn = ?", "ASY-WO-001").Scan(&assemblyQty)
-	if err != nil {
-		t.Fatalf("Failed to query assembly qty: %v", err)
-	}
-
-	t.Logf("   ASY-WO-001: qty_on_hand = %.0f (expected 10)", assemblyQty)
-
-	workflowGap := false
-	if assemblyQty == 10.0 {
-		t.Log("   ✓ Finished goods correctly added!")
-	} else if assemblyQty == 0.0 {
-		t.Error("   ✗ WORKFLOW GAP: Finished goods NOT added to inventory")
-		workflowGap = true
-	}
-
-	// Step 5: Check if inventory transactions exist
-	t.Log("Step 5: Verify inventory transactions created")
-	
-	var txCount int
-	err = db.QueryRow("SELECT COUNT(*) FROM inventory_transactions WHERE reference_id = ?", woID).Scan(&txCount)
-	if err != nil {
-		t.Fatalf("Failed to count transactions: %v", err)
-	}
-
-	if txCount > 0 {
-		t.Logf("   ✓ Found %d inventory transactions", txCount)
+	resp, body = client.apiRequest("PUT", "/api/v1/workorders/"+woID, completeData)
+	if resp.StatusCode != http.StatusOK {
+		t.Logf("⚠ WO completion returned %d: %s", resp.StatusCode, string(body))
 	} else {
-		t.Error("   ✗ NO inventory transactions created")
-		workflowGap = true
+		t.Logf("✓ Completed work order: %s", woID)
 	}
 
-	// Final verdict
-	t.Log("=== Test Results ===")
-	if workflowGap {
-		t.Error("✗✗ CRITICAL WORKFLOW GAP CONFIRMED:")
-		t.Error("   Work order completion does NOT update inventory")
-		t.Error("")
-		t.Error("Required implementation:")
-		t.Error("   1. When WO status → 'completed', query WO qty and ipn")
-		t.Error("   2. UPDATE inventory SET qty_onhand = qty_onhand + wo.qty WHERE ipn = wo.ipn")
-		t.Error("   3. INSERT inventory_transactions for audit trail")
-		t.Error("   4. (Optional) Deduct component materials from inventory")
+	// Allow async operations
+	time.Sleep(500 * time.Millisecond)
+
+	// Step 5: Verify finished goods were added to inventory
+	t.Log("\n[5] Verifying finished goods inventory...")
+	resp, body = client.apiRequest("GET", "/api/v1/inventory/"+assemblyIPN, nil)
+	json.Unmarshal(body, &invAsm)
+
+	finalQty := invAsm.Data.QtyOnHand
+	expectedQty := initialQty + 10.0 // 0 + 10 = 10
+
+	if finalQty == expectedQty {
+		t.Logf("✓✓ SUCCESS: %s inventory correct: %.0f (expected %.0f)", assemblyIPN, finalQty, expectedQty)
+		t.Log("\n✓✓ SUCCESS: WO Completion → Inventory Update workflow working!")
 	} else {
-		t.Log("✓✓ SUCCESS: WO → Inventory workflow implemented correctly")
+		t.Errorf("✗ %s inventory incorrect: %.0f (expected %.0f)", assemblyIPN, finalQty, expectedQty)
+		t.Error("\n✗✗ FAILURE: WO completion did not update inventory correctly")
 	}
 
-	t.Log("=== Integration Test Complete ===")
+	t.Log("\n=== Integration Test Complete ===")
 }

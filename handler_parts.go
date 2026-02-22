@@ -683,7 +683,7 @@ func calcBOMCost(ipn string, depth, maxDepth int) float64 {
 func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	d := DashboardData{}
 	db.QueryRow("SELECT COUNT(*) FROM ecos WHERE status NOT IN ('implemented','rejected')").Scan(&d.OpenECOs)
-	db.QueryRow("SELECT COUNT(*) FROM inventory WHERE qty_on_hand <= reorder_point AND reorder_point > 0").Scan(&d.LowStock)
+	db.QueryRow("SELECT COUNT(*) FROM inventory WHERE qty_on_hand < reorder_point AND reorder_point > 0").Scan(&d.LowStock)
 	db.QueryRow("SELECT COUNT(*) FROM purchase_orders WHERE status NOT IN ('received','cancelled')").Scan(&d.OpenPOs)
 	db.QueryRow("SELECT COUNT(*) FROM work_orders WHERE status IN ('open','in_progress')").Scan(&d.ActiveWOs)
 	db.QueryRow("SELECT COUNT(*) FROM ncrs WHERE status NOT IN ('resolved','closed')").Scan(&d.OpenNCRs)

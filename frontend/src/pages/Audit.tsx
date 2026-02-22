@@ -47,7 +47,8 @@ function Audit() {
   const currentLogs = filteredLogs.slice(startIndex, endIndex);
 
   // Format relative timestamp
-  const formatRelativeTime = (timestamp: string): string => {
+  const formatRelativeTime = (timestamp?: string): string => {
+    if (!timestamp) return '-';
     const now = new Date();
     const logTime = new Date(timestamp);
     const diffMs = now.getTime() - logTime.getTime();
@@ -76,7 +77,7 @@ function Audit() {
         setAuditLogs(result.entries);
         
         // Extract unique users
-        const uniqueUsers = Array.from(new Set(result.entries.map(log => log.user)));
+        const uniqueUsers = Array.from(new Set(result.entries.map(log => log.user).filter((u): u is string => !!u)));
         setUsers(uniqueUsers);
       } catch (error) {
         toast.error("Failed to fetch audit logs"); console.error("Failed to fetch audit logs:", error);
@@ -96,11 +97,11 @@ function Audit() {
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.filter(log =>
-        log.user.toLowerCase().includes(term) ||
+        (log.user?.toLowerCase() || '').includes(term) ||
         log.action.toLowerCase().includes(term) ||
-        log.entity_type.toLowerCase().includes(term) ||
-        log.entity_id.toLowerCase().includes(term) ||
-        log.details.toLowerCase().includes(term)
+        (log.entity_type?.toLowerCase() || '').includes(term) ||
+        (log.entity_id?.toLowerCase() || '').includes(term) ||
+        (log.details?.toLowerCase() || '').includes(term)
       );
     }
 
@@ -226,7 +227,8 @@ function Audit() {
         </CardHeader>
         <CardContent>
           <div className="rounded-md border">
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Timestamp</TableHead>
@@ -249,9 +251,9 @@ function Audit() {
                   currentLogs.map((log) => (
                     <TableRow key={log.id}>
                       <TableCell className="font-mono text-sm">
-                        <div>{new Date(log.timestamp).toLocaleDateString()}</div>
+                        <div>{log.timestamp || log.created_at ? new Date(log.timestamp || log.created_at!).toLocaleDateString() : '-'}</div>
                         <div className="text-xs text-muted-foreground">
-                          {formatRelativeTime(log.timestamp)}
+                          {formatRelativeTime(log.timestamp || log.created_at)}
                         </div>
                       </TableCell>
                       <TableCell className="font-medium text-sm">
@@ -266,13 +268,13 @@ function Audit() {
                         </Badge>
                       </TableCell>
                       <TableCell className="capitalize">
-                        {log.entity_type.replace('_', ' ')}
+                        {log.entity_type?.replace('_', ' ') || '-'}
                       </TableCell>
                       <TableCell className="font-mono text-sm">
-                        {log.entity_id}
+                        {log.entity_id || '-'}
                       </TableCell>
                       <TableCell className="max-w-xs truncate">
-                        {log.details}
+                        {log.details || '-'}
                       </TableCell>
                       <TableCell className="font-mono text-sm text-muted-foreground">
                         {log.ip_address}
@@ -282,6 +284,7 @@ function Audit() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
 
           {/* Pagination */}

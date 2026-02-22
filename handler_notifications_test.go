@@ -130,6 +130,9 @@ func TestHandleListNotifications_All(t *testing.T) {
 		t.Fatalf("Failed to insert notification: %v", err)
 	}
 
+	// Small delay to ensure distinct timestamps for ordering test
+	time.Sleep(10 * time.Millisecond)
+
 	_, err = db.Exec(`INSERT INTO notifications (type, severity, title, message, read_at) 
 		VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 		"info", "info", "System Update", "System updated successfully")

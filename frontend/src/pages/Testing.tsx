@@ -246,7 +246,8 @@ function Testing() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Test ID</TableHead>
@@ -282,6 +283,7 @@ function Testing() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

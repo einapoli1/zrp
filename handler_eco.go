@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -110,10 +111,10 @@ func handleCreateECO(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleUpdateECO(w http.ResponseWriter, r *http.Request, id string) {
-	// Verify exists
-	var exists int
-	db.QueryRow("SELECT COUNT(*) FROM ecos WHERE id=?", id).Scan(&exists)
-	if exists == 0 { jsonErr(w, "not found", 404); return }
+	// Verify exists and get current status
+	var currentStatus string
+	err := db.QueryRow("SELECT status FROM ecos WHERE id=?", id).Scan(&currentStatus)
+	if err != nil { jsonErr(w, "not found", 404); return }
 
 	oldSnap, _ := getECOSnapshot(id)
 	var e ECO
@@ -126,10 +127,16 @@ func handleUpdateECO(w http.ResponseWriter, r *http.Request, id string) {
 	validateMaxLength(ve, "affected_ipns", e.AffectedIPNs, 1000)
 	validateEnum(ve, "status", e.Status, validECOStatuses)
 	validateEnum(ve, "priority", e.Priority, validECOPriorities)
+	
+	// Validate status transition
+	if err := validateECOStatusTransition(currentStatus, e.Status); err != nil {
+		ve.Add("status", err.Error())
+	}
+	
 	if ve.HasErrors() { jsonErr(w, ve.Error(), 400); return }
 
 	now := time.Now().Format("2006-01-02 15:04:05")
-	_, err := db.Exec("UPDATE ecos SET title=?,description=?,status=?,priority=?,affected_ipns=?,updated_at=? WHERE id=?",
+	_, err = db.Exec("UPDATE ecos SET title=?,description=?,status=?,priority=?,affected_ipns=?,updated_at=? WHERE id=?",
 		e.Title, e.Description, e.Status, e.Priority, e.AffectedIPNs, now, id)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	logAudit(db, getUsername(r), "updated", "eco", id, "Updated "+id+": "+e.Title)
@@ -141,10 +148,49 @@ func handleUpdateECO(w http.ResponseWriter, r *http.Request, id string) {
 func handleApproveECO(w http.ResponseWriter, r *http.Request, id string) {
 	now := time.Now().Format("2006-01-02 15:04:05")
 	user := getUsername(r)
-	_, err := db.Exec("UPDATE ecos SET status='approved',approved_at=?,approved_by=?,updated_at=? WHERE id=?", now, user, now, id)
-	if err != nil { jsonErr(w, err.Error(), 500); return }
+	
+	// Use transaction with row locking to prevent concurrent approval race conditions
+	tx, err := db.Begin()
+	if err != nil {
+		jsonErr(w, "failed to start transaction: "+err.Error(), 500)
+		return
+	}
+	defer tx.Rollback()
+	
+	// Lock row and check current status
+	var currentStatus string
+	err = tx.QueryRow("SELECT status FROM ecos WHERE id=?", id).Scan(&currentStatus)
+	if err != nil {
+		jsonErr(w, "ECO not found", 404)
+		return
+	}
+	
+	// Validate can approve (should be in 'review' status)
+	if currentStatus != "review" {
+		jsonErr(w, fmt.Sprintf("ECO must be in 'review' status to approve (current: %s)", currentStatus), 400)
+		return
+	}
+	
+	// Perform approval update
+	_, err = tx.Exec("UPDATE ecos SET status='approved',approved_at=?,approved_by=?,updated_at=? WHERE id=?", now, user, now, id)
+	if err != nil {
+		jsonErr(w, err.Error(), 500)
+		return
+	}
+	
 	// Record approval in latest revision
-	updateRevisionApproval(id, user, now)
+	_, err = tx.Exec("UPDATE eco_revisions SET approved_by=?, approved_at=?, status='approved' WHERE eco_id=? AND id=(SELECT MAX(id) FROM eco_revisions WHERE eco_id=?)", user, now, id, id)
+	if err != nil {
+		jsonErr(w, err.Error(), 500)
+		return
+	}
+	
+	// Commit transaction
+	if err = tx.Commit(); err != nil {
+		jsonErr(w, "failed to commit transaction: "+err.Error(), 500)
+		return
+	}
+	
 	logAudit(db, user, "approved", "eco", id, "Approved "+id)
 	go emailOnECOApproved(id)
 	handleGetECO(w, r, id)
@@ -164,6 +210,39 @@ func handleImplementECO(w http.ResponseWriter, r *http.Request, id string) {
 	handleGetECO(w, r, id)
 }
 
+// --- ECO Status State Machine ---
+
+// validateECOStatusTransition validates that a status change follows the allowed workflow
+func validateECOStatusTransition(currentStatus, newStatus string) error {
+	// If status unchanged, allow it
+	if currentStatus == newStatus {
+		return nil
+	}
+	
+	// Define valid state transitions
+	validTransitions := map[string][]string{
+		"draft":       {"review", "cancelled"},
+		"review":      {"approved", "rejected", "draft"},
+		"approved":    {"implemented"},
+		"implemented": {},                  // terminal state - no transitions allowed
+		"rejected":    {"draft"},           // allow re-submission
+		"cancelled":   {},                  // terminal state
+	}
+	
+	allowed, exists := validTransitions[currentStatus]
+	if !exists {
+		return fmt.Errorf("invalid current status: %s", currentStatus)
+	}
+	
+	for _, valid := range allowed {
+		if newStatus == valid {
+			return nil
+		}
+	}
+	
+	return fmt.Errorf("invalid transition from %s to %s", currentStatus, newStatus)
+}
+
 // --- ECO Revision Handlers ---
 
 func nextRevisionLetter(ecoID string) string {
@@ -172,7 +251,33 @@ func nextRevisionLetter(ecoID string) string {
 	if err != nil || last == "" {
 		return "A"
 	}
+	
+	// Handle overflow: A-Z, then AA, AB, AC, ..., AZ, BA, etc.
+	if last == "Z" {
+		return "AA"
+	} else if len(last) > 1 {
+		// Multi-letter revisions (AA, AB, etc.)
+		return incrementRevision(last)
+	}
 	return string(rune(last[0] + 1))
+}
+
+// incrementRevision increments multi-letter revision strings (AA -> AB, AZ -> BA, ZZ -> AAA)
+func incrementRevision(rev string) string {
+	runes := []rune(rev)
+	
+	// Start from rightmost character
+	for i := len(runes) - 1; i >= 0; i-- {
+		if runes[i] < 'Z' {
+			runes[i]++
+			return string(runes)
+		}
+		// Overflow: Z -> A and carry to next position
+		runes[i] = 'A'
+	}
+	
+	// All positions overflowed (e.g., ZZ -> AAA)
+	return "A" + string(runes)
 }
 
 func updateRevisionApproval(ecoID, user, now string) {

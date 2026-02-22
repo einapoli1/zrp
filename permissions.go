@@ -28,6 +28,7 @@ const (
 	ModuleRFQs         = "rfqs"
 	ModuleReports      = "reports"
 	ModuleTesting      = "testing"
+	ModuleAttachments  = "attachments"
 	ModuleAdmin        = "admin" // users, api keys, email config, backups, settings
 )
 
@@ -45,7 +46,7 @@ var AllModules = []string{
 	ModuleParts, ModuleECOs, ModuleDocuments, ModuleInventory, ModuleVendors,
 	ModulePOs, ModuleWorkOrders, ModuleNCRs, ModuleRMAs, ModuleQuotes,
 	ModulePricing, ModuleDevices, ModuleFirmware, ModuleShipments,
-	ModuleFieldReports, ModuleRFQs, ModuleReports, ModuleTesting, ModuleAdmin,
+	ModuleFieldReports, ModuleRFQs, ModuleReports, ModuleTesting, ModuleAttachments, ModuleAdmin,
 }
 
 // AllActions lists every action
@@ -317,11 +318,13 @@ func mapAPIPathToPermission(apiPath, method string) (module, action string) {
 		module = ModuleInventory
 	case "prices":
 		module = ModulePricing
+	case "attachments":
+		module = ModuleAttachments
 
 	// Passthrough routes (no permission required beyond auth)
 	case "dashboard", "search", "scan", "audit", "calendar",
 		"changes", "undo", "notifications", "email-log",
-		"config", "attachments", "openapi.json":
+		"config", "openapi.json":
 		return "", ""
 	default:
 		return "", ""

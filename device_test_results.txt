@@ -1,0 +1,180 @@
+=== RUN   TestFK_CampaignDeviceRequiresCampaign
+--- PASS: TestFK_CampaignDeviceRequiresCampaign (0.04s)
+=== RUN   TestCheck_DeviceInvalidStatus
+--- PASS: TestCheck_DeviceInvalidStatus (0.03s)
+=== RUN   TestHandleAdvancedSearch_DevicesAndNCRsAndPOs
+=== RUN   TestHandleAdvancedSearch_DevicesAndNCRsAndPOs/Search_devices
+=== RUN   TestHandleAdvancedSearch_DevicesAndNCRsAndPOs/Search_NCRs
+=== RUN   TestHandleAdvancedSearch_DevicesAndNCRsAndPOs/Search_POs
+--- PASS: TestHandleAdvancedSearch_DevicesAndNCRsAndPOs (0.00s)
+    --- PASS: TestHandleAdvancedSearch_DevicesAndNCRsAndPOs/Search_devices (0.00s)
+    --- PASS: TestHandleAdvancedSearch_DevicesAndNCRsAndPOs/Search_NCRs (0.00s)
+    --- PASS: TestHandleAdvancedSearch_DevicesAndNCRsAndPOs/Search_POs (0.00s)
+=== RUN   TestHandleBulkDevices_DecommissionSuccess
+--- PASS: TestHandleBulkDevices_DecommissionSuccess (0.00s)
+=== RUN   TestBulkUpdateDevicesStatus
+--- PASS: TestBulkUpdateDevicesStatus (0.00s)
+=== RUN   TestBulkUpdateDevicesCustomerAndLocation
+--- PASS: TestBulkUpdateDevicesCustomerAndLocation (0.00s)
+=== RUN   TestBulkUpdateDevicesInvalidStatus
+--- PASS: TestBulkUpdateDevicesInvalidStatus (0.00s)
+=== RUN   TestBulkUpdateDevicesDisallowedField
+--- PASS: TestBulkUpdateDevicesDisallowedField (0.00s)
+=== RUN   TestHandleImportDevices_LargeCSV
+--- PASS: TestHandleImportDevices_LargeCSV (0.02s)
+=== RUN   TestHandleImportDevices_MalformedCSV
+--- PASS: TestHandleImportDevices_MalformedCSV (0.00s)
+=== RUN   TestHandleImportDevices_DuplicatesInFile
+--- PASS: TestHandleImportDevices_DuplicatesInFile (0.00s)
+=== RUN   TestHandleImportDevices_UpsertExisting
+--- PASS: TestHandleImportDevices_UpsertExisting (0.00s)
+=== RUN   TestHandleImportDevices_InvalidFileExtension
+--- PASS: TestHandleImportDevices_InvalidFileExtension (0.00s)
+=== RUN   TestHandleImportDevices_LongFieldValues
+--- PASS: TestHandleImportDevices_LongFieldValues (0.00s)
+=== RUN   TestConcurrentDeviceCreation_DuplicatePrevention
+--- PASS: TestConcurrentDeviceCreation_DuplicatePrevention (0.00s)
+=== RUN   TestConcurrentDeviceUpdates
+    handler_devices_edge_test.go:374: Failed to query device after concurrent updates: SQL logic error: no such table: devices (1)
+--- FAIL: TestConcurrentDeviceUpdates (0.00s)
+=== RUN   TestDeviceStatusTracking
+--- PASS: TestDeviceStatusTracking (0.00s)
+=== RUN   TestDeviceLocationTracking
+--- PASS: TestDeviceLocationTracking (0.00s)
+=== RUN   TestDeviceQuerySQLInjection
+--- PASS: TestDeviceQuerySQLInjection (0.00s)
+=== RUN   TestHandleExportDevices_SpecialCharacters
+--- PASS: TestHandleExportDevices_SpecialCharacters (0.00s)
+=== RUN   TestCreateDevice_InvalidStatus
+--- PASS: TestCreateDevice_InvalidStatus (0.00s)
+=== RUN   TestUpdateDevice_PreservesCreatedAt
+--- PASS: TestUpdateDevice_PreservesCreatedAt (0.10s)
+=== RUN   TestHandleImportDevices_EmptyRows
+    handler_devices_edge_test.go:638: Expected at least 2 skipped (empty rows), got 1
+--- FAIL: TestHandleImportDevices_EmptyRows (0.00s)
+=== RUN   TestDeviceHistory_NoRecords
+--- PASS: TestDeviceHistory_NoRecords (0.00s)
+=== RUN   TestCreateDevice_MaxFieldLengths
+--- PASS: TestCreateDevice_MaxFieldLengths (0.00s)
+=== RUN   TestCreateDevice_ExceedMaxFieldLengths
+=== RUN   TestCreateDevice_ExceedMaxFieldLengths/serial_number_too_long
+=== RUN   TestCreateDevice_ExceedMaxFieldLengths/ipn_too_long
+=== RUN   TestCreateDevice_ExceedMaxFieldLengths/firmware_version_too_long
+=== RUN   TestCreateDevice_ExceedMaxFieldLengths/customer_too_long
+=== RUN   TestCreateDevice_ExceedMaxFieldLengths/location_too_long
+=== RUN   TestCreateDevice_ExceedMaxFieldLengths/notes_too_long
+--- PASS: TestCreateDevice_ExceedMaxFieldLengths (0.00s)
+    --- PASS: TestCreateDevice_ExceedMaxFieldLengths/serial_number_too_long (0.00s)
+    --- PASS: TestCreateDevice_ExceedMaxFieldLengths/ipn_too_long (0.00s)
+    --- PASS: TestCreateDevice_ExceedMaxFieldLengths/firmware_version_too_long (0.00s)
+    --- PASS: TestCreateDevice_ExceedMaxFieldLengths/customer_too_long (0.00s)
+    --- PASS: TestCreateDevice_ExceedMaxFieldLengths/location_too_long (0.00s)
+    --- PASS: TestCreateDevice_ExceedMaxFieldLengths/notes_too_long (0.00s)
+=== RUN   TestHandleListDevices
+--- PASS: TestHandleListDevices (0.00s)
+=== RUN   TestHandleListDevices_Empty
+--- PASS: TestHandleListDevices_Empty (0.00s)
+=== RUN   TestHandleGetDevice
+--- PASS: TestHandleGetDevice (0.00s)
+=== RUN   TestHandleGetDevice_NotFound
+--- PASS: TestHandleGetDevice_NotFound (0.00s)
+=== RUN   TestHandleCreateDevice
+--- PASS: TestHandleCreateDevice (0.00s)
+=== RUN   TestHandleCreateDevice_DefaultStatus
+--- PASS: TestHandleCreateDevice_DefaultStatus (0.00s)
+=== RUN   TestHandleCreateDevice_MissingSerialNumber
+--- PASS: TestHandleCreateDevice_MissingSerialNumber (0.00s)
+=== RUN   TestHandleCreateDevice_MissingIPN
+--- PASS: TestHandleCreateDevice_MissingIPN (0.00s)
+=== RUN   TestHandleCreateDevice_InvalidJSON
+--- PASS: TestHandleCreateDevice_InvalidJSON (0.00s)
+=== RUN   TestHandleUpdateDevice
+--- PASS: TestHandleUpdateDevice (0.00s)
+=== RUN   TestHandleExportDevices
+--- PASS: TestHandleExportDevices (0.00s)
+=== RUN   TestHandleImportDevices
+--- PASS: TestHandleImportDevices (0.00s)
+=== RUN   TestHandleImportDevices_SkipInvalidRows
+--- PASS: TestHandleImportDevices_SkipInvalidRows (0.00s)
+=== RUN   TestHandleImportDevices_MissingFile
+--- PASS: TestHandleImportDevices_MissingFile (0.00s)
+=== RUN   TestHandleDeviceHistory
+--- PASS: TestHandleDeviceHistory (0.00s)
+=== RUN   TestHandleDeviceHistory_NoHistory
+--- PASS: TestHandleDeviceHistory_NoHistory (0.00s)
+=== RUN   TestHandleMarkCampaignDevice_Success
+=== RUN   TestHandleMarkCampaignDevice_Success/Mark_as_updated
+=== RUN   TestHandleMarkCampaignDevice_Success/Mark_as_failed
+--- PASS: TestHandleMarkCampaignDevice_Success (0.00s)
+    --- PASS: TestHandleMarkCampaignDevice_Success/Mark_as_updated (0.00s)
+    --- PASS: TestHandleMarkCampaignDevice_Success/Mark_as_failed (0.00s)
+=== RUN   TestHandleMarkCampaignDevice_ValidationErrors
+=== RUN   TestHandleMarkCampaignDevice_ValidationErrors/Invalid_status
+=== RUN   TestHandleMarkCampaignDevice_ValidationErrors/Missing_status
+--- PASS: TestHandleMarkCampaignDevice_ValidationErrors (0.00s)
+    --- PASS: TestHandleMarkCampaignDevice_ValidationErrors/Invalid_status (0.00s)
+    --- PASS: TestHandleMarkCampaignDevice_ValidationErrors/Missing_status (0.00s)
+=== RUN   TestHandleMarkCampaignDevice_NotFound
+--- PASS: TestHandleMarkCampaignDevice_NotFound (0.00s)
+=== RUN   TestHandleCampaignDevices
+--- PASS: TestHandleCampaignDevices (0.00s)
+=== RUN   TestHandleCampaignDevices_Empty
+--- PASS: TestHandleCampaignDevices_Empty (0.00s)
+=== RUN   TestDeviceNotesLengthValidation
+=== RUN   TestDeviceNotesLengthValidation/Empty_notes
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestDeviceNotesLengthValidation/Single_char
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestDeviceNotesLengthValidation/Max_valid_(10000)
+audit log error: SQL logic error: table audit_log has no column named module (1)
+=== RUN   TestDeviceNotesLengthValidation/Over_max_(10001)
+--- PASS: TestDeviceNotesLengthValidation (0.00s)
+    --- PASS: TestDeviceNotesLengthValidation/Empty_notes (0.00s)
+    --- PASS: TestDeviceNotesLengthValidation/Single_char (0.00s)
+    --- PASS: TestDeviceNotesLengthValidation/Max_valid_(10000) (0.00s)
+    --- PASS: TestDeviceNotesLengthValidation/Over_max_(10001) (0.00s)
+=== RUN   TestHandleScanLookup_DeviceMatch
+=== RUN   TestHandleScanLookup_DeviceMatch/Exact_device_serial_match
+=== RUN   TestHandleScanLookup_DeviceMatch/Partial_device_serial_match
+=== RUN   TestHandleScanLookup_DeviceMatch/Case_insensitive_device_match
+--- PASS: TestHandleScanLookup_DeviceMatch (0.00s)
+    --- PASS: TestHandleScanLookup_DeviceMatch/Exact_device_serial_match (0.00s)
+    --- PASS: TestHandleScanLookup_DeviceMatch/Partial_device_serial_match (0.00s)
+    --- PASS: TestHandleScanLookup_DeviceMatch/Case_insensitive_device_match (0.00s)
+=== RUN   TestSQLInjection_Devices
+=== RUN   TestSQLInjection_Devices/Device_Serial:_'_OR_'1'='1
+=== RUN   TestSQLInjection_Devices/Device_Serial:_';_DROP_TABLE_parts--
+=== RUN   TestSQLInjection_Devices/Device_Serial:_'_UNION_SELECT_*_FROM_users--
+=== RUN   TestSQLInjection_Devices/Device_Serial:_admin'--
+=== RUN   TestSQLInjection_Devices/Device_Serial:_'_OR_1=1--
+=== RUN   TestSQLInjection_Devices/Device_Serial:_1'_AND_'1'='1
+=== RUN   TestSQLInjection_Devices/Device_Serial:_';_DELETE_FROM_inventory_WHERE_'1'='1
+=== RUN   TestSQLInjection_Devices/Device_Serial:_'_UNION_SELECT_NULL,_username,_password_hash_FROM_users--
+=== RUN   TestSQLInjection_Devices/Device_Serial:_')_OR_('1'='1
+=== RUN   TestSQLInjection_Devices/Device_Serial:_1'_OR_'1'='1'_/*
+=== RUN   TestSQLInjection_Devices/Device_Serial:_';_EXEC_xp_cmdshell('dir')--
+=== RUN   TestSQLInjection_Devices/Device_Serial:_'_AND_1=(SELECT_COUNT(*)_FROM_users)--
+=== RUN   TestSQLInjection_Devices/Device_Serial:_admin'_OR_'1'='1'_/*
+=== RUN   TestSQLInjection_Devices/Device_Serial:_'_UNION_ALL_SELECT_NULL,NULL,NULL--
+=== RUN   TestSQLInjection_Devices/Device_Serial:_';_UPDATE_users_SET_role='admin'_WHERE_username='engineer'--
+--- PASS: TestSQLInjection_Devices (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_'_OR_'1'='1 (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_';_DROP_TABLE_parts-- (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_'_UNION_SELECT_*_FROM_users-- (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_admin'-- (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_'_OR_1=1-- (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_1'_AND_'1'='1 (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_';_DELETE_FROM_inventory_WHERE_'1'='1 (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_'_UNION_SELECT_NULL,_username,_password_hash_FROM_users-- (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_')_OR_('1'='1 (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_1'_OR_'1'='1'_/* (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_';_EXEC_xp_cmdshell('dir')-- (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_'_AND_1=(SELECT_COUNT(*)_FROM_users)-- (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_admin'_OR_'1'='1'_/* (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_'_UNION_ALL_SELECT_NULL,NULL,NULL-- (0.00s)
+    --- PASS: TestSQLInjection_Devices/Device_Serial:_';_UPDATE_users_SET_role='admin'_WHERE_username='engineer'-- (0.00s)
+=== RUN   TestXSS_Endpoint_DeviceName
+--- PASS: TestXSS_Endpoint_DeviceName (0.06s)
+FAIL
+exit status 1
+FAIL	zrp	0.554s

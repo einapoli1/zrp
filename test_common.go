@@ -459,6 +459,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			ipn TEXT DEFAULT '',
 			serial_number TEXT DEFAULT '',
 			qty INTEGER DEFAULT 1 CHECK(qty > 0),
+			sales_order_id TEXT DEFAULT '',
 			work_order_id TEXT DEFAULT '',
 			rma_id TEXT DEFAULT '',
 			FOREIGN KEY (shipment_id) REFERENCES shipments(id) ON DELETE CASCADE

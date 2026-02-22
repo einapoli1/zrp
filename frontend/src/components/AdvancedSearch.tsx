@@ -233,11 +233,6 @@ export function AdvancedSearch({
     }
   };
 
-  const getFieldType = (field: string): string => {
-    const fieldDef = availableFields.find(f => f.field === field);
-    return fieldDef?.type || "text";
-  };
-
   return (
     <div className="space-y-4">
       {/* Search Bar with Expansion Toggle */}

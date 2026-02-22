@@ -308,7 +308,8 @@ export default function Pricing() {
         </TabsList>
 
         <TabsContent value="pricing" className="space-y-4">
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8"></TableHead>
@@ -379,10 +380,12 @@ export default function Pricing() {
                 })}
             </TableBody>
           </Table>
+          </div>
         </TabsContent>
 
         <TabsContent value="analysis" className="space-y-4">
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Product IPN</TableHead>
@@ -427,6 +430,7 @@ export default function Pricing() {
                 ))}
             </TableBody>
           </Table>
+          </div>
         </TabsContent>
       </Tabs>
 

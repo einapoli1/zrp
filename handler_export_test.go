@@ -237,9 +237,9 @@ func insertExportTestData(t *testing.T, db *sql.DB) {
 
 func TestHandleExportParts_CSV(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertExportTestData(t, db)
 
@@ -294,9 +294,9 @@ func TestHandleExportParts_CSV(t *testing.T) {
 
 func TestHandleExportParts_Excel(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertExportTestData(t, db)
 
@@ -346,9 +346,9 @@ func TestHandleExportParts_Excel(t *testing.T) {
 
 func TestHandleExportParts_WithSearch(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertExportTestData(t, db)
 
@@ -379,9 +379,9 @@ func TestHandleExportParts_WithSearch(t *testing.T) {
 
 func TestHandleExportParts_WithCategory(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	// Insert parts with different categories
 	db.Exec("INSERT INTO parts (ipn, category, description) VALUES (?, ?, ?)", "CAT-001", "Cat1", "Test")
@@ -411,9 +411,9 @@ func TestHandleExportParts_WithCategory(t *testing.T) {
 
 func TestHandleExportInventory_CSV(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertExportTestData(t, db)
 
@@ -447,9 +447,9 @@ func TestHandleExportInventory_CSV(t *testing.T) {
 
 func TestHandleExportInventory_LowStock(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	// Insert inventory with low stock (qty <= reorder_point)
 	db.Exec("INSERT INTO inventory (ipn, qty_on_hand, reorder_point, location) VALUES (?, ?, ?, ?)",
@@ -485,9 +485,9 @@ func TestHandleExportInventory_LowStock(t *testing.T) {
 
 func TestHandleExportWorkOrders_CSV(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertExportTestData(t, db)
 
@@ -513,9 +513,9 @@ func TestHandleExportWorkOrders_CSV(t *testing.T) {
 
 func TestHandleExportWorkOrders_StatusFilter(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	db.Exec("INSERT INTO work_orders (id, assembly_ipn, status) VALUES (?, ?, ?)", "WO-PEND", "ASSY", "pending")
 	db.Exec("INSERT INTO work_orders (id, assembly_ipn, status) VALUES (?, ?, ?)", "WO-COMP", "ASSY", "completed")
@@ -543,9 +543,9 @@ func TestHandleExportWorkOrders_StatusFilter(t *testing.T) {
 
 func TestHandleExportECOs_CSV(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertExportTestData(t, db)
 
@@ -571,9 +571,9 @@ func TestHandleExportECOs_CSV(t *testing.T) {
 
 func TestHandleExportVendors_CSV(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertExportTestData(t, db)
 
@@ -599,9 +599,9 @@ func TestHandleExportVendors_CSV(t *testing.T) {
 
 func TestHandleExport_LargeDataset(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	// Insert 1000 parts
 	for i := 1; i <= 1000; i++ {
@@ -632,9 +632,9 @@ func TestHandleExport_LargeDataset(t *testing.T) {
 
 func TestHandleExport_SQLInjection(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertExportTestData(t, db)
 
@@ -672,9 +672,9 @@ func TestHandleExport_SQLInjection(t *testing.T) {
 
 func TestHandleExport_FormatValidation(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertExportTestData(t, db)
 
@@ -715,9 +715,9 @@ func TestHandleExport_FormatValidation(t *testing.T) {
 
 func TestHandleExport_EmptyResults(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	// Don't insert any data
 
@@ -744,9 +744,9 @@ func TestHandleExport_EmptyResults(t *testing.T) {
 
 func TestHandleExport_XSSInData(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	// Insert part with XSS payload
 	xssPayload := "<script>alert('xss')</script>"
@@ -782,9 +782,9 @@ func TestHandleExport_XSSInData(t *testing.T) {
 
 func TestHandleExport_SpecialCharacters(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	// Insert parts with special characters
 	specialChars := []string{
@@ -822,9 +822,9 @@ func TestHandleExport_SpecialCharacters(t *testing.T) {
 
 func TestHandleExport_ExcelMultipleSheets(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertExportTestData(t, db)
 
@@ -907,9 +907,9 @@ func TestExportExcel_DirectFunction(t *testing.T) {
 
 func TestLogDataExport(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupExportTestDB(t)
-	defer db.Close()
+	testDB := setupExportTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	req := httptest.NewRequest("GET", "/api/export/parts?format=csv", nil)
 	req.Header.Set("X-User-ID", "test-user")

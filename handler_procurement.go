@@ -178,16 +178,56 @@ func handleReceivePO(w http.ResponseWriter, r *http.Request, id string) {
 		SkipInspection bool `json:"skip_inspection"`
 	}
 	if err := decodeBody(r, &body); err != nil { jsonErr(w, "invalid body", 400); return }
+
+	// FIX 1: Validate negative quantities before processing
+	for _, l := range body.Lines {
+		if l.Qty <= 0 {
+			jsonErr(w, "quantity must be positive", 400)
+			return
+		}
+	}
+
+	// FIX 3: Wrap entire receive logic in transaction to prevent race conditions
+	tx, err := db.Begin()
+	if err != nil {
+		jsonErr(w, err.Error(), 500)
+		return
+	}
+	defer tx.Rollback()
+
+	// Acquire write lock immediately by updating a dummy row to force serialization
+	_, err = tx.Exec("UPDATE purchase_orders SET status=status WHERE id=?", id)
+	if err != nil {
+		jsonErr(w, err.Error(), 500)
+		return
+	}
+
+	// FIX 2: Validate over-receive INSIDE transaction for atomicity
+	for _, l := range body.Lines {
+		var qtyOrdered, qtyReceived float64
+		err := tx.QueryRow("SELECT qty_ordered, qty_received FROM po_lines WHERE id=?", l.ID).
+			Scan(&qtyOrdered, &qtyReceived)
+		if err != nil {
+			jsonErr(w, fmt.Sprintf("line %d not found", l.ID), 404)
+			return
+		}
+		if qtyReceived+l.Qty > qtyOrdered {
+			jsonErr(w, fmt.Sprintf("cannot receive %.2f (ordered: %.2f, already received: %.2f)",
+				l.Qty, qtyOrdered, qtyReceived), 400)
+			return
+		}
+	}
+
 	// Get vendor_id for price recording
 	var poVendorID string
-	db.QueryRow("SELECT COALESCE(vendor_id,'') FROM purchase_orders WHERE id=?", id).Scan(&poVendorID)
+	tx.QueryRow("SELECT COALESCE(vendor_id,'') FROM purchase_orders WHERE id=?", id).Scan(&poVendorID)
 
 	now := time.Now().Format("2006-01-02 15:04:05")
 	for _, l := range body.Lines {
-		db.Exec("UPDATE po_lines SET qty_received=qty_received+? WHERE id=?", l.Qty, l.ID)
+		tx.Exec("UPDATE po_lines SET qty_received=qty_received+? WHERE id=?", l.Qty, l.ID)
 		var ipn string
 		var unitPrice float64
-		db.QueryRow("SELECT ipn, COALESCE(unit_price,0) FROM po_lines WHERE id=?", l.ID).Scan(&ipn, &unitPrice)
+		tx.QueryRow("SELECT ipn, COALESCE(unit_price,0) FROM po_lines WHERE id=?", l.ID).Scan(&ipn, &unitPrice)
 		// Record price history
 		if ipn != "" && unitPrice > 0 {
 			recordPriceFromPO(id, ipn, unitPrice, poVendorID)
@@ -196,24 +236,31 @@ func handleReceivePO(w http.ResponseWriter, r *http.Request, id string) {
 		if ipn != "" {
 			if body.SkipInspection {
 				// Legacy behavior: directly update inventory
-				db.Exec("INSERT OR IGNORE INTO inventory (ipn) VALUES (?)", ipn)
-				db.Exec("UPDATE inventory SET qty_on_hand=qty_on_hand+?,updated_at=? WHERE ipn=?", l.Qty, now, ipn)
-				db.Exec("INSERT INTO inventory_transactions (ipn,type,qty,reference,created_at) VALUES (?,?,?,?,?)", ipn, "receive", l.Qty, id, now)
+				tx.Exec("INSERT OR IGNORE INTO inventory (ipn) VALUES (?)", ipn)
+				tx.Exec("UPDATE inventory SET qty_on_hand=qty_on_hand+?,updated_at=? WHERE ipn=?", l.Qty, now, ipn)
+				tx.Exec("INSERT INTO inventory_transactions (ipn,type,qty,reference,created_at) VALUES (?,?,?,?,?)", ipn, "receive", l.Qty, id, now)
 			} else {
 				// Create receiving inspection record (inventory updated after inspection)
-				db.Exec(`INSERT INTO receiving_inspections (po_id,po_line_id,ipn,qty_received,created_at) VALUES (?,?,?,?,?)`,
+				tx.Exec(`INSERT INTO receiving_inspections (po_id,po_line_id,ipn,qty_received,created_at) VALUES (?,?,?,?,?)`,
 					id, l.ID, ipn, l.Qty, now)
 			}
 		}
 	}
 	// Check if all received
 	var totalOrdered, totalReceived float64
-	db.QueryRow("SELECT COALESCE(SUM(qty_ordered),0),COALESCE(SUM(qty_received),0) FROM po_lines WHERE po_id=?", id).Scan(&totalOrdered, &totalReceived)
+	tx.QueryRow("SELECT COALESCE(SUM(qty_ordered),0),COALESCE(SUM(qty_received),0) FROM po_lines WHERE po_id=?", id).Scan(&totalOrdered, &totalReceived)
 	if totalReceived >= totalOrdered {
-		db.Exec("UPDATE purchase_orders SET status='received',received_at=? WHERE id=?", now, id)
+		tx.Exec("UPDATE purchase_orders SET status='received',received_at=? WHERE id=?", now, id)
 	} else {
-		db.Exec("UPDATE purchase_orders SET status='partial' WHERE id=?", id)
+		tx.Exec("UPDATE purchase_orders SET status='partial' WHERE id=?", id)
 	}
+
+	// Commit transaction
+	if err := tx.Commit(); err != nil {
+		jsonErr(w, err.Error(), 500)
+		return
+	}
+
 	logAudit(db, getUsername(r), "received", "po", id, "Received items on PO "+id)
 	go emailOnPOReceived(id)
 	handleGetPO(w, r, id)
