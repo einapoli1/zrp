@@ -116,7 +116,7 @@ func handleCreateCAPA(w http.ResponseWriter, r *http.Request) {
 	c.UpdatedAt = now
 	logAudit(db, getUsername(r), "created", "capa", c.ID, "Created "+c.ID+": "+c.Title)
 	recordChangeJSON(getUsername(r), "capas", c.ID, "create", nil, c)
-	go emailOnCAPACreated(c)
+	go emailOnCAPACreatedWithDB(db, c) // Pass db explicitly to avoid race condition in tests
 	jsonResp(w, c)
 }
 
@@ -124,14 +124,10 @@ func handleUpdateCAPA(w http.ResponseWriter, r *http.Request, id string) {
 	oldSnap, _ := getCAPASnapshot(id)
 	username := getUsername(r)
 	_ = getUserRole(r)
-	userID, err := getUserID(r)
-	if err != nil {
-		jsonErr(w, "authentication required", 401)
-		return
-	}
 
 	var body map[string]interface{}
-	if err := decodeBody(r, &body); err != nil {
+	var err error
+	if err = decodeBody(r, &body); err != nil {
 		jsonErr(w, "invalid body", 400)
 		return
 	}
@@ -225,6 +221,12 @@ func handleUpdateCAPA(w http.ResponseWriter, r *http.Request, id string) {
 			jsonErr(w, "insufficient permissions: only QE role can approve as QE", 403)
 			return
 		}
+		// Get user ID only when performing approval action
+		userID, err := getUserID(r)
+		if err != nil {
+			jsonErr(w, "authentication required for approval", 401)
+			return
+		}
 		newApprovedByQE = fmt.Sprintf("%d", userID) // Store actual user ID
 		newQEAt = now
 	}
@@ -233,6 +235,12 @@ func handleUpdateCAPA(w http.ResponseWriter, r *http.Request, id string) {
 	if approvedByMgr != "" && approvedByMgr != currentCAPA.ApprovedByMgr {
 		if !canApproveCAPA(r, "manager") {
 			jsonErr(w, "insufficient permissions: only manager role can approve as manager", 403)
+			return
+		}
+		// Get user ID only when performing approval action
+		userID, err := getUserID(r)
+		if err != nil {
+			jsonErr(w, "authentication required for approval", 401)
 			return
 		}
 		newApprovedByMgr = fmt.Sprintf("%d", userID) // Store actual user ID
