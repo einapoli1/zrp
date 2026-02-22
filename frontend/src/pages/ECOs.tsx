@@ -43,6 +43,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { LoadingState } from "../components/LoadingState";
 import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
 interface CreateECOData {
   title: string;
   description: string;
@@ -62,7 +63,8 @@ function ECOs() {
   const navigate = useNavigate();
   const [ecos, setECOs] = useState<ECO[]>([]);
   const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState('all');
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
 
@@ -81,12 +83,16 @@ function ECOs() {
 
   const fetchECOs = async () => {
     setLoading(true);
+    setError(null);
     try {
       const statusFilter = activeTab === 'all' ? undefined : activeTab;
       const data = await api.getECOs(statusFilter);
       setECOs(data);
-    } catch (error) {
-      toast.error("Failed to fetch ECOs"); console.error('Failed to fetch ECOs:', error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error";
+      setError(errorMessage);
+      toast.error(`Failed to fetch ECOs: ${errorMessage}`);
+      console.error('Failed to fetch ECOs:', error);
       setECOs([]);
     } finally {
       setLoading(false);
@@ -120,13 +126,16 @@ function ECOs() {
       };
       
       const newECO = await api.createECO(ecoData);
+      toast.success(`ECO "${data.title}" created successfully`);
       setCreateDialogOpen(false);
       form.reset();
       
       // Navigate to the new ECO detail page
       navigate(`/ecos/${newECO.id}`);
-    } catch (error) {
-      toast.error("Failed to create ECO"); console.error('Failed to create ECO:', error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to create ECO";
+      toast.error(`Failed to create ECO: ${errorMessage}`);
+      console.error('Failed to create ECO:', error);
     } finally {
       setCreating(false);
     }
@@ -308,6 +317,12 @@ function ECOs() {
             <TabsContent value={activeTab} className="mt-6">
               {loading ? (
                 <LoadingState variant="table" rows={5} />
+              ) : error ? (
+                <ErrorState
+                  title="Failed to load ECOs"
+                  message={error}
+                  onRetry={fetchECOs}
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <Table>

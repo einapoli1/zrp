@@ -36,6 +36,8 @@ import { toast } from "sonner";
 import { api, type InventoryItem } from "../lib/api";
 import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTable";
 import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
 // Lazy load BarcodeScanner to reduce initial bundle size (329KB chunk)
 const BarcodeScanner = lazy(() => import("../components/BarcodeScanner").then(m => ({ default: m.BarcodeScanner })));
 import { ConfirmDialog } from "../components/ConfirmDialog";
@@ -43,6 +45,7 @@ import { ConfirmDialog } from "../components/ConfirmDialog";
 function Inventory() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showLowStock, setShowLowStock] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
@@ -67,10 +70,14 @@ function Inventory() {
   const fetchInventory = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await api.getInventory(showLowStock);
       setInventory(data);
-    } catch (error) {
-      toast.error("Failed to fetch inventory"); console.error("Failed to fetch inventory:", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error";
+      setError(errorMessage);
+      toast.error(`Failed to fetch inventory: ${errorMessage}`);
+      console.error("Failed to fetch inventory:", error);
     } finally {
       setLoading(false);
     }
@@ -81,27 +88,33 @@ function Inventory() {
       const data = await api.getParts();
       const partsArray = Array.isArray(data) ? data : [];
       setParts(partsArray.map(p => ({ ipn: p.ipn, description: p.description })));
-    } catch (error) {
-      toast.error("Failed to fetch parts"); console.error("Failed to fetch parts:", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error";
+      toast.error(`Failed to fetch parts: ${errorMessage}`);
+      console.error("Failed to fetch parts:", error);
     }
   };
 
   const handleQuickReceive = async () => {
     try {
+      const qty = parseFloat(receiveForm.qty);
+      const ipn = receiveForm.ipn;
+      
       await api.createInventoryTransaction({
-        ipn: receiveForm.ipn,
+        ipn,
         type: "receive",
-        qty: parseFloat(receiveForm.qty),
+        qty,
         reference: receiveForm.reference || undefined,
         notes: receiveForm.notes || undefined,
       });
       
+      toast.success(`Received ${qty} units of ${ipn}`);
       setReceiveDialogOpen(false);
       setReceiveForm({ ipn: "", qty: "", reference: "", notes: "" });
-      toast.success(`Received ${receiveForm.qty} units of ${receiveForm.ipn}`);
       fetchInventory();
     } catch (error: any) {
-      toast.error(error.message || "Failed to receive inventory");
+      const errorMessage = error?.message || "Failed to receive inventory";
+      toast.error(`Failed to receive inventory: ${errorMessage}`);
     }
   };
 
@@ -501,43 +514,53 @@ function Inventory() {
           <CardTitle>Inventory Items</CardTitle>
         </CardHeader>
         <CardContent>
-          <ConfigurableTable<InventoryItem>
-            tableName="inventory"
-            columns={inventoryColumns}
-            data={inventory}
-            rowKey={(item) => item.ipn}
-            rowClassName={(item) => isLowStock(item) ? "bg-destructive/5" : ""}
-            emptyMessage={showLowStock ? "No low stock items found" : "No inventory items found"}
-            emptyIcon={Package}
-            emptyDescription={
-              showLowStock
-                ? "All inventory levels are healthy."
-                : "Get started by receiving your first items."
-            }
-            emptyAction={
-              showLowStock ? undefined : (
-                <Button onClick={() => setReceiveDialogOpen(true)}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Quick Receive
-                </Button>
-              )
-            }
-            leadingColumn={{
-              header: (
-                <Checkbox
-                  checked={selectedItems.size === inventory.length && inventory.length > 0}
-                  onCheckedChange={toggleSelectAll}
-                />
-              ),
-              cell: (item) => (
-                <Checkbox
-                  checked={selectedItems.has(item.ipn)}
-                  onCheckedChange={() => toggleSelectItem(item.ipn)}
-                />
-              ),
-              className: "w-12",
-            }}
-          />
+          {loading ? (
+            <LoadingState variant="table" rows={5} />
+          ) : error ? (
+            <ErrorState
+              title="Failed to load inventory"
+              message={error}
+              onRetry={fetchInventory}
+            />
+          ) : (
+            <ConfigurableTable<InventoryItem>
+              tableName="inventory"
+              columns={inventoryColumns}
+              data={inventory}
+              rowKey={(item) => item.ipn}
+              rowClassName={(item) => isLowStock(item) ? "bg-destructive/5" : ""}
+              emptyMessage={showLowStock ? "No low stock items found" : "No inventory items found"}
+              emptyIcon={Package}
+              emptyDescription={
+                showLowStock
+                  ? "All inventory levels are healthy."
+                  : "Get started by receiving your first items."
+              }
+              emptyAction={
+                showLowStock ? undefined : (
+                  <Button onClick={() => setReceiveDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Quick Receive
+                  </Button>
+                )
+              }
+              leadingColumn={{
+                header: (
+                  <Checkbox
+                    checked={selectedItems.size === inventory.length && inventory.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                ),
+                cell: (item) => (
+                  <Checkbox
+                    checked={selectedItems.has(item.ipn)}
+                    onCheckedChange={() => toggleSelectItem(item.ipn)}
+                  />
+                ),
+                className: "w-12",
+              }}
+            />
+          )}
         </CardContent>
       </Card>
 

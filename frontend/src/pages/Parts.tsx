@@ -112,8 +112,10 @@ function Parts() {
     try {
       const data = await api.getCategories();
       setCategories(data);
-    } catch (error) {
-      toast.error("Failed to fetch categories"); console.error("Failed to fetch categories:", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error";
+      toast.error(`Failed to fetch categories: ${errorMessage}`);
+      console.error("Failed to fetch categories:", error);
     }
   };
 
@@ -137,12 +139,13 @@ function Parts() {
       const response: ApiResponse<Part[]> = await api.getParts(params);
       setParts(response.data || []);
       setTotalParts(response.meta?.total || 0);
-    } catch (error) {
-      toast.error("Failed to fetch parts");
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error";
+      toast.error(`Failed to fetch parts: ${errorMessage}`);
       console.error("Failed to fetch parts:", error);
       setParts([]);
       setTotalParts(0);
-      setError("Failed to load parts. Please try again.");
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -205,15 +208,17 @@ function Parts() {
         category: partForm.category,
         fields: partForm.dynamicFields,
       });
+      toast.success(`Part ${partForm.ipn} created successfully`);
       setCreateDialogOpen(false);
       setPartForm({ ipn: "", category: "", dynamicFields: {} });
       fetchParts();
     } catch (error: any) {
       const msg = error?.message || "Failed to create part";
-      if (msg.includes("already exists")) {
+      if (msg.toLowerCase().includes("already exists") || msg.toLowerCase().includes("duplicate")) {
         setIpnError("This IPN already exists");
       } else {
         setCreateError(msg);
+        toast.error(`Failed to create part: ${msg}`);
       }
     } finally {
       setCreating(false);
@@ -224,11 +229,14 @@ function Parts() {
     setCreatingCategory(true);
     try {
       await api.createCategory(newCatData);
+      toast.success(`Category "${newCatData.title}" created successfully`);
       setNewCatDialogOpen(false);
       setNewCatData({ title: "", prefix: "" });
       await fetchCategories();
     } catch (error: any) {
-      toast.error("Failed to create category"); console.error("Failed to create category:", error);
+      const errorMessage = error?.message || "Failed to create category";
+      toast.error(`Failed to create category: ${errorMessage}`);
+      console.error("Failed to create category:", error);
     } finally {
       setCreatingCategory(false);
     }

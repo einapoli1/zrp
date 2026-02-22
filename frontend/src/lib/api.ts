@@ -667,8 +667,23 @@ class ApiClient {
         window.location.href = '/login';
         throw new Error('Session expired');
       }
+      
+      // Parse error response
       const body = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(body.error || `API error: ${response.statusText}`);
+      const errorMessage = body.error || body.message || response.statusText;
+      
+      // Handle specific status codes
+      if (response.status === 403) {
+        throw new Error(`Permission denied: ${errorMessage}`);
+      }
+      if (response.status === 404) {
+        throw new Error(`Not found: ${errorMessage}`);
+      }
+      if (response.status >= 500) {
+        throw new Error(`Server error: ${errorMessage}`);
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const json = await response.json();
@@ -723,8 +738,22 @@ class ApiClient {
         window.location.href = '/login';
         throw new Error('Session expired');
       }
+      
       const errBody = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(errBody.error || `API error: ${response.statusText}`);
+      const errorMessage = errBody.error || errBody.message || response.statusText;
+      
+      // Handle specific status codes
+      if (response.status === 403) {
+        throw new Error(`Permission denied: ${errorMessage}`);
+      }
+      if (response.status === 404) {
+        throw new Error(`Not found: ${errorMessage}`);
+      }
+      if (response.status >= 500) {
+        throw new Error(`Server error: ${errorMessage}`);
+      }
+      
+      throw new Error(errorMessage);
     }
     return response.json();
   }

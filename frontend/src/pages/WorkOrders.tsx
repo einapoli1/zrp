@@ -47,10 +47,12 @@ import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog
 import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
 function WorkOrders() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
@@ -71,10 +73,14 @@ function WorkOrders() {
   const fetchWorkOrders = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await api.getWorkOrders();
       setWorkOrders(data);
-    } catch (error) {
-      toast.error("Failed to fetch work orders"); console.error("Failed to fetch work orders:", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error";
+      setError(errorMessage);
+      toast.error(`Failed to fetch work orders: ${errorMessage}`);
+      console.error("Failed to fetch work orders:", error);
     } finally {
       setLoading(false);
     }
@@ -86,19 +92,24 @@ function WorkOrders() {
       // Filter to assemblies only (this would typically be based on a category or type field)
       const partsArray = Array.isArray(data) ? data : [];
       setParts(partsArray);
-    } catch (error) {
-      toast.error("Failed to fetch parts"); console.error("Failed to fetch parts:", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error";
+      toast.error(`Failed to fetch parts: ${errorMessage}`);
+      console.error("Failed to fetch parts:", error);
     }
   };
 
   const handleCreateWO = async () => {
     try {
       await api.createWorkOrder(woForm);
+      toast.success(`Work order for ${woForm.assembly_ipn} created successfully`);
       setCreateDialogOpen(false);
       resetForm();
       fetchWorkOrders();
-    } catch (error) {
-      toast.error("Failed to create work order"); console.error("Failed to create work order:", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to create work order";
+      toast.error(`Failed to create work order: ${errorMessage}`);
+      console.error("Failed to create work order:", error);
     }
   };
 
@@ -567,36 +578,46 @@ function WorkOrders() {
           <CardTitle>Work Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          <ConfigurableTable<WorkOrder>
-            tableName="work-orders"
-            columns={woColumns}
-            data={workOrders}
-            rowKey={(wo) => wo.id}
-            emptyMessage="No work orders found"
-            emptyIcon={ClipboardList}
-            emptyDescription="Get started by creating your first work order."
-            emptyAction={
-              <Button onClick={() => setCreateDialogOpen(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Work Order
-              </Button>
-            }
-            leadingColumn={{
-              header: (
-                <Checkbox
-                  checked={selectedItems.size === workOrders.length && workOrders.length > 0}
-                  onCheckedChange={toggleSelectAll}
-                />
-              ),
-              cell: (wo) => (
-                <Checkbox
-                  checked={selectedItems.has(wo.id)}
-                  onCheckedChange={() => toggleSelectItem(wo.id)}
-                />
-              ),
-              className: "w-12",
-            }}
-          />
+          {loading ? (
+            <LoadingState variant="table" rows={5} />
+          ) : error ? (
+            <ErrorState
+              title="Failed to load work orders"
+              message={error}
+              onRetry={fetchWorkOrders}
+            />
+          ) : (
+            <ConfigurableTable<WorkOrder>
+              tableName="work-orders"
+              columns={woColumns}
+              data={workOrders}
+              rowKey={(wo) => wo.id}
+              emptyMessage="No work orders found"
+              emptyIcon={ClipboardList}
+              emptyDescription="Get started by creating your first work order."
+              emptyAction={
+                <Button onClick={() => setCreateDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Work Order
+                </Button>
+              }
+              leadingColumn={{
+                header: (
+                  <Checkbox
+                    checked={selectedItems.size === workOrders.length && workOrders.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                ),
+                cell: (wo) => (
+                  <Checkbox
+                    checked={selectedItems.has(wo.id)}
+                    onCheckedChange={() => toggleSelectItem(wo.id)}
+                  />
+                ),
+                className: "w-12",
+              }}
+            />
+          )}
         </CardContent>
       </Card>
       <BulkEditDialog
