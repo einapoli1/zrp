@@ -566,7 +566,7 @@ func TestHandleMarkCampaignDevice_NotFound(t *testing.T) {
 
 	insertTestCampaign(t, db, "FW-001", "Not Found Test", "v1.0.0", "public", "active")
 
-	body, _ := json.Marshal(map[string]string{"status": "updated"})
+	body, _ := json.Marshal(map[string]string{"status": "success"})
 	req := httptest.NewRequest("PUT", "/api/firmware/campaigns/FW-001/devices/SN-999", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

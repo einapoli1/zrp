@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -273,12 +274,14 @@ func TestApplyPartChangesOnECOImplement(t *testing.T) {
 	// Create draft changes
 	body := `{"changes":[{"field_name":"description","old_value":"10k Resistor","new_value":"10k 0402 Resistor"}]}`
 	req := authedRequest("POST", "/api/v1/parts/RES-001/changes", []byte(body), cookie)
+	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 	handleCreatePartChanges(w, req, "RES-001")
 
 	// Create ECO
 	body2 := `{"title":"Update RES-001"}`
 	req2 := authedRequest("POST", "/api/v1/parts/RES-001/changes/create-eco", []byte(body2), cookie)
+	req2.Header.Set("Content-Type", "application/json")
 	w2 := httptest.NewRecorder()
 	handleCreateECOFromChanges(w2, req2, "RES-001")
 	
@@ -302,12 +305,21 @@ func TestApplyPartChangesOnECOImplement(t *testing.T) {
 		t.Fatalf("Expected 'eco_id' to be string, got %T", ecoIDVal)
 	}
 
-	// Approve ECO
-	req3 := authedRequest("POST", fmt.Sprintf("/api/v1/ecos/%s/approve", ecoID), nil, cookie)
+	// Update ECO to review status
+	updateBody := `{"title":"Update RES-001","status":"review","priority":"normal"}`
+	req3 := httptest.NewRequest("PUT", fmt.Sprintf("/api/v1/ecos/%s", ecoID), bytes.NewBufferString(updateBody))
 	w3 := httptest.NewRecorder()
-	handleApproveECO(w3, req3, ecoID)
+	handleUpdateECO(w3, req3, ecoID)
 	if w3.Code != 200 {
-		t.Fatalf("approve failed: %d %s", w3.Code, w3.Body.String())
+		t.Fatalf("update to review failed: %d %s", w3.Code, w3.Body.String())
+	}
+
+	// Approve ECO
+	req3a := authedRequest("POST", fmt.Sprintf("/api/v1/ecos/%s/approve", ecoID), nil, cookie)
+	w3a := httptest.NewRecorder()
+	handleApproveECO(w3a, req3a, ecoID)
+	if w3a.Code != 200 {
+		t.Fatalf("approve failed: %d %s", w3a.Code, w3a.Body.String())
 	}
 
 	// Implement ECO - should apply CSV changes

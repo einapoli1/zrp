@@ -251,7 +251,7 @@ func setupTestDB(t *testing.T) *sql.DB {
 			priority TEXT DEFAULT 'normal' CHECK(priority IN ('low','normal','high','critical')),
 			affected_ipns TEXT DEFAULT '',
 			created_by TEXT DEFAULT 'engineer',
-			linked_ncr_id TEXT DEFAULT '',
+			ncr_id TEXT DEFAULT '',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 			approved_at DATETIME,

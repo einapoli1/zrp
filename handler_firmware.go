@@ -150,6 +150,7 @@ func handleMarkCampaignDevice(w http.ResponseWriter, r *http.Request, campaignID
 	
 	// Validate status - use validCampaignDevStatuses from validation.go
 	ve := &ValidationErrors{}
+	requireField(ve, "status", body.Status)
 	validateEnum(ve, "status", body.Status, validCampaignDevStatuses)
 	if ve.HasErrors() {
 		jsonErr(w, ve.Error(), 400)

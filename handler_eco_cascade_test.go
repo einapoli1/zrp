@@ -546,7 +546,9 @@ func TestECOPartRevisionCascade(t *testing.T) {
 	// Step 4: Update ECO to review status
 	t.Log("Step 4a: Updating ECO to review status")
 	updateBody := map[string]interface{}{
-		"status": "review",
+		"title":    "Update RES-100 to v1.1",
+		"status":   "review",
+		"priority": "normal",
 	}
 	updateJSON, _ := json.Marshal(updateBody)
 	req = httptest.NewRequest("PUT", "/api/v1/ecos/"+ecoID, bytes.NewBuffer(updateJSON))
