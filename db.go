@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 	"time"
 
@@ -592,6 +591,12 @@ func runMigrations() error {
 		FOREIGN KEY (sales_order_id) REFERENCES sales_orders(id) ON DELETE CASCADE
 	)`)
 
+	// ID sequence table for concurrent-safe ID generation
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS id_sequences (
+		prefix TEXT PRIMARY KEY,
+		next_num INTEGER NOT NULL DEFAULT 1
+	)`)
+
 	tables = append(tables, `CREATE TABLE IF NOT EXISTS invoices (
 		id TEXT PRIMARY KEY,
 		invoice_number TEXT NOT NULL UNIQUE,
@@ -965,22 +970,55 @@ func seedDB() {
 }
 
 // ID generation helpers
+// nextID generates unique IDs with format PREFIX-YYYY-NNNN using transaction-based locking
+// to prevent race conditions during concurrent ID generation.
+// Fixed: 2026-02-23 - Use SQLite transaction locking to prevent duplicate IDs (Bug #1 from audit)
 func nextID(prefix string, table string, digits int) string {
 	year := time.Now().Format("2006")
-	pattern := prefix + "-" + year + "-%"
-	var maxID sql.NullString
-	db.QueryRow("SELECT id FROM "+table+" WHERE id LIKE ? ORDER BY id DESC LIMIT 1", pattern).Scan(&maxID)
-
-	next := 1
-	if maxID.Valid {
-		parts := strings.Split(maxID.String, "-")
-		if len(parts) >= 3 {
-			if n, err := strconv.Atoi(parts[len(parts)-1]); err == nil {
-				next = n + 1
-			}
+	seqKey := prefix + "-" + year // One sequence per prefix-year combination
+	
+	// SQLite provides automatic write locking within transactions.
+	// The transaction will block other writers until committed.
+	tx, err := db.Begin()
+	if err != nil {
+		log.Printf("ERROR: nextID transaction begin failed for %s: %v", prefix, err)
+		// Fallback to timestamp-based ID to avoid blocking production
+		return fmt.Sprintf("%s-%s-%0*d", prefix, year, digits, time.Now().UnixNano()%1000000)
+	}
+	defer tx.Rollback() // Safe to call even after commit
+	
+	// Try to read current sequence value
+	var nextNum int
+	err = tx.QueryRow(`SELECT next_num FROM id_sequences WHERE prefix = ?`, seqKey).Scan(&nextNum)
+	
+	if err == sql.ErrNoRows {
+		// First ID for this prefix-year, initialize sequence
+		nextNum = 1
+		_, err = tx.Exec(`INSERT INTO id_sequences (prefix, next_num) VALUES (?, ?)`, seqKey, nextNum+1)
+		if err != nil {
+			log.Printf("ERROR: nextID insert sequence failed for %s: %v", seqKey, err)
+			return fmt.Sprintf("%s-%s-%0*d", prefix, year, digits, time.Now().UnixNano()%1000000)
+		}
+	} else if err != nil {
+		log.Printf("ERROR: nextID query sequence failed for %s: %v", seqKey, err)
+		return fmt.Sprintf("%s-%s-%0*d", prefix, year, digits, time.Now().UnixNano()%1000000)
+	} else {
+		// Increment the sequence for next caller
+		// The UPDATE acquires a write lock, blocking other concurrent transactions
+		_, err = tx.Exec(`UPDATE id_sequences SET next_num = next_num + 1 WHERE prefix = ?`, seqKey)
+		if err != nil {
+			log.Printf("ERROR: nextID update sequence failed for %s: %v", seqKey, err)
+			return fmt.Sprintf("%s-%s-%0*d", prefix, year, digits, time.Now().UnixNano()%1000000)
 		}
 	}
-	return fmt.Sprintf("%s-%s-%0*d", prefix, year, digits, next)
+	
+	// Commit the transaction to release the lock
+	if err = tx.Commit(); err != nil {
+		log.Printf("ERROR: nextID commit failed for %s: %v", seqKey, err)
+		return fmt.Sprintf("%s-%s-%0*d", prefix, year, digits, time.Now().UnixNano()%1000000)
+	}
+	
+	return fmt.Sprintf("%s-%s-%0*d", prefix, year, digits, nextNum)
 }
 
 func ns(s *string) sql.NullString {

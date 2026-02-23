@@ -98,6 +98,17 @@ func setupECOTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create part_changes table: %v", err)
 	}
 
+	// Create id_sequences table for concurrent-safe ID generation
+	_, err = testDB.Exec(`
+		CREATE TABLE id_sequences (
+			prefix TEXT PRIMARY KEY,
+			next_num INTEGER NOT NULL DEFAULT 1
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create id_sequences table: %v", err)
+	}
+
 	return testDB
 }
 

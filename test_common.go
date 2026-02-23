@@ -617,6 +617,17 @@ func setupTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create password_history table: %v", err)
 	}
 
+	// Create id_sequences table for concurrent-safe ID generation
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS id_sequences (
+			prefix TEXT PRIMARY KEY,
+			next_num INTEGER NOT NULL DEFAULT 1
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create id_sequences table: %v", err)
+	}
+
 	// Seed default admin user with password "changeme" (matching production)
 	hash, err := bcrypt.GenerateFromPassword([]byte("changeme"), bcrypt.DefaultCost)
 	if err != nil {
