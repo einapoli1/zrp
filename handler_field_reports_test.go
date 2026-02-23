@@ -81,6 +81,17 @@ func setupFieldReportsTestDB(t *testing.T) func() {
 		t.Fatalf("Failed to create audit_log table: %v", err)
 	}
 
+	// Create id_sequences table
+	_, err = testDB.Exec(`
+		CREATE TABLE id_sequences (
+			prefix TEXT PRIMARY KEY,
+			next_num INTEGER
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create id_sequences table: %v", err)
+	}
+
 	// Save and swap db
 	origDB := db
 	db = testDB
