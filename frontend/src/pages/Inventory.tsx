@@ -14,7 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
 import { Checkbox } from "../components/ui/checkbox";
 // Table used via ConfigurableTable
 import {
@@ -41,6 +40,22 @@ import { ErrorState } from "../components/ErrorState";
 // Lazy load BarcodeScanner to reduce initial bundle size (329KB chunk)
 const BarcodeScanner = lazy(() => import("../components/BarcodeScanner").then(m => ({ default: m.BarcodeScanner })));
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../components/ui/form";
+
+interface ReceiveInventoryData {
+  ipn: string;
+  qty: string;
+  reference: string;
+  notes: string;
+}
 
 function Inventory() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -51,16 +66,17 @@ function Inventory() {
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [parts, setParts] = useState<{ ipn: string; description?: string }[]>([]);
-
-  // Quick receive form state
-  const [receiveForm, setReceiveForm] = useState({
-    ipn: "",
-    qty: "",
-    reference: "",
-    notes: "",
-  });
   const [showScanner, setShowScanner] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  const receiveForm = useForm<ReceiveInventoryData>({
+    defaultValues: {
+      ipn: "",
+      qty: "",
+      reference: "",
+      notes: "",
+    },
+  });
 
   useEffect(() => {
     fetchInventory();
@@ -95,22 +111,25 @@ function Inventory() {
     }
   };
 
-  const handleQuickReceive = async () => {
+  const handleQuickReceive = async (data: ReceiveInventoryData) => {
     try {
-      const qty = parseFloat(receiveForm.qty);
-      const ipn = receiveForm.ipn;
+      const qty = parseFloat(data.qty);
+      if (isNaN(qty) || qty <= 0) {
+        receiveForm.setError("qty", { message: "Please enter a valid quantity" });
+        return;
+      }
       
       await api.createInventoryTransaction({
-        ipn,
+        ipn: data.ipn,
         type: "receive",
         qty,
-        reference: receiveForm.reference || undefined,
-        notes: receiveForm.notes || undefined,
+        reference: data.reference || undefined,
+        notes: data.notes || undefined,
       });
       
-      toast.success(`Received ${qty} units of ${ipn}`);
+      toast.success(`Received ${qty} units of ${data.ipn}`);
       setReceiveDialogOpen(false);
-      setReceiveForm({ ipn: "", qty: "", reference: "", notes: "" });
+      receiveForm.reset();
       fetchInventory();
     } catch (error: any) {
       const errorMessage = error?.message || "Failed to receive inventory";
@@ -188,8 +207,9 @@ function Inventory() {
     return item.reorder_point > 0 && item.qty_on_hand <= item.reorder_point;
   };
 
+  const ipnValue = receiveForm.watch("ipn") || "";
   const filteredParts = parts.filter(part => 
-    part.ipn.toLowerCase().includes(receiveForm.ipn.toLowerCase())
+    part.ipn.toLowerCase().includes(ipnValue.toLowerCase())
   );
 
   const inventoryColumns: ColumnDef<InventoryItem>[] = [
@@ -272,7 +292,7 @@ function Inventory() {
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
-                setReceiveForm((prev) => ({ ...prev, ipn: item.ipn }));
+                receiveForm.setValue("ipn", item.ipn);
                 setReceiveDialogOpen(true);
               }}
             >
@@ -340,102 +360,129 @@ function Inventory() {
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Quick Receive Inventory</DialogTitle>
-              
-              <DialogDescription>
-                Record received items and update inventory.
-              </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <Label htmlFor="ipn">IPN</Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowScanner(!showScanner)}
-                    >
-                      <ScanLine className="h-4 w-4 mr-1" />
-                      {showScanner ? "Hide Scanner" : "Scan Barcode"}
-                    </Button>
-                  </div>
-                  {showScanner && (
-                    <div className="mb-2">
-                      <Suspense fallback={<div className="h-64 bg-muted animate-pulse rounded" />}>
-                        <BarcodeScanner
-                          onScan={(code) => {
-                            setReceiveForm(prev => ({ ...prev, ipn: code }));
-                            setShowScanner(false);
-                          }}
-                        />
-                      </Suspense>
-                    </div>
-                  )}
-                  <Input
-                    id="ipn"
-                    value={receiveForm.ipn}
-                    onChange={(e) => setReceiveForm(prev => ({ ...prev, ipn: e.target.value }))}
-                    placeholder="Search IPN..."
-                  />
-                  {receiveForm.ipn && filteredParts.length > 0 && (
-                    <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
-                      {filteredParts.slice(0, 5).map((part) => (
-                        <div
-                          key={part.ipn}
-                          className="p-2 hover:bg-muted cursor-pointer"
-                          onClick={() => setReceiveForm(prev => ({ ...prev, ipn: part.ipn }))}
-                        >
-                          <div className="font-medium">{part.ipn}</div>
-                          {part.description && (
-                            <div className="text-sm text-muted-foreground">{part.description}</div>
+              <Form {...receiveForm}>
+                <form onSubmit={receiveForm.handleSubmit(handleQuickReceive)} className="space-y-6">
+                  <DialogHeader>
+                    <DialogTitle>Quick Receive Inventory</DialogTitle>
+                    <DialogDescription>
+                      Record received items and update inventory.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <FormField
+                      control={receiveForm.control}
+                      name="ipn"
+                      rules={{ required: 'IPN is required' }}
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between mb-1">
+                            <FormLabel>IPN *</FormLabel>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowScanner(!showScanner)}
+                            >
+                              <ScanLine className="h-4 w-4 mr-1" />
+                              {showScanner ? "Hide Scanner" : "Scan Barcode"}
+                            </Button>
+                          </div>
+                          {showScanner && (
+                            <div className="mb-2">
+                              <Suspense fallback={<div className="h-64 bg-muted animate-pulse rounded" />}>
+                                <BarcodeScanner
+                                  onScan={(code) => {
+                                    field.onChange(code);
+                                    setShowScanner(false);
+                                  }}
+                                />
+                              </Suspense>
+                            </div>
                           )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="qty">Quantity</Label>
-                  <Input
-                    id="qty"
-                    type="number"
-                    value={receiveForm.qty}
-                    onChange={(e) => setReceiveForm(prev => ({ ...prev, qty: e.target.value }))}
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="reference">Reference</Label>
-                  <Input
-                    id="reference"
-                    value={receiveForm.reference}
-                    onChange={(e) => setReceiveForm(prev => ({ ...prev, reference: e.target.value }))}
-                    placeholder="PO number, invoice, etc."
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="notes">Notes</Label>
-                  <Input
-                    id="notes"
-                    value={receiveForm.notes}
-                    onChange={(e) => setReceiveForm(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Optional notes"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setReceiveDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleQuickReceive}
-                  disabled={!receiveForm.ipn || !receiveForm.qty}
-                >
-                  Receive
-                </Button>
-              </DialogFooter>
+                          <FormControl>
+                            <Input placeholder="Search IPN..." {...field} />
+                          </FormControl>
+                          {field.value && filteredParts.length > 0 && (
+                            <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
+                              {filteredParts.slice(0, 5).map((part) => (
+                                <div
+                                  key={part.ipn}
+                                  className="p-2 hover:bg-muted cursor-pointer"
+                                  onClick={() => field.onChange(part.ipn)}
+                                >
+                                  <div className="font-medium">{part.ipn}</div>
+                                  {part.description && (
+                                    <div className="text-sm text-muted-foreground">{part.description}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={receiveForm.control}
+                      name="qty"
+                      rules={{ 
+                        required: 'Quantity is required',
+                        validate: (value) => {
+                          const num = parseFloat(value);
+                          if (isNaN(num) || num <= 0) return 'Quantity must be greater than 0';
+                          return true;
+                        }
+                      }}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quantity *</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="0" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={receiveForm.control}
+                      name="reference"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Reference</FormLabel>
+                          <FormControl>
+                            <Input placeholder="PO number, invoice, etc." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={receiveForm.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notes</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Optional notes" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setReceiveDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">
+                      Receive
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
             </DialogContent>
           </Dialog>
         </div>

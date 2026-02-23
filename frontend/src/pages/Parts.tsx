@@ -51,6 +51,15 @@ import { ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { useHotkeys } from 'react-hotkeys-hook';
 import { KeyboardShortcutsHelp } from '../components/KeyboardShortcutsHelp';
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../components/ui/form";
 interface PartWithFields extends Part {
   category?: string;
   description?: string;
@@ -84,14 +93,20 @@ function Parts() {
   const { configured: gitplmConfigured, buildUrl: gitplmUrl } = useGitPLM();
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState("");
-  const [ipnError, setIpnError] = useState("");
   const [newCatDialogOpen, setNewCatDialogOpen] = useState(false);
   const [newCatData, setNewCatData] = useState<NewCategoryData>({ title: "", prefix: "" });
   const [creatingCategory, setCreatingCategory] = useState(false);
   const pageSize = 50;
   
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  const partForm = useForm<CreatePartData>({
+    defaultValues: {
+      ipn: "",
+      category: "",
+      dynamicFields: {},
+    },
+  });
 
   // Keyboard shortcuts
   useHotkeys('n', () => setCreateDialogOpen(true), { 
@@ -112,12 +127,6 @@ function Parts() {
   }, {
     enableOnFormTags: true,
     preventDefault: true
-  });
-
-  const [partForm, setPartForm] = useState<CreatePartData>({
-    ipn: "",
-    category: "",
-    dynamicFields: {},
   });
 
   // Debounced search effect
@@ -209,40 +218,38 @@ function Parts() {
     setCurrentPage(1);
   };
 
+  const selectedPartCategory = partForm.watch("category");
   const selectedCategoryColumns = useMemo(() => {
-    if (!partForm.category) return [];
-    const cat = categories.find(c => c.id === partForm.category);
+    if (!selectedPartCategory) return [];
+    const cat = categories.find(c => c.id === selectedPartCategory);
     return cat?.columns?.filter(c => c.toLowerCase() !== "ipn") || [];
-  }, [partForm.category, categories]);
+  }, [selectedPartCategory, categories]);
 
-  const handleCreatePart = async () => {
+  const handleCreatePart = async (data: CreatePartData) => {
     setCreating(true);
-    setCreateError("");
-    setIpnError("");
     try {
       // Check for duplicate IPN
-      const check = await api.checkIPN(partForm.ipn);
+      const check = await api.checkIPN(data.ipn);
       if (check.exists) {
-        setIpnError("This IPN already exists");
+        partForm.setError("ipn", { message: "This IPN already exists" });
         setCreating(false);
         return;
       }
 
       await api.createPart({
-        ipn: partForm.ipn,
-        category: partForm.category,
-        fields: partForm.dynamicFields,
+        ipn: data.ipn,
+        category: data.category,
+        fields: data.dynamicFields,
       });
-      toast.success(`Part ${partForm.ipn} created successfully`);
+      toast.success(`Part ${data.ipn} created successfully`);
       setCreateDialogOpen(false);
-      setPartForm({ ipn: "", category: "", dynamicFields: {} });
+      partForm.reset();
       fetchParts();
     } catch (error: any) {
       const msg = error?.message || "Failed to create part";
       if (msg.toLowerCase().includes("already exists") || msg.toLowerCase().includes("duplicate")) {
-        setIpnError("This IPN already exists");
+        partForm.setError("ipn", { message: "This IPN already exists" });
       } else {
-        setCreateError(msg);
         toast.error(`Failed to create part: ${msg}`);
       }
     } finally {
@@ -396,90 +403,104 @@ function Parts() {
               </Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Add New Part</DialogTitle>
-              <DialogDescription>
-                Create a new part in your inventory system.
-              </DialogDescription>
-            </DialogHeader>
-            
-            {createError && (
-              <div className="text-sm text-destructive bg-destructive/10 p-2 rounded" data-testid="create-error">
-                {createError}
-              </div>
-            )}
+            <Form {...partForm}>
+              <form onSubmit={partForm.handleSubmit(handleCreatePart)} className="space-y-6">
+                <DialogHeader>
+                  <DialogTitle>Add New Part</DialogTitle>
+                  <DialogDescription>
+                    Create a new part in your inventory system.
+                  </DialogDescription>
+                </DialogHeader>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="ipn">IPN *</Label>
-                <Input
-                  id="ipn"
-                  placeholder="Internal Part Number"
-                  value={partForm.ipn}
-                  onChange={(e) => {
-                    setPartForm(prev => ({ ...prev, ipn: e.target.value }));
-                    setIpnError("");
-                  }}
-                />
-                {ipnError && <p className="text-sm text-destructive" data-testid="ipn-error">{ipnError}</p>}
-              </div>
-              
-              <div className="space-y-2">
-                <Label>Category *</Label>
-                <div className="flex gap-2">
-                  <Select
-                    value={partForm.category}
-                    onValueChange={(value) => setPartForm(prev => ({ ...prev, category: value, dynamicFields: {} }))}
-                  >
-                    <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Select category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {categories.map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Button type="button" variant="outline" size="icon" onClick={() => setNewCatDialogOpen(true)} aria-label="Add new category" title="Add new category">
-                    <Plus className="h-4 w-4" aria-hidden="true" />
-                  </Button>
-                </div>
-              </div>
-
-              {selectedCategoryColumns.map((col) => (
-                <div key={col} className="space-y-2">
-                  <Label htmlFor={`field-${col}`} className="capitalize">{col}</Label>
-                  <Input
-                    id={`field-${col}`}
-                    placeholder={col}
-                    value={partForm.dynamicFields[col] || ""}
-                    onChange={(e) => setPartForm(prev => ({
-                      ...prev,
-                      dynamicFields: { ...prev.dynamicFields, [col]: e.target.value }
-                    }))}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <FormField
+                    control={partForm.control}
+                    name="ipn"
+                    rules={{ required: 'IPN is required' }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>IPN *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Internal Part Number" {...field} />
+                        </FormControl>
+                        <FormMessage data-testid="ipn-error" />
+                      </FormItem>
+                    )}
                   />
+                  
+                  <FormField
+                    control={partForm.control}
+                    name="category"
+                    rules={{ required: 'Category is required' }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Category *</FormLabel>
+                        <div className="flex gap-2">
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              partForm.setValue("dynamicFields", {});
+                            }}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="flex-1">
+                                <SelectValue placeholder="Select category" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {categories.map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button type="button" variant="outline" size="icon" onClick={() => setNewCatDialogOpen(true)} aria-label="Add new category" title="Add new category">
+                            <Plus className="h-4 w-4" aria-hidden="true" />
+                          </Button>
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {selectedCategoryColumns.map((col) => (
+                    <FormField
+                      key={col}
+                      control={partForm.control}
+                      name={`dynamicFields.${col}` as any}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="capitalize">{col}</FormLabel>
+                          <FormControl>
+                            <Input placeholder={col} {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
-            
-            <DialogFooter>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => setCreateDialogOpen(false)}
-                disabled={creating}
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleCreatePart}
-                disabled={creating || !partForm.ipn || !partForm.category}
-              >
-                {creating ? 'Creating...' : 'Create Part'}
-              </Button>
-            </DialogFooter>
+                
+                <DialogFooter>
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    onClick={() => setCreateDialogOpen(false)}
+                    disabled={creating}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    type="submit"
+                    disabled={creating}
+                  >
+                    {creating ? 'Creating...' : 'Create Part'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
 

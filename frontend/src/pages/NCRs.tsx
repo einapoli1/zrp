@@ -8,24 +8,42 @@ import { Dialog, DialogContent,
 import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { Label } from "../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { AlertTriangle, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { api, type NCR } from "../lib/api";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../components/ui/form";
+
+interface CreateNCRData {
+  title: string;
+  description: string;
+  severity: string;
+  ipn: string;
+}
 
 function NCRs() {
   const navigate = useNavigate();
   const [ncrs, setNCRs] = useState<NCR[]>([]);
   const [loading, setLoading] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    severity: "minor",
-    ipn: "",
+
+  const form = useForm<CreateNCRData>({
+    defaultValues: {
+      title: "",
+      description: "",
+      severity: "minor",
+      ipn: "",
+    },
   });
 
   useEffect(() => {
@@ -43,13 +61,12 @@ function NCRs() {
     fetchNCRs();
   }, []);
 
-  const handleCreateNCR = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreateNCR = async (data: CreateNCRData) => {
     try {
-      const newNCR = await api.createNCR(formData);
+      const newNCR = await api.createNCR(data);
       setNCRs([newNCR, ...ncrs]);
       setCreateDialogOpen(false);
-      setFormData({ title: "", description: "", severity: "minor", ipn: "" });
+      form.reset();
       toast.success("NCR created successfully");
     } catch (error: any) {
       toast.error(error.message || "Failed to create NCR");
@@ -97,65 +114,92 @@ function NCRs() {
             </Button>
           </DialogTrigger>
           <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Create New NCR</DialogTitle>
-            
-              <DialogDescription>
-                Fill out the form below to create a new new ncr.
-              </DialogDescription>
-              </DialogHeader>
-            <form onSubmit={handleCreateNCR} className="space-y-4">
-              <div>
-                <Label htmlFor="title">Title *</Label>
-                <Input
-                  id="title"
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  placeholder="Brief description of the non-conformance"
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="Detailed description of the issue"
-                  rows={3}
-                />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="severity">Severity *</Label>
-                  <Select value={formData.severity} onValueChange={(value) => setFormData({ ...formData, severity: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="minor">Minor</SelectItem>
-                      <SelectItem value="major">Major</SelectItem>
-                      <SelectItem value="critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="ipn">Affected IPN</Label>
-                  <Input
-                    id="ipn"
-                    value={formData.ipn}
-                    onChange={(e) => setFormData({ ...formData, ipn: e.target.value })}
-                    placeholder="Part number affected"
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleCreateNCR)} className="space-y-6">
+                <DialogHeader>
+                  <DialogTitle>Create New NCR</DialogTitle>
+                  <DialogDescription>
+                    Fill out the form below to create a new non-conformance report.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="title"
+                    rules={{ required: 'Title is required' }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Title *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Brief description of the non-conformance" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
+
+                  <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Description</FormLabel>
+                        <FormControl>
+                          <Textarea placeholder="Detailed description of the issue" rows={3} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="severity"
+                      rules={{ required: 'Severity is required' }}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Severity *</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="minor">Minor</SelectItem>
+                              <SelectItem value="major">Major</SelectItem>
+                              <SelectItem value="critical">Critical</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="ipn"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Affected IPN</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Part number affected" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">Create NCR</Button>
-              </div>
-            </form>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Create NCR</Button>
+                </div>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
       </div>
