@@ -1,0 +1,365 @@
+=== RUN   TestVendorNameLengthValidation
+=== RUN   TestVendorNameLengthValidation/Empty_name
+=== RUN   TestVendorNameLengthValidation/Single_char
+=== RUN   TestVendorNameLengthValidation/Max_valid_(255)
+=== RUN   TestVendorNameLengthValidation/Over_max_(256)
+=== RUN   TestVendorNameLengthValidation/Way_over_max_(10k)
+--- PASS: TestVendorNameLengthValidation (0.00s)
+    --- PASS: TestVendorNameLengthValidation/Empty_name (0.00s)
+    --- PASS: TestVendorNameLengthValidation/Single_char (0.00s)
+    --- PASS: TestVendorNameLengthValidation/Max_valid_(255) (0.00s)
+    --- PASS: TestVendorNameLengthValidation/Over_max_(256) (0.00s)
+    --- PASS: TestVendorNameLengthValidation/Way_over_max_(10k) (0.00s)
+=== RUN   TestVendorNotesLengthValidation
+=== RUN   TestVendorNotesLengthValidation/Empty_notes
+=== RUN   TestVendorNotesLengthValidation/Single_char
+=== RUN   TestVendorNotesLengthValidation/Max_valid_(10000)
+=== RUN   TestVendorNotesLengthValidation/Over_max_(10001)
+=== RUN   TestVendorNotesLengthValidation/Way_over_(50k)
+--- PASS: TestVendorNotesLengthValidation (0.00s)
+    --- PASS: TestVendorNotesLengthValidation/Empty_notes (0.00s)
+    --- PASS: TestVendorNotesLengthValidation/Single_char (0.00s)
+    --- PASS: TestVendorNotesLengthValidation/Max_valid_(10000) (0.00s)
+    --- PASS: TestVendorNotesLengthValidation/Over_max_(10001) (0.00s)
+    --- PASS: TestVendorNotesLengthValidation/Way_over_(50k) (0.00s)
+=== RUN   TestHandleListVendors_EmptyList
+    handler_procurement_comprehensive_test.go:503: Expected 200, got 500
+--- FAIL: TestHandleListVendors_EmptyList (0.00s)
+=== RUN   TestHandleGetVendor_NotFound_Procurement
+--- PASS: TestHandleGetVendor_NotFound_Procurement (0.00s)
+=== RUN   TestHandleCreateVendor_RequiredFieldsComprehensive
+=== RUN   TestHandleCreateVendor_RequiredFieldsComprehensive/Valid_with_all_fields
+=== RUN   TestHandleCreateVendor_RequiredFieldsComprehensive/Valid_with_only_name
+=== RUN   TestHandleCreateVendor_RequiredFieldsComprehensive/Missing_name
+=== RUN   TestHandleCreateVendor_RequiredFieldsComprehensive/Empty_name
+=== RUN   TestHandleCreateVendor_RequiredFieldsComprehensive/Whitespace-only_name
+--- PASS: TestHandleCreateVendor_RequiredFieldsComprehensive (0.00s)
+    --- PASS: TestHandleCreateVendor_RequiredFieldsComprehensive/Valid_with_all_fields (0.00s)
+    --- PASS: TestHandleCreateVendor_RequiredFieldsComprehensive/Valid_with_only_name (0.00s)
+    --- PASS: TestHandleCreateVendor_RequiredFieldsComprehensive/Missing_name (0.00s)
+    --- PASS: TestHandleCreateVendor_RequiredFieldsComprehensive/Empty_name (0.00s)
+    --- PASS: TestHandleCreateVendor_RequiredFieldsComprehensive/Whitespace-only_name (0.00s)
+=== RUN   TestHandleCreateVendor_StatusEnumComprehensive
+=== RUN   TestHandleCreateVendor_StatusEnumComprehensive/ValidStatus_active
+=== RUN   TestHandleCreateVendor_StatusEnumComprehensive/ValidStatus_preferred
+=== RUN   TestHandleCreateVendor_StatusEnumComprehensive/ValidStatus_inactive
+=== RUN   TestHandleCreateVendor_StatusEnumComprehensive/ValidStatus_blocked
+=== RUN   TestHandleCreateVendor_StatusEnumComprehensive/InvalidStatus_pending
+=== RUN   TestHandleCreateVendor_StatusEnumComprehensive/InvalidStatus_approved
+=== RUN   TestHandleCreateVendor_StatusEnumComprehensive/InvalidStatus_ACTIVE
+=== RUN   TestHandleCreateVendor_StatusEnumComprehensive/InvalidStatus_Active
+=== RUN   TestHandleCreateVendor_StatusEnumComprehensive/InvalidStatus_unknown
+=== RUN   TestHandleCreateVendor_StatusEnumComprehensive/InvalidStatus_test
+--- PASS: TestHandleCreateVendor_StatusEnumComprehensive (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusEnumComprehensive/ValidStatus_active (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusEnumComprehensive/ValidStatus_preferred (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusEnumComprehensive/ValidStatus_inactive (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusEnumComprehensive/ValidStatus_blocked (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusEnumComprehensive/InvalidStatus_pending (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusEnumComprehensive/InvalidStatus_approved (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusEnumComprehensive/InvalidStatus_ACTIVE (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusEnumComprehensive/InvalidStatus_Active (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusEnumComprehensive/InvalidStatus_unknown (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusEnumComprehensive/InvalidStatus_test (0.00s)
+=== RUN   TestHandleUpdateVendor_StatusTransitions
+=== RUN   TestHandleUpdateVendor_StatusTransitions/active_to_preferred
+=== RUN   TestHandleUpdateVendor_StatusTransitions/preferred_to_inactive
+=== RUN   TestHandleUpdateVendor_StatusTransitions/inactive_to_blocked
+=== RUN   TestHandleUpdateVendor_StatusTransitions/blocked_to_active
+--- PASS: TestHandleUpdateVendor_StatusTransitions (0.00s)
+    --- PASS: TestHandleUpdateVendor_StatusTransitions/active_to_preferred (0.00s)
+    --- PASS: TestHandleUpdateVendor_StatusTransitions/preferred_to_inactive (0.00s)
+    --- PASS: TestHandleUpdateVendor_StatusTransitions/inactive_to_blocked (0.00s)
+    --- PASS: TestHandleUpdateVendor_StatusTransitions/blocked_to_active (0.00s)
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Valid_basic
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Valid_subdomain
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Valid_plus_addressing
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Valid_dots_in_local
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Valid_numbers
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Valid_underscores
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Valid_hyphens_in_domain
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Valid_long_TLD
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Empty_(optional)
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Invalid_no_@
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Invalid_no_domain
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Invalid_no_local_part
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Invalid_double_@
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Invalid_spaces
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Invalid_no_TLD
+    handler_vendors_comprehensive_test.go:252: Email 'user@example' should be invalid, got success
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Invalid_special_chars
+    handler_vendors_comprehensive_test.go:252: Email 'user!#$@example.com' should be invalid, got success
+=== RUN   TestHandleCreateVendor_EmailValidationComprehensive/Invalid_consecutive_dots
+--- FAIL: TestHandleCreateVendor_EmailValidationComprehensive (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Valid_basic (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Valid_subdomain (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Valid_plus_addressing (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Valid_dots_in_local (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Valid_numbers (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Valid_underscores (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Valid_hyphens_in_domain (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Valid_long_TLD (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Empty_(optional) (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Invalid_no_@ (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Invalid_no_domain (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Invalid_no_local_part (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Invalid_double_@ (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Invalid_spaces (0.00s)
+    --- FAIL: TestHandleCreateVendor_EmailValidationComprehensive/Invalid_no_TLD (0.00s)
+    --- FAIL: TestHandleCreateVendor_EmailValidationComprehensive/Invalid_special_chars (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidationComprehensive/Invalid_consecutive_dots (0.00s)
+=== RUN   TestHandleCreateVendor_IDGenerationSequence
+--- PASS: TestHandleCreateVendor_IDGenerationSequence (0.00s)
+=== RUN   TestHandleCreateVendor_IDFormat
+=== RUN   TestHandleCreateVendor_IDFormat/V-001_to_V-002
+=== RUN   TestHandleCreateVendor_IDFormat/V-099_to_V-100
+=== RUN   TestHandleCreateVendor_IDFormat/V-999_to_V-1000
+--- PASS: TestHandleCreateVendor_IDFormat (0.00s)
+    --- PASS: TestHandleCreateVendor_IDFormat/V-001_to_V-002 (0.00s)
+    --- PASS: TestHandleCreateVendor_IDFormat/V-099_to_V-100 (0.00s)
+    --- PASS: TestHandleCreateVendor_IDFormat/V-999_to_V-1000 (0.00s)
+=== RUN   TestHandleCreateVendor_ConcurrentIDGeneration
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_vendors_comprehensive_test.go:400: vendor 14 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 1 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 13 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 4 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 2 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 18 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 17 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 0 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 12 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 15 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 6 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 8 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 11 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 10 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 7 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 5 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 9 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 3 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:400: vendor 16 failed: {"error":"SQL logic error: no such table: vendors (1)"}
+        
+    handler_vendors_comprehensive_test.go:402: Concurrent ID generation had 19 errors
+--- FAIL: TestHandleCreateVendor_ConcurrentIDGeneration (0.00s)
+=== RUN   TestHandleDeleteVendor_POAssociationBlocking
+=== RUN   TestHandleDeleteVendor_POAssociationBlocking/POStatus_draft
+=== RUN   TestHandleDeleteVendor_POAssociationBlocking/POStatus_submitted
+=== RUN   TestHandleDeleteVendor_POAssociationBlocking/POStatus_approved
+=== RUN   TestHandleDeleteVendor_POAssociationBlocking/POStatus_partial
+=== RUN   TestHandleDeleteVendor_POAssociationBlocking/POStatus_received
+=== RUN   TestHandleDeleteVendor_POAssociationBlocking/POStatus_cancelled
+--- PASS: TestHandleDeleteVendor_POAssociationBlocking (0.00s)
+    --- PASS: TestHandleDeleteVendor_POAssociationBlocking/POStatus_draft (0.00s)
+    --- PASS: TestHandleDeleteVendor_POAssociationBlocking/POStatus_submitted (0.00s)
+    --- PASS: TestHandleDeleteVendor_POAssociationBlocking/POStatus_approved (0.00s)
+    --- PASS: TestHandleDeleteVendor_POAssociationBlocking/POStatus_partial (0.00s)
+    --- PASS: TestHandleDeleteVendor_POAssociationBlocking/POStatus_received (0.00s)
+    --- PASS: TestHandleDeleteVendor_POAssociationBlocking/POStatus_cancelled (0.00s)
+=== RUN   TestHandleUpdateVendor_FieldPreservation
+    handler_vendors_comprehensive_test.go:500: Update behavior: unprovided fields set to: website='', contact_name='', email='', phone='', notes='', lead_time=0
+--- PASS: TestHandleUpdateVendor_FieldPreservation (0.00s)
+=== RUN   TestHandleDeleteVendor_MultiplePOs
+--- PASS: TestHandleDeleteVendor_MultiplePOs (0.00s)
+=== RUN   TestHandleDeleteVendor_POsAndRFQs
+--- PASS: TestHandleDeleteVendor_POsAndRFQs (0.00s)
+=== RUN   TestHandleCreateVendor_LeadTimeEdgeCases
+=== RUN   TestHandleCreateVendor_LeadTimeEdgeCases/Zero_lead_time
+=== RUN   TestHandleCreateVendor_LeadTimeEdgeCases/Small_lead_time
+=== RUN   TestHandleCreateVendor_LeadTimeEdgeCases/Typical_lead_time
+=== RUN   TestHandleCreateVendor_LeadTimeEdgeCases/Long_lead_time
+=== RUN   TestHandleCreateVendor_LeadTimeEdgeCases/Max_lead_time
+=== RUN   TestHandleCreateVendor_LeadTimeEdgeCases/Over_max
+=== RUN   TestHandleCreateVendor_LeadTimeEdgeCases/Negative
+=== RUN   TestHandleCreateVendor_LeadTimeEdgeCases/Large_negative
+--- PASS: TestHandleCreateVendor_LeadTimeEdgeCases (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeEdgeCases/Zero_lead_time (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeEdgeCases/Small_lead_time (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeEdgeCases/Typical_lead_time (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeEdgeCases/Long_lead_time (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeEdgeCases/Max_lead_time (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeEdgeCases/Over_max (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeEdgeCases/Negative (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeEdgeCases/Large_negative (0.00s)
+=== RUN   TestHandleListVendors_OrderByName
+--- PASS: TestHandleListVendors_OrderByName (0.00s)
+=== RUN   TestHandleCreateVendor_DuplicateName
+    handler_vendors_edge_test.go:51: WARNING: Duplicate vendor names are allowed. Both V-001 and V-002 have name 'Duplicate Corp'
+--- PASS: TestHandleCreateVendor_DuplicateName (0.00s)
+=== RUN   TestHandleCreateVendor_PhoneValidation
+=== RUN   TestHandleCreateVendor_PhoneValidation/Valid_US_format
+=== RUN   TestHandleCreateVendor_PhoneValidation/Valid_international
+=== RUN   TestHandleCreateVendor_PhoneValidation/Valid_parentheses
+=== RUN   TestHandleCreateVendor_PhoneValidation/Valid_dots
+=== RUN   TestHandleCreateVendor_PhoneValidation/Valid_spaces
+=== RUN   TestHandleCreateVendor_PhoneValidation/Too_long
+=== RUN   TestHandleCreateVendor_PhoneValidation/Valid_extension
+=== RUN   TestHandleCreateVendor_PhoneValidation/Empty
+--- PASS: TestHandleCreateVendor_PhoneValidation (0.00s)
+    --- PASS: TestHandleCreateVendor_PhoneValidation/Valid_US_format (0.00s)
+    --- PASS: TestHandleCreateVendor_PhoneValidation/Valid_international (0.00s)
+    --- PASS: TestHandleCreateVendor_PhoneValidation/Valid_parentheses (0.00s)
+    --- PASS: TestHandleCreateVendor_PhoneValidation/Valid_dots (0.00s)
+    --- PASS: TestHandleCreateVendor_PhoneValidation/Valid_spaces (0.00s)
+    --- PASS: TestHandleCreateVendor_PhoneValidation/Too_long (0.00s)
+    --- PASS: TestHandleCreateVendor_PhoneValidation/Valid_extension (0.00s)
+    --- PASS: TestHandleCreateVendor_PhoneValidation/Empty (0.00s)
+=== RUN   TestHandleCreateVendor_EmailValidation
+=== RUN   TestHandleCreateVendor_EmailValidation/Valid_simple
+=== RUN   TestHandleCreateVendor_EmailValidation/Valid_subdomain
+=== RUN   TestHandleCreateVendor_EmailValidation/Valid_plus
+=== RUN   TestHandleCreateVendor_EmailValidation/Valid_dots
+=== RUN   TestHandleCreateVendor_EmailValidation/Invalid_no_@
+=== RUN   TestHandleCreateVendor_EmailValidation/Invalid_no_domain
+=== RUN   TestHandleCreateVendor_EmailValidation/Invalid_no_local
+=== RUN   TestHandleCreateVendor_EmailValidation/Invalid_double_@
+=== RUN   TestHandleCreateVendor_EmailValidation/Invalid_spaces
+=== RUN   TestHandleCreateVendor_EmailValidation/Empty
+--- PASS: TestHandleCreateVendor_EmailValidation (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidation/Valid_simple (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidation/Valid_subdomain (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidation/Valid_plus (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidation/Valid_dots (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidation/Invalid_no_@ (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidation/Invalid_no_domain (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidation/Invalid_no_local (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidation/Invalid_double_@ (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidation/Invalid_spaces (0.00s)
+    --- PASS: TestHandleCreateVendor_EmailValidation/Empty (0.00s)
+=== RUN   TestHandleCreateVendor_FieldLengthLimits
+=== RUN   TestHandleCreateVendor_FieldLengthLimits/name_ÿ
+=== RUN   TestHandleCreateVendor_FieldLengthLimits/name_Ā
+=== RUN   TestHandleCreateVendor_FieldLengthLimits/website_ÿ
+=== RUN   TestHandleCreateVendor_FieldLengthLimits/website_Ā
+=== RUN   TestHandleCreateVendor_FieldLengthLimits/contact_name_ÿ
+=== RUN   TestHandleCreateVendor_FieldLengthLimits/contact_name_Ā
+=== RUN   TestHandleCreateVendor_FieldLengthLimits/notes_✐
+=== RUN   TestHandleCreateVendor_FieldLengthLimits/notes_✑
+--- PASS: TestHandleCreateVendor_FieldLengthLimits (0.00s)
+    --- PASS: TestHandleCreateVendor_FieldLengthLimits/name_ÿ (0.00s)
+    --- PASS: TestHandleCreateVendor_FieldLengthLimits/name_Ā (0.00s)
+    --- PASS: TestHandleCreateVendor_FieldLengthLimits/website_ÿ (0.00s)
+    --- PASS: TestHandleCreateVendor_FieldLengthLimits/website_Ā (0.00s)
+    --- PASS: TestHandleCreateVendor_FieldLengthLimits/contact_name_ÿ (0.00s)
+    --- PASS: TestHandleCreateVendor_FieldLengthLimits/contact_name_Ā (0.00s)
+    --- PASS: TestHandleCreateVendor_FieldLengthLimits/notes_✐ (0.00s)
+    --- PASS: TestHandleCreateVendor_FieldLengthLimits/notes_✑ (0.00s)
+=== RUN   TestHandleCreateVendor_LeadTimeValidation
+=== RUN   TestHandleCreateVendor_LeadTimeValidation/Zero_lead_time
+=== RUN   TestHandleCreateVendor_LeadTimeValidation/One_day
+=== RUN   TestHandleCreateVendor_LeadTimeValidation/One_year
+=== RUN   TestHandleCreateVendor_LeadTimeValidation/Max_allowed
+=== RUN   TestHandleCreateVendor_LeadTimeValidation/Over_max
+=== RUN   TestHandleCreateVendor_LeadTimeValidation/Negative
+=== RUN   TestHandleCreateVendor_LeadTimeValidation/Large_negative
+--- PASS: TestHandleCreateVendor_LeadTimeValidation (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeValidation/Zero_lead_time (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeValidation/One_day (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeValidation/One_year (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeValidation/Max_allowed (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeValidation/Over_max (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeValidation/Negative (0.00s)
+    --- PASS: TestHandleCreateVendor_LeadTimeValidation/Large_negative (0.00s)
+=== RUN   TestHandleCreateVendor_StatusValidation
+=== RUN   TestHandleCreateVendor_StatusValidation/Status_active
+=== RUN   TestHandleCreateVendor_StatusValidation/Status_preferred
+=== RUN   TestHandleCreateVendor_StatusValidation/Status_inactive
+=== RUN   TestHandleCreateVendor_StatusValidation/Status_blocked
+=== RUN   TestHandleCreateVendor_StatusValidation/Status_
+=== RUN   TestHandleCreateVendor_StatusValidation/Status_invalid
+=== RUN   TestHandleCreateVendor_StatusValidation/Status_ACTIVE
+=== RUN   TestHandleCreateVendor_StatusValidation/Status_pending
+--- PASS: TestHandleCreateVendor_StatusValidation (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusValidation/Status_active (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusValidation/Status_preferred (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusValidation/Status_inactive (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusValidation/Status_blocked (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusValidation/Status_ (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusValidation/Status_invalid (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusValidation/Status_ACTIVE (0.00s)
+    --- PASS: TestHandleCreateVendor_StatusValidation/Status_pending (0.00s)
+=== RUN   TestVendorPriceCatalog_Integration
+--- PASS: TestVendorPriceCatalog_Integration (0.00s)
+=== RUN   TestVendorDelete_PriceHistoryOrphaned
+    handler_vendors_edge_test.go:471: INFO: Price history entries are preserved after vendor deletion (orphaned records)
+--- PASS: TestVendorDelete_PriceHistoryOrphaned (0.00s)
+=== RUN   TestVendor_SQLInjectionSafety
+=== RUN   TestVendor_SQLInjectionSafety/Injection_0
+=== RUN   TestVendor_SQLInjectionSafety/Injection_1
+=== RUN   TestVendor_SQLInjectionSafety/Injection_2
+=== RUN   TestVendor_SQLInjectionSafety/Injection_3
+=== RUN   TestVendor_SQLInjectionSafety/Injection_4
+=== RUN   TestVendor_SQLInjectionSafety/Injection_5
+--- PASS: TestVendor_SQLInjectionSafety (0.00s)
+    --- PASS: TestVendor_SQLInjectionSafety/Injection_0 (0.00s)
+    --- PASS: TestVendor_SQLInjectionSafety/Injection_1 (0.00s)
+    --- PASS: TestVendor_SQLInjectionSafety/Injection_2 (0.00s)
+    --- PASS: TestVendor_SQLInjectionSafety/Injection_3 (0.00s)
+    --- PASS: TestVendor_SQLInjectionSafety/Injection_4 (0.00s)
+    --- PASS: TestVendor_SQLInjectionSafety/Injection_5 (0.00s)
+=== RUN   TestHandleUpdateVendor_PartialUpdate
+    handler_vendors_edge_test.go:569: WARNING: Unprovided fields were cleared to empty strings
+--- PASS: TestHandleUpdateVendor_PartialUpdate (0.00s)
+=== RUN   TestVendor_CaseSensitivity
+    handler_vendors_edge_test.go:603: INFO: Vendor names are case-sensitive. 3 vendors created with same name in different cases
+--- PASS: TestVendor_CaseSensitivity (0.00s)
+=== RUN   TestVendor_EmptyVsNullFields
+    handler_vendors_edge_test.go:641: INFO: Empty strings are stored as empty strings (not NULL)
+--- PASS: TestVendor_EmptyVsNullFields (0.00s)
+=== RUN   TestVendor_RapidCreation
+    handler_vendors_edge_test.go:671: Created 100 vendors in 4.60275ms (21726.14 vendors/sec)
+--- PASS: TestVendor_RapidCreation (0.00s)
+=== RUN   TestVendor_IDOverflow
+--- PASS: TestVendor_IDOverflow (0.00s)
+=== RUN   TestHandleListVendors
+--- PASS: TestHandleListVendors (0.00s)
+=== RUN   TestHandleListVendors_Empty
+--- PASS: TestHandleListVendors_Empty (0.00s)
+=== RUN   TestHandleGetVendor
+--- PASS: TestHandleGetVendor (0.00s)
+=== RUN   TestHandleGetVendor_NotFound
+--- PASS: TestHandleGetVendor_NotFound (0.00s)
+=== RUN   TestHandleCreateVendor
+--- PASS: TestHandleCreateVendor (0.00s)
+=== RUN   TestHandleCreateVendor_DefaultStatus
+--- PASS: TestHandleCreateVendor_DefaultStatus (0.00s)
+=== RUN   TestHandleCreateVendor_AutoIncrementID
+--- PASS: TestHandleCreateVendor_AutoIncrementID (0.00s)
+=== RUN   TestHandleCreateVendor_MissingName
+--- PASS: TestHandleCreateVendor_MissingName (0.00s)
+=== RUN   TestHandleCreateVendor_InvalidEmail
+--- PASS: TestHandleCreateVendor_InvalidEmail (0.00s)
+=== RUN   TestHandleCreateVendor_NegativeLeadTime
+--- PASS: TestHandleCreateVendor_NegativeLeadTime (0.00s)
+=== RUN   TestHandleCreateVendor_InvalidJSON
+--- PASS: TestHandleCreateVendor_InvalidJSON (0.00s)
+=== RUN   TestHandleUpdateVendor
+--- PASS: TestHandleUpdateVendor (0.00s)
+=== RUN   TestHandleDeleteVendor
+--- PASS: TestHandleDeleteVendor (0.00s)
+=== RUN   TestHandleDeleteVendor_WithPurchaseOrders
+--- PASS: TestHandleDeleteVendor_WithPurchaseOrders (0.00s)
+=== RUN   TestHandleDeleteVendor_WithRFQs
+--- PASS: TestHandleDeleteVendor_WithRFQs (0.00s)
+FAIL
+exit status 1
+FAIL	zrp	3.139s

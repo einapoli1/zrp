@@ -305,6 +305,7 @@ type ShipmentLine struct {
 	Qty          int    `json:"qty"`
 	WorkOrderID  string `json:"work_order_id"`
 	RMAID        string `json:"rma_id"`
+	SalesOrderID string `json:"sales_order_id"`
 }
 
 type PackList struct {

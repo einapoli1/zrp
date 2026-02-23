@@ -45,7 +45,7 @@ func handleGetShipment(w http.ResponseWriter, r *http.Request, id string) {
 }
 
 func getShipmentLines(shipmentID string) []ShipmentLine {
-	rows, err := db.Query("SELECT id,shipment_id,COALESCE(ipn,''),COALESCE(serial_number,''),qty,COALESCE(work_order_id,''),COALESCE(rma_id,'') FROM shipment_lines WHERE shipment_id=?", shipmentID)
+	rows, err := db.Query("SELECT id,shipment_id,COALESCE(ipn,''),COALESCE(serial_number,''),qty,COALESCE(work_order_id,''),COALESCE(rma_id,''),COALESCE(sales_order_id,'') FROM shipment_lines WHERE shipment_id=?", shipmentID)
 	if err != nil {
 		return []ShipmentLine{}
 	}
@@ -53,7 +53,7 @@ func getShipmentLines(shipmentID string) []ShipmentLine {
 	var lines []ShipmentLine
 	for rows.Next() {
 		var l ShipmentLine
-		rows.Scan(&l.ID, &l.ShipmentID, &l.IPN, &l.SerialNumber, &l.Qty, &l.WorkOrderID, &l.RMAID)
+		rows.Scan(&l.ID, &l.ShipmentID, &l.IPN, &l.SerialNumber, &l.Qty, &l.WorkOrderID, &l.RMAID, &l.SalesOrderID)
 		lines = append(lines, l)
 	}
 	if lines == nil {
@@ -97,8 +97,8 @@ func handleCreateShipment(w http.ResponseWriter, r *http.Request) {
 
 	// Insert lines if provided
 	for _, line := range s.Lines {
-		_, err := db.Exec("INSERT INTO shipment_lines (shipment_id,ipn,serial_number,qty,work_order_id,rma_id) VALUES (?,?,?,?,?,?)",
-			s.ID, line.IPN, line.SerialNumber, line.Qty, line.WorkOrderID, line.RMAID)
+		_, err := db.Exec("INSERT INTO shipment_lines (shipment_id,ipn,serial_number,qty,work_order_id,rma_id,sales_order_id) VALUES (?,?,?,?,?,?,?)",
+			s.ID, line.IPN, line.SerialNumber, line.Qty, line.WorkOrderID, line.RMAID, line.SalesOrderID)
 		if err != nil {
 			jsonErr(w, err.Error(), 500)
 			return
@@ -128,8 +128,8 @@ func handleUpdateShipment(w http.ResponseWriter, r *http.Request, id string) {
 	if s.Lines != nil {
 		db.Exec("DELETE FROM shipment_lines WHERE shipment_id=?", id)
 		for _, line := range s.Lines {
-			db.Exec("INSERT INTO shipment_lines (shipment_id,ipn,serial_number,qty,work_order_id,rma_id) VALUES (?,?,?,?,?,?)",
-				id, line.IPN, line.SerialNumber, line.Qty, line.WorkOrderID, line.RMAID)
+			db.Exec("INSERT INTO shipment_lines (shipment_id,ipn,serial_number,qty,work_order_id,rma_id,sales_order_id) VALUES (?,?,?,?,?,?,?)",
+				id, line.IPN, line.SerialNumber, line.Qty, line.WorkOrderID, line.RMAID, line.SalesOrderID)
 		}
 	}
 

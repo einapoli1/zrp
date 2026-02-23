@@ -1,0 +1,63 @@
+=== RUN   TestRFQ_IDGeneration
+2026/02/23 08:30:53 ERROR: nextID query sequence failed for RFQ-2026: SQL logic error: no such table: id_sequences (1)
+    handler_rfq_comprehensive_test.go:155: Expected ID length 8, got 15 for ID RFQ-2026-220000
+--- FAIL: TestRFQ_IDGeneration (0.00s)
+=== RUN   TestRFQ_NoLines
+2026/02/23 08:30:53 ERROR: nextID query sequence failed for RFQ-2026: SQL logic error: no such table: id_sequences (1)
+    handler_rfq_comprehensive_test.go:191: Expected empty lines array, got nil
+--- FAIL: TestRFQ_NoLines (0.00s)
+=== RUN   TestRFQ_NoVendors
+2026/02/23 08:30:53 ERROR: nextID query sequence failed for RFQ-2026: SQL logic error: no such table: id_sequences (1)
+    handler_rfq_comprehensive_test.go:225: Expected empty vendors array, got nil
+--- FAIL: TestRFQ_NoVendors (0.00s)
+=== RUN   TestRFQ_LineItemZeroQty
+2026/02/23 08:30:53 ERROR: nextID query sequence failed for RFQ-2026: SQL logic error: no such table: id_sequences (1)
+    handler_rfq_comprehensive_test.go:252: Note: System currently allows zero quantity line items
+--- PASS: TestRFQ_LineItemZeroQty (0.00s)
+=== RUN   TestRFQ_LineItemNegativeQty
+2026/02/23 08:30:53 ERROR: nextID query sequence failed for RFQ-2026: SQL logic error: no such table: id_sequences (1)
+    handler_rfq_comprehensive_test.go:279: Note: System currently allows negative quantity line items
+--- PASS: TestRFQ_LineItemNegativeQty (0.00s)
+=== RUN   TestRFQ_LineItemEmptyIPN
+2026/02/23 08:30:53 ERROR: nextID query sequence failed for RFQ-2026: SQL logic error: no such table: id_sequences (1)
+    handler_rfq_comprehensive_test.go:306: Note: System currently allows empty IPN in line items
+--- PASS: TestRFQ_LineItemEmptyIPN (0.00s)
+=== RUN   TestRFQ_MultiVendorDifferentQuotes
+    handler_rfq_comprehensive_test.go:386: Multi-vendor comparison successful: 2 lines, 3 vendors, 2 matrix entries
+--- PASS: TestRFQ_MultiVendorDifferentQuotes (0.00s)
+=== RUN   TestRFQ_PastDueDate
+2026/02/23 08:30:53 ERROR: nextID query sequence failed for RFQ-2026: SQL logic error: no such table: id_sequences (1)
+    handler_rfq_comprehensive_test.go:411: Note: System currently allows past due dates
+--- PASS: TestRFQ_PastDueDate (0.00s)
+=== RUN   TestRFQ_AwardWithNoQuotes
+2026/02/23 08:30:53 ERROR: nextID query sequence failed for PO-2026: SQL logic error: no such table: id_sequences (1)
+    handler_rfq_comprehensive_test.go:447: Note: System allows awarding RFQ without quotes (creates empty PO)
+--- PASS: TestRFQ_AwardWithNoQuotes (0.00s)
+=== RUN   TestRFQ_InvalidStatusTransitions
+--- PASS: TestRFQ_InvalidStatusTransitions (0.00s)
+=== RUN   TestRFQ_CascadeDelete
+--- PASS: TestRFQ_CascadeDelete (0.00s)
+=== RUN   TestRFQ_AuditLog
+2026/02/23 08:30:53 ERROR: nextID query sequence failed for RFQ-2026: SQL logic error: no such table: id_sequences (1)
+--- PASS: TestRFQ_AuditLog (0.00s)
+=== RUN   TestRFQ_EmailBody
+--- PASS: TestRFQ_EmailBody (0.00s)
+=== RUN   TestRFQ_Dashboard
+--- PASS: TestRFQ_Dashboard (0.00s)
+=== RUN   TestRFQ_ConcurrentUpdates
+audit log error: SQL logic error: no such table: audit_log (1)
+    handler_rfq_comprehensive_test.go:737: RFQ corrupted after concurrent updates: SQL logic error: no such table: rfqs (1)
+    handler_rfq_comprehensive_test.go:740: Concurrent update test completed. Final title: 
+--- FAIL: TestRFQ_ConcurrentUpdates (0.00s)
+=== RUN   TestRFQ_POCreationDetails
+2026/02/23 08:30:53 ERROR: nextID query sequence failed for PO-2026: SQL logic error: no such table: id_sequences (1)
+--- PASS: TestRFQ_POCreationDetails (0.00s)
+=== RUN   TestRFQ_PerLineAward
+2026/02/23 08:30:53 ERROR: nextID query sequence failed for PO-2026: SQL logic error: no such table: id_sequences (1)
+2026/02/23 08:30:53 ERROR: nextID query sequence failed for PO-2026: SQL logic error: no such table: id_sequences (1)
+    handler_rfq_comprehensive_test.go:887: PO PO-2026-670000 created for vendor V-A with 1 line(s)
+    handler_rfq_comprehensive_test.go:887: PO PO-2026-724000 created for vendor V-B with 1 line(s)
+--- PASS: TestRFQ_PerLineAward (0.00s)
+FAIL
+exit status 1
+FAIL	zrp	0.281s
