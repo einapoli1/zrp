@@ -132,6 +132,24 @@ func setupNCRIntegrationTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create id_sequences table: %v", err)
 	}
 
+	// Create change_history table (used by recordChangeJSON)
+	_, err = testDB.Exec(`
+		CREATE TABLE change_history (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			table_name TEXT,
+			record_id TEXT,
+			operation TEXT,
+			old_data TEXT,
+			new_data TEXT,
+			user_id TEXT,
+			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+			undone INTEGER DEFAULT 0
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create change_history table: %v", err)
+	}
+
 	return testDB
 }
 
@@ -835,12 +853,12 @@ func TestHandleCreateCAPAFromNCR_ChangeTracking(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	// Verify part_changes entry was created
+	// Verify change_history entry was created (not part_changes, which is part-specific)
 	var count int
-	db.QueryRow("SELECT COUNT(*) FROM part_changes WHERE table_name='capas' AND operation='create'").Scan(&count)
+	db.QueryRow("SELECT COUNT(*) FROM change_history WHERE table_name='capas' AND operation='create'").Scan(&count)
 
 	if count < 1 {
-		t.Errorf("Expected at least 1 part_changes entry for CAPA creation, got %d", count)
+		t.Errorf("Expected at least 1 change_history entry for CAPA creation, got %d", count)
 	}
 }
 
@@ -867,12 +885,12 @@ func TestHandleCreateECOFromNCR_ChangeTracking(t *testing.T) {
 		t.Errorf("Expected status 200, got %d: %s", w.Code, w.Body.String())
 	}
 
-	// Verify part_changes entry was created
+	// Verify change_history entry was created (not part_changes, which is part-specific)
 	var count int
-	db.QueryRow("SELECT COUNT(*) FROM part_changes WHERE table_name='ecos' AND operation='create'").Scan(&count)
+	db.QueryRow("SELECT COUNT(*) FROM change_history WHERE table_name='ecos' AND operation='create'").Scan(&count)
 
 	if count < 1 {
-		t.Errorf("Expected at least 1 part_changes entry for ECO creation, got %d", count)
+		t.Errorf("Expected at least 1 change_history entry for ECO creation, got %d", count)
 	}
 }
 

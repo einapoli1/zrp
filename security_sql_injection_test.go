@@ -171,6 +171,10 @@ func setupSQLInjectionTestDB(t *testing.T) *sql.DB {
 			summary TEXT,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
+		`CREATE TABLE id_sequences (
+			prefix TEXT PRIMARY KEY,
+			next_num INTEGER
+		)`,
 	}
 
 	for _, table := range tables {
