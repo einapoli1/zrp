@@ -303,7 +303,7 @@ function PartDetail() {
     setManufacturersLoading(true);
     try {
       const data = await api.getPartManufacturers(decodeURIComponent(ipn));
-      setManufacturers(data.manufacturers || []);
+      setManufacturers(Array.isArray(data?.manufacturers) ? data.manufacturers : []);
     } catch (error) {
       console.error("Failed to fetch manufacturers:", error);
       // Don't show toast - it's ok if manufacturers don't exist yet
@@ -315,7 +315,7 @@ function PartDetail() {
   const fetchAvailableManufacturers = async () => {
     try {
       const data = await api.getManufacturers({ approved: true });
-      setAvailableManufacturers(data);
+      setAvailableManufacturers(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Failed to fetch available manufacturers:", error);
     }
