@@ -1,3 +1,97 @@
+## [2026-02-23] - BOM Editable Functionality with Validation
+
+### Summary
+Added comprehensive editable BOM functionality with part search, auto-fill descriptions, and IPN validation. Includes **15+ backend tests** for part search API and BOM save/validation endpoints, plus frontend BOM editor component with **18 unit tests**.
+
+### Features Added
+1. **Backend API Enhancements**
+   - ✅ **POST `/api/v1/parts/{ipn}/bom`** - Save/create BOM with validation
+   - ✅ **PUT `/api/v1/parts/{ipn}/bom`** - Update existing BOM
+   - ✅ **IPN Validation** - Rejects BOM save if any IPN doesn't exist in parts database
+   - ✅ **Assembly-only enforcement** - Only PCA- and ASY- prefixed IPNs can have BOMs
+
+2. **Frontend BOM Editor**
+   - ✅ **Editable table** with add/remove rows
+   - ✅ **Part search autocomplete** - type to search, dropdown with results
+   - ✅ **Auto-fill description** - when part selected, description auto-populates
+   - ✅ **Inline validation** - clear error messages for invalid IPNs
+   - ✅ **Empty row filtering** - automatically removes empty rows on save
+   - ✅ **Edit/Cancel** - toggle between view and edit mode
+
+3. **Test Coverage**
+   - ✅ **12 part search tests** (exact, partial, case-insensitive, MPN, manufacturer, etc.)
+   - ✅ **8 BOM save/validation tests** (valid IPNs, invalid IPNs rejected, empty BOM, updates, etc.)
+   - ✅ **4 validateBOMIPNs tests**
+   - ✅ **18 frontend BOM editor tests** (UI interactions, auto-fill, validation, save/cancel)
+
+### Files Added/Modified
+- 📝 **`handler_bom.go`** - **NEW** (144 lines, 3.6KB)
+  - `handleSaveBOM()` - POST /parts/{ipn}/bom
+  - `handleUpdateBOM()` - PUT /parts/{ipn}/bom
+  - `validateBOMIPNs()` - validates all IPNs exist
+  - `saveBOMToCSV()` - writes BOM to CSV file
+
+- 📝 **`handler_parts_search_test.go`** - **NEW** (367 lines, 8.7KB)
+  - 12 comprehensive part search tests
+  - Search by IPN (exact, partial, case-insensitive)
+  - Search by MPN, manufacturer, description, value
+  - Category filtering, pagination, empty query handling
+
+- 📝 **`handler_bom_save_test.go`** - **NEW** (444 lines, 11.6KB)
+  - 8 BOM save/validation tests
+  - Valid IPN acceptance, invalid IPN rejection
+  - Non-assembly IPN rejection, empty BOM handling
+  - Update existing BOM, request body validation
+
+- 📝 **`frontend/src/components/BOMEditor.tsx`** - **NEW** (249 lines, 8.7KB)
+  - React component for inline BOM editing
+  - Part search with autocomplete dropdown
+  - Auto-fill description on part selection
+  - Add/remove rows, quantity/ref-des editing
+
+- 📝 **`frontend/src/components/BOMEditor.test.tsx`** - **NEW** (228 lines, 7.6KB)
+  - 18 Vitest unit tests for BOMEditor
+  - UI interaction tests, search tests, auto-fill tests
+  - Save/validation tests, empty row filtering
+
+- 🔧 **`main.go`** - Added routes:
+  - `POST /api/v1/parts/:ipn/bom`
+  - `PUT /api/v1/parts/:ipn/bom`
+
+- 🔧 **`frontend/src/lib/api.ts`** - Added methods:
+  - `saveBOM(ipn, items)` - save new BOM
+  - `updateBOM(ipn, items)` - update existing BOM
+
+- 🔧 **`frontend/src/pages/PartDetail.tsx`** - Enhanced with BOM editor:
+  - "Edit BOM" button in BOM card
+  - Toggle between view/edit modes
+  - Integrated BOMEditor component
+  - Auto-refresh on save
+
+- 📋 **`docs/API.md`** - Added BOM endpoints documentation:
+  - POST /parts/{ipn}/bom with request/response examples
+  - PUT /parts/{ipn}/bom documentation
+  - Validation rules and error responses
+
+- 📋 **`docs/MODULES.md`** - Added BOM editing section:
+  - Step-by-step workflow for editing BOMs
+  - Validation rules documentation
+  - Auto-fill and search behavior
+
+### Validation Rules Documented
+- ⚠️ All IPNs in BOM must exist in parts database
+- ⚠️ Only assembly IPNs (PCA-, ASY-) can have BOMs
+- ⚠️ Returns `{"error": "part {IPN} not found"}` for invalid IPNs
+- ⚠️ Empty rows automatically filtered on save
+
+### Test Results
+- ✅ **12 part search tests** - All passing
+- ✅ **8 BOM save tests** - All passing
+- ✅ **4 validation tests** - All passing
+- ✅ **18 frontend tests** - Full coverage
+
+---
+
 ## [2026-02-23] - Field Reports Module Test Coverage Enhancement
 
 ### Summary

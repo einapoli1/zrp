@@ -123,7 +123,25 @@ Type at least one character and results appear grouped by module. Click any resu
 1. **Find a part:** Type in the search box or filter by category. Search matches against IPN and all field values.
 2. **View details:** Click a part row to see all its fields.
 3. **View BOM:** For assemblies, view the Bill of Materials showing sub-components.
-4. **View cost:** See BOM cost rollup for assemblies.
+4. **Edit BOM:** Click "Edit BOM" to modify the bill of materials for PCA- or ASY- assemblies.
+5. **View cost:** See BOM cost rollup for assemblies.
+
+### BOM Editing
+
+For assembly parts (IPN starting with `PCA-` or `ASY-`), you can create and edit the BOM:
+
+1. **Click "Edit BOM"** on the part detail page
+2. **Add rows** for each component
+3. **Search for parts** by typing in the IPN field — matching parts will appear in a dropdown
+4. **Auto-fill description** — when you select a part from the dropdown, its description is automatically filled in
+5. **Enter quantity** and reference designators (e.g., "R1, R2, R3")
+6. **Save** — validates that all IPNs exist in the parts database
+
+**Validation Rules:**
+- All IPNs must exist in the parts database before saving
+- Only assembly parts (PCA-, ASY- prefix) can have BOMs
+- Empty rows are automatically filtered out when saving
+- If validation fails, you'll see a clear error message: "Part {IPN} not found"
 
 **IPN Autocomplete:** When entering an IPN in other modules (inventory, work orders, etc.), the system suggests matching IPNs as you type.
 

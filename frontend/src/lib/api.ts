@@ -845,6 +845,26 @@ class ApiClient {
     return this.request(`/parts/${ipn}/bom`);
   }
 
+  async saveBOM(ipn: string, items: Array<{ ipn: string; description: string; quantity: number; ref_des: string }>): Promise<{ success: boolean; assembly_ipn: string; item_count: number }> {
+    return this.request(`/parts/${ipn}/bom`, {
+      method: 'POST',
+      body: JSON.stringify({
+        assembly_ipn: ipn,
+        items: items,
+      }),
+    });
+  }
+
+  async updateBOM(ipn: string, items: Array<{ ipn: string; description: string; quantity: number; ref_des: string }>): Promise<{ success: boolean; assembly_ipn: string; item_count: number }> {
+    return this.request(`/parts/${ipn}/bom`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        assembly_ipn: ipn,
+        items: items,
+      }),
+    });
+  }
+
   async getPartCost(ipn: string): Promise<PartCost> {
     return this.request(`/parts/${ipn}/cost`);
   }

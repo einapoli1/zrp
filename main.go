@@ -182,6 +182,10 @@ func main() {
 			handleGetPart(w, r, parts[1])
 		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "bom" && r.Method == "GET":
 			handlePartBOM(w, r, parts[1])
+		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "bom" && r.Method == "POST":
+			handleSaveBOM(w, r, parts[1])
+		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "bom" && r.Method == "PUT":
+			handleUpdateBOM(w, r, parts[1])
 		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "cost" && r.Method == "GET":
 			handlePartCost(w, r, parts[1])
 		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "where-used" && r.Method == "GET":

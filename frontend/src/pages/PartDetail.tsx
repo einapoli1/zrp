@@ -14,7 +14,8 @@ import {
   Info,
   GitBranch,
   RefreshCw,
-  Store
+  Store,
+  Plus
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -32,6 +33,7 @@ import { ExternalLink, Edit, Trash2, FilePlus } from "lucide-react";
 import { toast } from "sonner";
 import { Breadcrumb } from "../components/ui/breadcrumb";
 import { LoadingState } from "../components/LoadingState";
+import { BOMEditor } from "../components/BOMEditor";
 
 interface PartWithDetails extends Part {
   category?: string;
@@ -146,6 +148,21 @@ function BOMTree({ node, level = 0, onPartClick, gitplmBuildUrl }: BOMTreeProps)
   );
 }
 
+// Helper to flatten BOM tree to editable items (only direct children)
+function flattenBOMToItems(bom: BOMNode): Array<{ id: string; ipn: string; description: string; quantity: number; ref_des: string }> {
+  if (!bom.children || bom.children.length === 0) {
+    return [];
+  }
+  
+  return bom.children.map(child => ({
+    id: crypto.randomUUID(),
+    ipn: child.ipn,
+    description: child.description || "",
+    quantity: child.qty || 1,
+    ref_des: child.ref || "",
+  }));
+}
+
 function PartDetail() {
   const { ipn } = useParams<{ ipn: string }>();
   const navigate = useNavigate();
@@ -166,6 +183,7 @@ function PartDetail() {
   const [editFields, setEditFields] = useState<Record<string, string>>({});
   const [pendingChanges, setPendingChanges] = useState<PartChange[]>([]);
   const [savingChanges, setSavingChanges] = useState(false);
+  const [editingBOM, setEditingBOM] = useState(false);
   const [, setPendingLoading] = useState(false);
   const [creatingECO, setCreatingECO] = useState(false);
   const { configured: gitplmConfigured, buildUrl: gitplmUrl } = useGitPLM();
@@ -680,13 +698,37 @@ function PartDetail() {
       {isAssembly && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Layers className="h-5 w-5 mr-2" />
-              Bill of Materials
-            </CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center">
+                <Layers className="h-5 w-5 mr-2" />
+                Bill of Materials
+              </CardTitle>
+              {!editingBOM && (
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => setEditingBOM(true)}
+                  data-testid="edit-bom-btn"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit BOM
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
-            {bomLoading ? (
+            {editingBOM ? (
+              <BOMEditor 
+                assemblyIPN={ipn!}
+                initialItems={bom ? flattenBOMToItems(bom) : []}
+                onSave={() => {
+                  setEditingBOM(false);
+                  fetchBOM();
+                  toast.success("BOM updated successfully");
+                }}
+                onCancel={() => setEditingBOM(false)}
+              />
+            ) : bomLoading ? (
               <div className="space-y-3">
                 {Array.from({ length: 5 }).map((_, i) => (
                   <Skeleton key={i} className="h-8 w-full" />
@@ -700,6 +742,15 @@ function PartDetail() {
               <div className="text-center py-8 text-muted-foreground">
                 <Layers className="h-8 w-8 mx-auto mb-2 opacity-50" />
                 <p>No BOM data available for this assembly</p>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => setEditingBOM(true)}
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create BOM
+                </Button>
               </div>
             )}
           </CardContent>

@@ -64,6 +64,8 @@ Global search across parts, documents, ECOs, etc.
 | PUT | `/parts/{ipn}` | Update part |
 | DELETE | `/parts/{ipn}` | Delete part |
 | GET | `/parts/{ipn}/bom` | BOM tree |
+| POST | `/parts/{ipn}/bom` | Save/create BOM |
+| PUT | `/parts/{ipn}/bom` | Update BOM |
 | GET | `/parts/{ipn}/cost` | Cost info |
 | GET | `/parts/{ipn}/where-used` | Where-used |
 | GET | `/parts/{ipn}/changes` | List pending changes |
@@ -84,6 +86,34 @@ Global search across parts, documents, ECOs, etc.
 // Request
 {"ipn": "RES-001", "category": "Resistors", "fields": {"value": "10k", "package": "0603"}}
 ```
+
+### POST /parts/{ipn}/bom
+Save/create a BOM for an assembly part. The IPN must have a PCA- or ASY- prefix.
+
+**Validation:**
+- All IPNs in the BOM must exist in the parts database
+- Returns 400 error if any IPN is not found
+
+```json
+// Request
+{
+  "assembly_ipn": "PCA-MAIN-001",
+  "items": [
+    {"ipn": "RES-001", "description": "10K Resistor", "quantity": 2, "ref_des": "R1,R2"},
+    {"ipn": "CAP-001", "description": "10uF Capacitor", "quantity": 1, "ref_des": "C1"},
+    {"ipn": "IC-001", "description": "ATmega328P", "quantity": 1, "ref_des": "U1"}
+  ]
+}
+
+// Response
+{"data": {"success": true, "assembly_ipn": "PCA-MAIN-001", "item_count": 3}}
+
+// Error Response (invalid IPN)
+{"error": "part RES-999 not found"}
+```
+
+### PUT /parts/{ipn}/bom
+Update an existing BOM. Same request/response format as POST.
 
 ---
 
