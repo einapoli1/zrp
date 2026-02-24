@@ -554,11 +554,25 @@ func runMigrations() error {
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`)
 
+	// Manufacturers master table - normalized manufacturer data
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS manufacturers (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+		contact_name TEXT DEFAULT '',
+		contact_email TEXT DEFAULT '',
+		contact_phone TEXT DEFAULT '',
+		website TEXT DEFAULT '',
+		notes TEXT DEFAULT '',
+		approved INTEGER DEFAULT 1,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`)
+
 	// Part manufacturers table - supports multiple manufacturers per part
 	tables = append(tables, `CREATE TABLE IF NOT EXISTS part_manufacturers (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		part_id TEXT NOT NULL,
-		manufacturer TEXT NOT NULL,
+		manufacturer_id INTEGER,
 		mpn TEXT NOT NULL,
 		is_primary INTEGER NOT NULL DEFAULT 0,
 		approved INTEGER NOT NULL DEFAULT 1,
@@ -566,7 +580,8 @@ func runMigrations() error {
 		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 		FOREIGN KEY (part_id) REFERENCES parts(ipn) ON DELETE CASCADE,
-		UNIQUE(part_id, manufacturer, mpn)
+		FOREIGN KEY (manufacturer_id) REFERENCES manufacturers(id) ON DELETE RESTRICT,
+		UNIQUE(part_id, manufacturer_id, mpn)
 	)`)
 
 	tables = append(tables, `CREATE TABLE IF NOT EXISTS part_changes (
@@ -777,6 +792,7 @@ func runMigrations() error {
 		"CREATE INDEX IF NOT EXISTS idx_change_history_user_created ON change_history(user_id, created_at)",
 		"CREATE INDEX IF NOT EXISTS idx_email_log_address_sent ON email_log(to_address, sent_at)",
 		"CREATE INDEX IF NOT EXISTS idx_part_manufacturers_part_id ON part_manufacturers(part_id)",
+		"CREATE INDEX IF NOT EXISTS idx_manufacturers_name ON manufacturers(name)",
 	}
 	for _, idx := range indexes {
 		if _, err := db.Exec(idx); err != nil {

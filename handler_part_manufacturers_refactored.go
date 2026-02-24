@@ -10,20 +10,22 @@ import (
 	"time"
 )
 
-type PartManufacturer struct {
-	ID           int    `json:"id"`
-	PartID       string `json:"part_id"`
-	Manufacturer string `json:"manufacturer"`
-	MPN          string `json:"mpn"`
-	IsPrimary    bool   `json:"is_primary"`
-	Approved     bool   `json:"approved"`
-	Notes        string `json:"notes"`
-	CreatedAt    string `json:"created_at"`
-	UpdatedAt    string `json:"updated_at"`
+// PartManufacturerRefactored uses normalized manufacturer_id instead of TEXT manufacturer
+type PartManufacturerRefactored struct {
+	ID             int    `json:"id"`
+	PartID         string `json:"part_id"`
+	ManufacturerID int    `json:"manufacturer_id"`
+	Manufacturer   string `json:"manufacturer_name"` // Joined from manufacturers table
+	MPN            string `json:"mpn"`
+	IsPrimary      bool   `json:"is_primary"`
+	Approved       bool   `json:"approved"`
+	Notes          string `json:"notes"`
+	CreatedAt      string `json:"created_at"`
+	UpdatedAt      string `json:"updated_at"`
 }
 
-// GET /api/v1/parts/:ipn/manufacturers
-func handleGetPartManufacturers(w http.ResponseWriter, r *http.Request) {
+// GET /api/v1/parts/:ipn/manufacturers (refactored to JOIN with manufacturers table)
+func handleGetPartManufacturersRefactored(w http.ResponseWriter, r *http.Request) {
 	ipn := extractPathParam(r.URL.Path, "/api/v1/parts/", "/manufacturers")
 	if ipn == "" {
 		http.Error(w, "IPN required", http.StatusBadRequest)
@@ -42,12 +44,15 @@ func handleGetPartManufacturers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Query manufacturers ordered by is_primary DESC, created_at ASC
+	// Query manufacturers with JOIN to manufacturers table
 	rows, err := db.Query(`
-		SELECT id, part_id, manufacturer, mpn, is_primary, approved, notes, created_at, updated_at
-		FROM part_manufacturers
-		WHERE part_id = ?
-		ORDER BY is_primary DESC, created_at ASC
+		SELECT 
+			pm.id, pm.part_id, pm.manufacturer_id, m.name, pm.mpn, 
+			pm.is_primary, pm.approved, pm.notes, pm.created_at, pm.updated_at
+		FROM part_manufacturers pm
+		JOIN manufacturers m ON pm.manufacturer_id = m.id
+		WHERE pm.part_id = ?
+		ORDER BY pm.is_primary DESC, pm.created_at ASC
 	`, ipn)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
@@ -55,11 +60,11 @@ func handleGetPartManufacturers(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 
-	manufacturers := []PartManufacturer{}
+	manufacturers := []PartManufacturerRefactored{}
 	for rows.Next() {
-		var m PartManufacturer
+		var m PartManufacturerRefactored
 		var isPrimary, approved int
-		err := rows.Scan(&m.ID, &m.PartID, &m.Manufacturer, &m.MPN, &isPrimary, &approved, &m.Notes, &m.CreatedAt, &m.UpdatedAt)
+		err := rows.Scan(&m.ID, &m.PartID, &m.ManufacturerID, &m.Manufacturer, &m.MPN, &isPrimary, &approved, &m.Notes, &m.CreatedAt, &m.UpdatedAt)
 		if err != nil {
 			http.Error(w, "Failed to scan manufacturer", http.StatusInternalServerError)
 			return
@@ -78,8 +83,8 @@ func handleGetPartManufacturers(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// POST /api/v1/parts/:ipn/manufacturers
-func handleCreatePartManufacturer(w http.ResponseWriter, r *http.Request) {
+// POST /api/v1/parts/:ipn/manufacturers (refactored to use manufacturer_id)
+func handleCreatePartManufacturerRefactored(w http.ResponseWriter, r *http.Request) {
 	ipn := extractPathParam(r.URL.Path, "/api/v1/parts/", "/manufacturers")
 	if ipn == "" {
 		http.Error(w, "IPN required", http.StatusBadRequest)
@@ -87,11 +92,11 @@ func handleCreatePartManufacturer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req struct {
-		Manufacturer string `json:"manufacturer"`
-		MPN          string `json:"mpn"`
-		IsPrimary    bool   `json:"is_primary"`
-		Approved     bool   `json:"approved"`
-		Notes        string `json:"notes"`
+		ManufacturerID int    `json:"manufacturer_id"`
+		MPN            string `json:"mpn"`
+		IsPrimary      bool   `json:"is_primary"`
+		Approved       bool   `json:"approved"`
+		Notes          string `json:"notes"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -100,8 +105,8 @@ func handleCreatePartManufacturer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validation
-	if strings.TrimSpace(req.Manufacturer) == "" {
-		http.Error(w, "Manufacturer cannot be empty", http.StatusBadRequest)
+	if req.ManufacturerID <= 0 {
+		http.Error(w, "Valid manufacturer_id is required", http.StatusBadRequest)
 		return
 	}
 	if strings.TrimSpace(req.MPN) == "" {
@@ -109,14 +114,22 @@ func handleCreatePartManufacturer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Verify manufacturer exists
+	var mfrExists bool
+	err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM manufacturers WHERE id = ?)`, req.ManufacturerID).Scan(&mfrExists)
+	if err != nil || !mfrExists {
+		http.Error(w, "Manufacturer not found", http.StatusNotFound)
+		return
+	}
+
 	// Verify part exists
-	var exists bool
-	err := db.QueryRow(`SELECT EXISTS(SELECT 1 FROM parts WHERE ipn = ?)`, ipn).Scan(&exists)
+	var partExists bool
+	err = db.QueryRow(`SELECT EXISTS(SELECT 1 FROM parts WHERE ipn = ?)`, ipn).Scan(&partExists)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
-	if !exists {
+	if !partExists {
 		http.Error(w, "Part not found", http.StatusNotFound)
 		return
 	}
@@ -148,9 +161,9 @@ func handleCreatePartManufacturer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result, err := tx.Exec(`
-		INSERT INTO part_manufacturers (part_id, manufacturer, mpn, is_primary, approved, notes, created_at, updated_at)
+		INSERT INTO part_manufacturers (part_id, manufacturer_id, mpn, is_primary, approved, notes, created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	`, ipn, req.Manufacturer, req.MPN, isPrimaryInt, approvedInt, req.Notes, time.Now().Format(time.RFC3339), time.Now().Format(time.RFC3339))
+	`, ipn, req.ManufacturerID, req.MPN, isPrimaryInt, approvedInt, req.Notes, time.Now().Format(time.RFC3339), time.Now().Format(time.RFC3339))
 	if err != nil {
 		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
 			http.Error(w, "Duplicate manufacturer/MPN combination for this part", http.StatusConflict)
@@ -169,7 +182,7 @@ func handleCreatePartManufacturer(w http.ResponseWriter, r *http.Request) {
 
 	// Audit log (after commit)
 	username := getUsername(r)
-	logAudit(db, username, "create", "part_manufacturers", strconv.FormatInt(id, 10), fmt.Sprintf("Added manufacturer %s (%s) to part %s", req.Manufacturer, req.MPN, ipn))
+	logAudit(db, username, "create", "part_manufacturers", strconv.FormatInt(id, 10), fmt.Sprintf("Added manufacturer ID %d (MPN: %s) to part %s", req.ManufacturerID, req.MPN, ipn))
 
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json")
@@ -181,8 +194,8 @@ func handleCreatePartManufacturer(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// PUT /api/v1/parts/:ipn/manufacturers/:id
-func handleUpdatePartManufacturer(w http.ResponseWriter, r *http.Request) {
+// PUT /api/v1/parts/:ipn/manufacturers/:id (refactored to use manufacturer_id)
+func handleUpdatePartManufacturerRefactored(w http.ResponseWriter, r *http.Request) {
 	ipn := extractPathParam(r.URL.Path, "/api/v1/parts/", "/manufacturers/")
 	if ipn == "" {
 		http.Error(w, "IPN required", http.StatusBadRequest)
@@ -230,6 +243,26 @@ func handleUpdatePartManufacturer(w http.ResponseWriter, r *http.Request) {
 	updates := []string{}
 	args := []interface{}{}
 
+	// Handle manufacturer_id change
+	if manufacturerID, ok := req["manufacturer_id"]; ok {
+		mfrID := int(manufacturerID.(float64))
+		if mfrID <= 0 {
+			http.Error(w, "Invalid manufacturer_id", http.StatusBadRequest)
+			return
+		}
+		
+		// Verify new manufacturer exists
+		var exists bool
+		tx.QueryRow(`SELECT EXISTS(SELECT 1 FROM manufacturers WHERE id = ?)`, mfrID).Scan(&exists)
+		if !exists {
+			http.Error(w, "Manufacturer not found", http.StatusNotFound)
+			return
+		}
+		
+		updates = append(updates, "manufacturer_id = ?")
+		args = append(args, mfrID)
+	}
+
 	// Handle is_primary
 	if isPrimary, ok := req["is_primary"]; ok {
 		if isPrimary.(bool) {
@@ -266,17 +299,6 @@ func handleUpdatePartManufacturer(w http.ResponseWriter, r *http.Request) {
 		}
 		updates = append(updates, "mpn = ?")
 		args = append(args, mpnStr)
-	}
-
-	// Handle manufacturer
-	if manufacturer, ok := req["manufacturer"]; ok {
-		mfrStr := manufacturer.(string)
-		if strings.TrimSpace(mfrStr) == "" {
-			http.Error(w, "Manufacturer cannot be empty", http.StatusBadRequest)
-			return
-		}
-		updates = append(updates, "manufacturer = ?")
-		args = append(args, mfrStr)
 	}
 
 	// Handle notes
@@ -321,111 +343,5 @@ func handleUpdatePartManufacturer(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// DELETE /api/v1/parts/:ipn/manufacturers/:id
-func handleDeletePartManufacturer(w http.ResponseWriter, r *http.Request) {
-	ipn := extractPathParam(r.URL.Path, "/api/v1/parts/", "/manufacturers/")
-	if ipn == "" {
-		http.Error(w, "IPN required", http.StatusBadRequest)
-		return
-	}
-
-	// Extract manufacturer ID from path
-	idStr := strings.TrimPrefix(r.URL.Path, "/api/v1/parts/"+ipn+"/manufacturers/")
-	id, err := strconv.Atoi(idStr)
-	if err != nil {
-		http.Error(w, "Invalid manufacturer ID", http.StatusBadRequest)
-		return
-	}
-
-	tx, err := db.Begin()
-	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-	defer tx.Rollback()
-
-	// Verify manufacturer exists and belongs to this part
-	var existingPartID string
-	var isPrimary int
-	err = tx.QueryRow(`SELECT part_id, is_primary FROM part_manufacturers WHERE id = ?`, id).Scan(&existingPartID, &isPrimary)
-	if err == sql.ErrNoRows {
-		http.Error(w, "Manufacturer not found", http.StatusNotFound)
-		return
-	}
-	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-	if existingPartID != ipn {
-		http.Error(w, "Manufacturer does not belong to this part", http.StatusBadRequest)
-		return
-	}
-
-	// Check if this is the last manufacturer for the part
-	var count int
-	err = tx.QueryRow(`SELECT COUNT(*) FROM part_manufacturers WHERE part_id = ?`, ipn).Scan(&count)
-	if err != nil {
-		http.Error(w, "Database error", http.StatusInternalServerError)
-		return
-	}
-	if count <= 1 {
-		http.Error(w, "Cannot delete the last manufacturer. Each part must have at least one manufacturer.", http.StatusBadRequest)
-		return
-	}
-
-	// If deleting primary manufacturer and others exist, promote oldest secondary to primary
-	if isPrimary == 1 {
-		// SQLite doesn't support LIMIT in UPDATE, so we need to find the ID first
-		var promoteID int
-		err = tx.QueryRow(`
-			SELECT id FROM part_manufacturers 
-			WHERE part_id = ? AND id != ? 
-			ORDER BY created_at ASC 
-			LIMIT 1
-		`, ipn, id).Scan(&promoteID)
-		if err == nil {
-			_, err = tx.Exec(`UPDATE part_manufacturers SET is_primary = 1 WHERE id = ?`, promoteID)
-			if err != nil {
-				http.Error(w, "Failed to promote secondary manufacturer", http.StatusInternalServerError)
-				return
-			}
-		}
-	}
-
-	// Delete the manufacturer
-	_, err = tx.Exec(`DELETE FROM part_manufacturers WHERE id = ?`, id)
-	if err != nil {
-		http.Error(w, "Failed to delete manufacturer", http.StatusInternalServerError)
-		return
-	}
-
-	if err := tx.Commit(); err != nil {
-		http.Error(w, "Failed to commit transaction", http.StatusInternalServerError)
-		return
-	}
-
-	// Audit log (after commit)
-	username := getUsername(r)
-	logAudit(db, username, "delete", "part_manufacturers", strconv.Itoa(id), fmt.Sprintf("Deleted manufacturer from part %s", ipn))
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(APIResponse{
-		Data: map[string]interface{}{
-			"message": "Manufacturer deleted successfully",
-		},
-	})
-}
-
-// Helper function to extract path parameter
-func extractPathParam(path, prefix, suffix string) string {
-	if !strings.HasPrefix(path, prefix) {
-		return ""
-	}
-	path = strings.TrimPrefix(path, prefix)
-	if idx := strings.Index(path, suffix); idx != -1 {
-		return path[:idx]
-	}
-	return path
-}
-
-// Migration function moved to db_manufacturer_migration.go
+// DELETE remains the same - no changes needed
+// (Reusing handleDeletePartManufacturer from original file)

@@ -329,6 +329,18 @@ func main() {
 		case parts[0] == "vendors" && len(parts) == 2 && r.Method == "DELETE":
 			handleDeleteVendor(w, r, parts[1])
 
+		// Manufacturers
+		case parts[0] == "manufacturers" && len(parts) == 1 && r.Method == "GET":
+			handleListManufacturers(w, r)
+		case parts[0] == "manufacturers" && len(parts) == 1 && r.Method == "POST":
+			handleCreateManufacturer(w, r)
+		case parts[0] == "manufacturers" && len(parts) == 2 && r.Method == "GET":
+			handleGetManufacturer(w, r)
+		case parts[0] == "manufacturers" && len(parts) == 2 && r.Method == "PUT":
+			handleUpdateManufacturer(w, r)
+		case parts[0] == "manufacturers" && len(parts) == 2 && r.Method == "DELETE":
+			handleDeleteManufacturer(w, r)
+
 		// Inventory
 		case parts[0] == "inventory" && len(parts) == 2 && parts[1] == "export" && r.Method == "GET":
 			handleExportInventory(w, r)
