@@ -74,7 +74,7 @@ export function Vendors() {
     setLoading(true);
     try {
       const data = await api.getManufacturers();
-      setManufacturers(data);
+      setManufacturers(Array.isArray(data) ? data : []);
     } catch (error: any) {
       console.error("Failed to fetch manufacturers:", error);
       toast.error(error.message || "Failed to fetch manufacturers");
