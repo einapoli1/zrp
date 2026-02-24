@@ -65,11 +65,9 @@ test.describe('Product Configurator', () => {
     console.log('React DevTools available:', hasId); // Let form elements render
     
     // Add first parameter (voltage - enum)
+    // Scroll to the parameter form inputs (they're below the fold)
+    await page.locator('input[placeholder*="voltage"]').scrollIntoViewIfNeeded();
     await page.fill('input[placeholder*="voltage"]', 'voltage');
-
-    // Scroll to parameter form
-    await page.locator("select").first().scrollIntoViewIfNeeded();
-    await page.locator('select').scrollIntoViewIfNeeded();
     await page.selectOption('select', 'enum');
     await page.fill('input[placeholder*="120,208"]', '120V,208V,240V');
     await page.click('button:has-text("Add Parameter")');
@@ -122,8 +120,12 @@ test.describe('Product Configurator', () => {
     console.log('React DevTools available:', hasId); // Let form elements render
     
     // Add parameter
+
+    
+    await page.locator('input[placeholder*="voltage"]').scrollIntoViewIfNeeded();
+
+    
     await page.fill('input[placeholder*="voltage"]', 'test');
-    await page.locator('select').scrollIntoViewIfNeeded();
     await page.selectOption('select', 'enum');
     await page.fill('input[placeholder*="120,208"]', 'A,B,C');
     await page.click('button:has-text("Add Parameter")');
@@ -208,8 +210,12 @@ test.describe('Product Configurator', () => {
     console.log('React DevTools available:', hasId); // Let form elements render
     
     // Add voltage parameter
+
+    
+    await page.locator('input[placeholder*="voltage"]').scrollIntoViewIfNeeded();
+
+    
     await page.fill('input[placeholder*="voltage"]', 'voltage');
-    await page.locator('select').scrollIntoViewIfNeeded();
     await page.selectOption('select', 'enum');
     await page.fill('input[placeholder*="120,208"]', '120V,208V');
     await page.click('button:has-text("Add Parameter")');
