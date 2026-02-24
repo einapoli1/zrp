@@ -168,7 +168,7 @@ function Configurator() {
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error("Failed to update template");
-        const updated = await response.json();
+        const response_data = await response.json(); const updated = response_data.data || response_data;
         setEditingTemplate(updated);
         toast.success("Template updated");
       } else {
@@ -179,7 +179,7 @@ function Configurator() {
           body: JSON.stringify(payload),
         });
         if (!response.ok) throw new Error("Failed to create template");
-        const created = await response.json();
+        const response_data = await response.json(); const created = response_data.data || response_data;
         setEditingTemplate(created);
         toast.success("Template created");
       }
