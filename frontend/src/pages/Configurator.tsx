@@ -105,12 +105,8 @@ function Configurator() {
       setLoading(true);
       const response = await fetch("/api/v1/configurator/templates");
       if (!response.ok) throw new Error("Failed to fetch templates");
-      const data = await response.json();
-      if (!Array.isArray(data)) {
-        console.error("Invalid templates response:", data);
-        setTemplates([]);
-        return;
-      }
+      const response_data = await response.json();
+      const data = response_data.data || response_data;
       setTemplates(data);
       setError(null);
     } catch (err) {
@@ -392,7 +388,7 @@ function Configurator() {
     try {
       const response = await fetch(`/api/v1/configurator/templates/${selectedTemplateId}/preview`);
       if (!response.ok) throw new Error("Failed to preview");
-      const data = await response.json();
+      const response_data = await response.json(); const data = response_data.data || response_data;
       setPreviewData(data.preview || []);
       toast.success(`Preview: ${data.total_count} variants`);
     } catch (err) {
@@ -414,7 +410,7 @@ function Configurator() {
         method: "POST",
       });
       if (!response.ok) throw new Error("Failed to generate");
-      const data = await response.json();
+      const response_data = await response.json(); const data = response_data.data || response_data;
       toast.success(`Generated ${data.variant_count} variants in ${data.eco_id}`);
       navigate(`/ecos/${data.eco_id}`);
     } catch (err) {
