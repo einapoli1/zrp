@@ -55,6 +55,10 @@ test.describe('Product Configurator', () => {
     
     // Add first parameter (voltage - enum)
     await page.fill('input[placeholder*="voltage"]', 'voltage');
+
+    // Scroll to parameter form
+    await page.locator("select").first().scrollIntoViewIfNeeded();
+    await page.locator('select').scrollIntoViewIfNeeded();
     await page.selectOption('select', 'enum');
     await page.fill('input[placeholder*="120,208"]', '120V,208V,240V');
     await page.click('button:has-text("Add Parameter")');
@@ -97,6 +101,7 @@ test.describe('Product Configurator', () => {
     
     // Add parameter
     await page.fill('input[placeholder*="voltage"]', 'test');
+    await page.locator('select').scrollIntoViewIfNeeded();
     await page.selectOption('select', 'enum');
     await page.fill('input[placeholder*="120,208"]', 'A,B,C');
     await page.click('button:has-text("Add Parameter")');
@@ -160,6 +165,7 @@ test.describe('Product Configurator', () => {
     
     // Add voltage parameter
     await page.fill('input[placeholder*="voltage"]', 'voltage');
+    await page.locator('select').scrollIntoViewIfNeeded();
     await page.selectOption('select', 'enum');
     await page.fill('input[placeholder*="120,208"]', '120V,208V');
     await page.click('button:has-text("Add Parameter")');
