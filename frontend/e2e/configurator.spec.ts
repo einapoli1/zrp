@@ -53,6 +53,10 @@ test.describe('Product Configurator', () => {
     await page.click('button:has-text("Save Template")');
     await expect(page.locator('text=/template created/i')).toBeVisible({ timeout: 5000 });
     
+    // Wait for Parameters section to fully render
+    await page.locator('h3:has-text("Add Parameter")').waitFor({ state: 'visible' });
+    await page.waitForTimeout(500); // Let form elements render
+    
     // Add first parameter (voltage - enum)
     await page.fill('input[placeholder*="voltage"]', 'voltage');
 
@@ -99,6 +103,10 @@ test.describe('Product Configurator', () => {
     await page.click('button:has-text("Save Template")');
     await expect(page.locator('text=/template created/i')).toBeVisible({ timeout: 5000 });
     
+    // Wait for Parameters section to fully render
+    await page.locator('h3:has-text("Add Parameter")').waitFor({ state: 'visible' });
+    await page.waitForTimeout(500); // Let form elements render
+    
     // Add parameter
     await page.fill('input[placeholder*="voltage"]', 'test');
     await page.locator('select').scrollIntoViewIfNeeded();
@@ -129,6 +137,10 @@ test.describe('Product Configurator', () => {
     await page.fill('input[placeholder*="PCA"]', 'PARTS-{voltage}');
     await page.click('button:has-text("Save Template")');
     await expect(page.locator('text=/template created/i')).toBeVisible({ timeout: 5000 });
+    
+    // Wait for Parameters section to fully render
+    await page.locator('h3:has-text("Add Parameter")').waitFor({ state: 'visible' });
+    await page.waitForTimeout(500); // Let form elements render
     
     // Scroll down to Parts section
     await page.locator('h3:has-text("Add Part")').scrollIntoViewIfNeeded();
@@ -162,6 +174,10 @@ test.describe('Product Configurator', () => {
     await page.fill('input[placeholder*="PCA"]', 'PREV-{voltage}-{length}');
     await page.click('button:has-text("Save Template")');
     await expect(page.locator('text=/template created/i')).toBeVisible({ timeout: 5000 });
+    
+    // Wait for Parameters section to fully render
+    await page.locator('h3:has-text("Add Parameter")').waitFor({ state: 'visible' });
+    await page.waitForTimeout(500); // Let form elements render
     
     // Add voltage parameter
     await page.fill('input[placeholder*="voltage"]', 'voltage');
@@ -210,6 +226,10 @@ test.describe('Product Configurator', () => {
     await page.click('button:has-text("Save Template")');
     await expect(page.locator('text=/template created/i')).toBeVisible({ timeout: 5000 });
     
+    // Wait for Parameters section to fully render
+    await page.locator('h3:has-text("Add Parameter")').waitFor({ state: 'visible' });
+    await page.waitForTimeout(500); // Let form elements render
+    
     // Switch back to Templates tab
     await page.click('button[role="tab"]:has-text("Templates")');
     
@@ -227,6 +247,10 @@ test.describe('Product Configurator', () => {
     await page.fill('input[placeholder*="PCA"]', 'EDIT-{test}');
     await page.click('button:has-text("Save Template")');
     await expect(page.locator('text=/template created/i')).toBeVisible({ timeout: 5000 });
+    
+    // Wait for Parameters section to fully render
+    await page.locator('h3:has-text("Add Parameter")').waitFor({ state: 'visible' });
+    await page.waitForTimeout(500); // Let form elements render
     
     // Go back to Templates tab
     await page.click('button[role="tab"]:has-text("Templates")');
