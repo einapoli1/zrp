@@ -106,6 +106,11 @@ function Configurator() {
       const response = await fetch("/api/v1/configurator/templates");
       if (!response.ok) throw new Error("Failed to fetch templates");
       const data = await response.json();
+      if (!Array.isArray(data)) {
+        console.error("Invalid templates response:", data);
+        setTemplates([]);
+        return;
+      }
       setTemplates(data);
       setError(null);
     } catch (err) {
