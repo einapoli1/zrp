@@ -19,6 +19,12 @@ func initDB(path string) error {
 	return runMigrations()
 }
 
+// runMigrationsOnDB runs all migrations on a specific database connection
+// This is a wrapper for tests that need to run migrations on test databases
+func runMigrationsOnDB(database *sql.DB) error {
+	return database.RunMigrations(database, InitSearchTables)
+}
+
 func runMigrations() error {
 	return database.RunMigrations(db, InitSearchTables)
 }

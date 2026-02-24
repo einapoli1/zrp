@@ -7,18 +7,6 @@ import (
 	"net/http"
 )
 
-type Notification struct {
-	ID        int     `json:"id"`
-	Type      string  `json:"type"`
-	Severity  string  `json:"severity"`
-	Title     string  `json:"title"`
-	Message   *string `json:"message"`
-	RecordID  *string `json:"record_id"`
-	Module    *string `json:"module"`
-	ReadAt    *string `json:"read_at"`
-	CreatedAt string  `json:"created_at"`
-}
-
 func handleListNotifications(w http.ResponseWriter, r *http.Request) {
 	unread := r.URL.Query().Get("unread")
 	q := `SELECT id, type, severity, title, message, record_id, module, read_at, created_at FROM notifications`
@@ -129,25 +117,3 @@ func generateNotifications() {
 	}
 	log.Printf("Notification check complete: %d candidates", len(pending))
 }
-
-func createNotificationIfNew(ntype, severity, title string, message, recordID, module *string) {
-	// Dedup: don't create if same type+record exists within 24h
-	var count int
-	if recordID != nil {
-		db.QueryRow(`SELECT COUNT(*) FROM notifications WHERE type = ? AND record_id = ? AND created_at > datetime('now', '-24 hours')`,
-			ntype, *recordID).Scan(&count)
-	} else {
-		db.QueryRow(`SELECT COUNT(*) FROM notifications WHERE type = ? AND title = ? AND created_at > datetime('now', '-24 hours')`,
-			ntype, title).Scan(&count)
-	}
-	if count > 0 {
-		return
-	}
-	_, err := db.Exec(`INSERT INTO notifications (type, severity, title, message, record_id, module) VALUES (?, ?, ?, ?, ?, ?)`,
-		ntype, severity, title, message, recordID, module)
-	if err != nil {
-		log.Println("Failed to insert notification:", err)
-	}
-}
-
-func stringPtr(s string) *string { return &s }
