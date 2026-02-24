@@ -55,7 +55,14 @@ test.describe('Product Configurator', () => {
     
     // Wait for Parameters section to fully render
     await page.locator('h3:has-text("Add Parameter")').waitFor({ state: 'visible' });
-    await page.waitForTimeout(500); // Let form elements render
+    await page.waitForTimeout(500);
+    
+    // Debug: Check if editingTemplate has an id
+    const hasId = await page.evaluate(() => {
+      const win = window as any;
+      return win.__REACT_DEVTOOLS_GLOBAL_HOOK__?.renderers?.size > 0;
+    });
+    console.log('React DevTools available:', hasId); // Let form elements render
     
     // Add first parameter (voltage - enum)
     await page.fill('input[placeholder*="voltage"]', 'voltage');
@@ -105,7 +112,14 @@ test.describe('Product Configurator', () => {
     
     // Wait for Parameters section to fully render
     await page.locator('h3:has-text("Add Parameter")').waitFor({ state: 'visible' });
-    await page.waitForTimeout(500); // Let form elements render
+    await page.waitForTimeout(500);
+    
+    // Debug: Check if editingTemplate has an id
+    const hasId = await page.evaluate(() => {
+      const win = window as any;
+      return win.__REACT_DEVTOOLS_GLOBAL_HOOK__?.renderers?.size > 0;
+    });
+    console.log('React DevTools available:', hasId); // Let form elements render
     
     // Add parameter
     await page.fill('input[placeholder*="voltage"]', 'test');
@@ -140,7 +154,14 @@ test.describe('Product Configurator', () => {
     
     // Wait for Parameters section to fully render
     await page.locator('h3:has-text("Add Parameter")').waitFor({ state: 'visible' });
-    await page.waitForTimeout(500); // Let form elements render
+    await page.waitForTimeout(500);
+    
+    // Debug: Check if editingTemplate has an id
+    const hasId = await page.evaluate(() => {
+      const win = window as any;
+      return win.__REACT_DEVTOOLS_GLOBAL_HOOK__?.renderers?.size > 0;
+    });
+    console.log('React DevTools available:', hasId); // Let form elements render
     
     // Scroll down to Parts section
     await page.locator('h3:has-text("Add Part")').scrollIntoViewIfNeeded();
@@ -177,7 +198,14 @@ test.describe('Product Configurator', () => {
     
     // Wait for Parameters section to fully render
     await page.locator('h3:has-text("Add Parameter")').waitFor({ state: 'visible' });
-    await page.waitForTimeout(500); // Let form elements render
+    await page.waitForTimeout(500);
+    
+    // Debug: Check if editingTemplate has an id
+    const hasId = await page.evaluate(() => {
+      const win = window as any;
+      return win.__REACT_DEVTOOLS_GLOBAL_HOOK__?.renderers?.size > 0;
+    });
+    console.log('React DevTools available:', hasId); // Let form elements render
     
     // Add voltage parameter
     await page.fill('input[placeholder*="voltage"]', 'voltage');
@@ -228,7 +256,14 @@ test.describe('Product Configurator', () => {
     
     // Wait for Parameters section to fully render
     await page.locator('h3:has-text("Add Parameter")').waitFor({ state: 'visible' });
-    await page.waitForTimeout(500); // Let form elements render
+    await page.waitForTimeout(500);
+    
+    // Debug: Check if editingTemplate has an id
+    const hasId = await page.evaluate(() => {
+      const win = window as any;
+      return win.__REACT_DEVTOOLS_GLOBAL_HOOK__?.renderers?.size > 0;
+    });
+    console.log('React DevTools available:', hasId); // Let form elements render
     
     // Switch back to Templates tab
     await page.click('button[role="tab"]:has-text("Templates")');
@@ -250,7 +285,14 @@ test.describe('Product Configurator', () => {
     
     // Wait for Parameters section to fully render
     await page.locator('h3:has-text("Add Parameter")').waitFor({ state: 'visible' });
-    await page.waitForTimeout(500); // Let form elements render
+    await page.waitForTimeout(500);
+    
+    // Debug: Check if editingTemplate has an id
+    const hasId = await page.evaluate(() => {
+      const win = window as any;
+      return win.__REACT_DEVTOOLS_GLOBAL_HOOK__?.renderers?.size > 0;
+    });
+    console.log('React DevTools available:', hasId); // Let form elements render
     
     // Go back to Templates tab
     await page.click('button[role="tab"]:has-text("Templates")');
