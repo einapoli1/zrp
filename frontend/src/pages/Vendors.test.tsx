@@ -1,261 +1,313 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "../test/test-utils";
-import { mockVendors } from "../test/mocks";
+import { render, screen, fireEvent, waitFor } from "../test/test-utils";
+import { Vendors } from "./Vendors";
+import { api, type Manufacturer } from "../lib/api";
+import { toast } from "sonner";
 
-const mockGetVendors = vi.fn().mockResolvedValue(mockVendors);
-const mockCreateVendor = vi.fn().mockResolvedValue(mockVendors[0]);
-const mockUpdateVendor = vi.fn().mockResolvedValue(mockVendors[0]);
-const mockDeleteVendor = vi.fn().mockResolvedValue(undefined);
+vi.mock("../lib/api");
+vi.mock("sonner");
 
-vi.mock("../lib/api", () => ({
-  api: {
-    getVendors: (...args: any[]) => mockGetVendors(...args),
-    createVendor: (...args: any[]) => mockCreateVendor(...args),
-    updateVendor: (...args: any[]) => mockUpdateVendor(...args),
-    deleteVendor: (...args: any[]) => mockDeleteVendor(...args),
+const mockManufacturers: Manufacturer[] = [
+  {
+    id: 1,
+    name: "Texas Instruments",
+    contact_name: "John Doe",
+    contact_email: "john@ti.com",
+    contact_phone: "+1-555-123-4567",
+    website: "https://ti.com",
+    notes: "Primary supplier",
+    approved: true,
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
   },
-}));
-
-import Vendors from "./Vendors";
-
-beforeEach(() => vi.clearAllMocks());
+  {
+    id: 2,
+    name: "Analog Devices",
+    contact_name: "Jane Smith",
+    contact_email: "jane@analog.com",
+    contact_phone: "+1-555-987-6543",
+    website: "https://analog.com",
+    notes: "Secondary supplier",
+    approved: false,
+    created_at: "2024-01-02T00:00:00Z",
+    updated_at: "2024-01-02T00:00:00Z",
+  },
+];
 
 describe("Vendors", () => {
-  it("renders loading state", () => {
-    render(<Vendors />);
-    expect(screen.getByText("Loading vendors...")).toBeInTheDocument();
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it("renders vendor list after loading", async () => {
-    render(<Vendors />);
-    await waitFor(() => {
-      expect(screen.getByText("Acme Corp")).toBeInTheDocument();
+  describe("Render manufacturers list", () => {
+    it("should render manufacturers table with data", async () => {
+      vi.mocked(api.getManufacturers).mockResolvedValue(mockManufacturers);
+
+      render(<Vendors />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
+        expect(screen.getByText("Analog Devices")).toBeInTheDocument();
+        expect(screen.getByText("John Doe")).toBeInTheDocument();
+        expect(screen.getByText("Jane Smith")).toBeInTheDocument();
+        expect(screen.getByText("john@ti.com")).toBeInTheDocument();
+        expect(screen.getByText("jane@analog.com")).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId("approved-badge-1")).toBeInTheDocument();
+      expect(screen.getByTestId("unapproved-badge-2")).toBeInTheDocument();
     });
-    expect(screen.getByText("DigiParts")).toBeInTheDocument();
-  });
 
-  it("has add vendor button", async () => {
-    render(<Vendors />);
-    await waitFor(() => {
-      expect(screen.getByText("Add Vendor")).toBeInTheDocument();
-    });
-  });
+    it("should show empty state when no manufacturers exist", async () => {
+      vi.mocked(api.getManufacturers).mockResolvedValue([]);
 
-  it("shows empty state", async () => {
-    mockGetVendors.mockResolvedValueOnce([]);
-    render(<Vendors />);
-    await waitFor(() => {
-      expect(screen.getByText(/no vendors found/i)).toBeInTheDocument();
-    });
-  });
+      render(<Vendors />);
 
-  it("shows vendor contact info", async () => {
-    render(<Vendors />);
-    await waitFor(() => {
-      expect(screen.getByText("john@acme.com")).toBeInTheDocument();
-    });
-  });
-
-  it("shows vendor status badges", async () => {
-    render(<Vendors />);
-    await waitFor(() => {
-      const badges = screen.getAllByText("ACTIVE");
-      expect(badges.length).toBe(2);
+      await waitFor(() => {
+        expect(screen.getByText("No manufacturers added")).toBeInTheDocument();
+        expect(screen.getByText("Get started by adding your first manufacturer")).toBeInTheDocument();
+      });
     });
   });
 
-  it("displays summary cards with counts", async () => {
-    render(<Vendors />);
-    await waitFor(() => {
-      expect(screen.getByText("Total Vendors")).toBeInTheDocument();
-    });
-    expect(screen.getByText("Active")).toBeInTheDocument();
-    expect(screen.getByText("Inactive")).toBeInTheDocument();
-  });
+  describe("Add manufacturer", () => {
+    it("should add a new manufacturer successfully", async () => {
+      vi.mocked(api.getManufacturers).mockResolvedValue(mockManufacturers);
+      vi.mocked(api.createManufacturer).mockResolvedValue({
+        id: 3,
+        name: "Microchip",
+        approved: true,
+        created_at: "2024-01-03T00:00:00Z",
+        updated_at: "2024-01-03T00:00:00Z",
+      });
 
-  it("shows vendor directory table headers", async () => {
-    render(<Vendors />);
-    await waitFor(() => {
-      expect(screen.getByText("Vendor Directory")).toBeInTheDocument();
-    });
-    expect(screen.getByText("Company")).toBeInTheDocument();
-    expect(screen.getByText("Contact")).toBeInTheDocument();
-    expect(screen.getByText("Email")).toBeInTheDocument();
-    expect(screen.getByText("Phone")).toBeInTheDocument();
-    expect(screen.getByText("Status")).toBeInTheDocument();
-    expect(screen.getByText("Lead Time")).toBeInTheDocument();
-  });
+      render(<Vendors />);
 
-  it("shows lead time for vendors", async () => {
-    render(<Vendors />);
-    await waitFor(() => {
-      expect(screen.getByText("14 days")).toBeInTheDocument();
-      expect(screen.getByText("7 days")).toBeInTheDocument();
-    });
-  });
+      await waitFor(() => {
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
+      });
 
-  it("renders vendor name as link", async () => {
-    render(<Vendors />);
-    await waitFor(() => {
-      const link = screen.getByText("Acme Corp").closest("a");
-      expect(link).toHaveAttribute("href", "/vendors/V-001");
-    });
-  });
+      // Open add dialog
+      fireEvent.click(screen.getByTestId("add-manufacturer-btn"));
 
-  it("shows website link for vendors with website", async () => {
-    render(<Vendors />);
-    await waitFor(() => {
-      const websiteLinks = screen.getAllByText("Website");
-      expect(websiteLinks.length).toBeGreaterThan(0);
-    });
-  });
+      await waitFor(() => {
+        expect(screen.getByTestId("manufacturer-dialog")).toBeInTheDocument();
+        expect(screen.getByRole("heading", { name: "Add Manufacturer" })).toBeInTheDocument();
+      });
 
-  it("opens create vendor dialog when Add Vendor clicked", async () => {
-    render(<Vendors />);
-    await waitFor(() => {
-      expect(screen.getByText("Add Vendor")).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByText("Add Vendor"));
-    await waitFor(() => {
-      expect(screen.getByText("Add New Vendor")).toBeInTheDocument();
-    });
-    expect(screen.getByLabelText("Company Name *")).toBeInTheDocument();
-    expect(screen.getByLabelText("Contact Name")).toBeInTheDocument();
-    expect(screen.getByLabelText("Email")).toBeInTheDocument();
-  });
+      // Fill form
+      fireEvent.change(screen.getByTestId("name-input"), {
+        target: { value: "Microchip" },
+      });
+      fireEvent.change(screen.getByTestId("contact-name-input"), {
+        target: { value: "Bob Johnson" },
+      });
+      fireEvent.change(screen.getByTestId("contact-email-input"), {
+        target: { value: "bob@microchip.com" },
+      });
 
-  it("create dialog has Cancel and Create Vendor buttons", async () => {
-    render(<Vendors />);
-    await waitFor(() => screen.getByText("Add Vendor"));
-    fireEvent.click(screen.getByText("Add Vendor"));
-    await waitFor(() => {
-      expect(screen.getByText("Add New Vendor")).toBeInTheDocument();
-    });
-    expect(screen.getByText("Cancel")).toBeInTheDocument();
-    expect(screen.getByText("Create Vendor")).toBeInTheDocument();
-  });
+      // Submit
+      fireEvent.click(screen.getByTestId("save-btn"));
 
-  it("Create Vendor button is disabled when name is empty", async () => {
-    render(<Vendors />);
-    await waitFor(() => screen.getByText("Add Vendor"));
-    fireEvent.click(screen.getByText("Add Vendor"));
-    await waitFor(() => {
-      expect(screen.getByText("Create Vendor")).toBeInTheDocument();
+      await waitFor(() => {
+        expect(api.createManufacturer).toHaveBeenCalledWith({
+          name: "Microchip",
+          contact_name: "Bob Johnson",
+          contact_email: "bob@microchip.com",
+          contact_phone: "",
+          website: "",
+          notes: "",
+          approved: true,
+        });
+        expect(toast.success).toHaveBeenCalledWith("Manufacturer added successfully");
+      });
     });
-    expect(screen.getByText("Create Vendor")).toBeDisabled();
-  });
 
-  it("calls createVendor when form submitted with name", async () => {
-    render(<Vendors />);
-    await waitFor(() => screen.getByText("Add Vendor"));
-    fireEvent.click(screen.getByText("Add Vendor"));
-    await waitFor(() => {
-      expect(screen.getByLabelText("Company Name *")).toBeInTheDocument();
-    });
-    fireEvent.change(screen.getByLabelText("Company Name *"), { target: { value: "New Vendor" } });
-    fireEvent.click(screen.getByText("Create Vendor"));
-    await waitFor(() => {
-      expect(mockCreateVendor).toHaveBeenCalledWith(
-        expect.objectContaining({ name: "New Vendor" })
+    it("should show fuzzy match suggestion for similar manufacturer name", async () => {
+      vi.mocked(api.getManufacturers).mockResolvedValue(mockManufacturers);
+      vi.mocked(api.createManufacturer).mockRejectedValue(
+        new Error("A similar manufacturer 'Texas Instruments' already exists. Did you mean that one?")
       );
-    });
-  });
 
-  it("calls deleteVendor when delete confirmed", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
-    render(<Vendors />);
-    await waitFor(() => {
-      expect(screen.getByText("Acme Corp")).toBeInTheDocument();
-    });
-    // Click the first dropdown trigger (MoreHorizontal button)
-    screen.getAllByRole("button").filter(
-      btn => btn.querySelector("svg") && btn.textContent === ""
-    );
-    // Find the dropdown triggers - they're the ghost buttons in the last column
-    const dropdownTriggers = screen.getAllByRole("button").filter(btn => {
-      const cls = btn.className || "";
-      return cls.includes("ghost");
-    });
-    if (dropdownTriggers.length > 0) {
-      fireEvent.click(dropdownTriggers[0]);
+      render(<Vendors />);
+
       await waitFor(() => {
-        const deleteItem = screen.getByText("Delete");
-        fireEvent.click(deleteItem);
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
       });
+
+      // Open add dialog
+      fireEvent.click(screen.getByTestId("add-manufacturer-btn"));
+
+      // Fill form with similar name
+      fireEvent.change(screen.getByTestId("name-input"), {
+        target: { value: "Texas Instrumants" }, // Typo
+      });
+
+      // Submit
+      fireEvent.click(screen.getByTestId("save-btn"));
+
       await waitFor(() => {
-        expect(mockDeleteVendor).toHaveBeenCalledWith("V-001");
+        expect(toast.error).toHaveBeenCalledWith(
+          expect.stringContaining("similar"),
+          expect.objectContaining({ duration: 6000 })
+        );
       });
-    }
-    (window.confirm as any).mockRestore();
+    });
   });
 
-  it("does not delete when confirm is cancelled", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(false);
-    render(<Vendors />);
-    await waitFor(() => {
-      expect(screen.getByText("Acme Corp")).toBeInTheDocument();
-    });
-    const dropdownTriggers = screen.getAllByRole("button").filter(btn => {
-      const cls = btn.className || "";
-      return cls.includes("ghost");
-    });
-    if (dropdownTriggers.length > 0) {
-      fireEvent.click(dropdownTriggers[0]);
+  describe("Edit manufacturer", () => {
+    it("should edit an existing manufacturer successfully", async () => {
+      vi.mocked(api.getManufacturers).mockResolvedValue(mockManufacturers);
+      vi.mocked(api.updateManufacturer).mockResolvedValue({
+        ...mockManufacturers[0],
+        contact_name: "John Updated",
+      });
+
+      render(<Vendors />);
+
       await waitFor(() => {
-        const deleteItem = screen.getByText("Delete");
-        fireEvent.click(deleteItem);
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
       });
-      expect(mockDeleteVendor).not.toHaveBeenCalled();
-    }
-    (window.confirm as any).mockRestore();
-  });
 
-  it("opens edit dialog with pre-populated vendor data", async () => {
-    const user = (await import("@testing-library/user-event")).default.setup();
-    render(<Vendors />);
-    await waitFor(() => expect(screen.getByText("Acme Corp")).toBeInTheDocument());
-    // Find the row for Acme Corp and click the dropdown trigger (last button in the row)
-    const acmeRow = screen.getByText("Acme Corp").closest("tr")!;
-    const triggerBtn = acmeRow.querySelector("button")!;
-    await user.click(triggerBtn);
-    await waitFor(() => expect(screen.getByRole("menuitem", { name: /edit/i })).toBeInTheDocument());
-    await user.click(screen.getByRole("menuitem", { name: /edit/i }));
-    await waitFor(() => {
-      expect(screen.getByText("Edit Vendor")).toBeInTheDocument();
+      // Open edit dialog
+      fireEvent.click(screen.getByTestId("edit-manufacturer-1"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("manufacturer-dialog")).toBeInTheDocument();
+        expect(screen.getByText("Edit Manufacturer")).toBeInTheDocument();
+      });
+
+      // Update contact name
+      const nameInput = screen.getByTestId("contact-name-input");
+      fireEvent.change(nameInput, {
+        target: { value: "John Updated" },
+      });
+
+      // Submit
+      fireEvent.click(screen.getByTestId("save-btn"));
+
+      await waitFor(() => {
+        expect(api.updateManufacturer).toHaveBeenCalledWith(1, expect.objectContaining({
+          contact_name: "John Updated",
+        }));
+        expect(toast.success).toHaveBeenCalledWith("Manufacturer updated successfully");
+      });
     });
-    // Verify form is pre-populated with existing vendor data
-    expect((screen.getByLabelText("Company Name *") as HTMLInputElement).value).toBe("Acme Corp");
-    expect((screen.getByLabelText("Contact Name") as HTMLInputElement).value).toBe("John");
-    expect((screen.getByLabelText("Email") as HTMLInputElement).value).toBe("john@acme.com");
+
+    it("should validate email format when editing", async () => {
+      vi.mocked(api.getManufacturers).mockResolvedValue(mockManufacturers);
+
+      render(<Vendors />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
+      });
+
+      // Open edit dialog
+      fireEvent.click(screen.getByTestId("edit-manufacturer-1"));
+
+      // Enter invalid email
+      const emailInput = screen.getByTestId("contact-email-input");
+      fireEvent.change(emailInput, {
+        target: { value: "invalid-email" },
+      });
+
+      // Submit
+      fireEvent.click(screen.getByTestId("save-btn"));
+
+      await waitFor(() => {
+        expect(screen.getByText("Invalid email address")).toBeInTheDocument();
+        expect(api.updateManufacturer).not.toHaveBeenCalled();
+      });
+    });
   });
 
-  it("submits edit vendor form and calls updateVendor", async () => {
-    const user = (await import("@testing-library/user-event")).default.setup();
-    render(<Vendors />);
-    await waitFor(() => expect(screen.getByText("Acme Corp")).toBeInTheDocument());
-    const acmeRow = screen.getByText("Acme Corp").closest("tr")!;
-    const triggerBtn = acmeRow.querySelector("button")!;
-    await user.click(triggerBtn);
-    await waitFor(() => expect(screen.getByRole("menuitem", { name: /edit/i })).toBeInTheDocument());
-    await user.click(screen.getByRole("menuitem", { name: /edit/i }));
-    await waitFor(() => expect(screen.getByText("Edit Vendor")).toBeInTheDocument());
-    fireEvent.change(screen.getByLabelText("Company Name *"), { target: { value: "Acme Corp Updated" } });
-    fireEvent.click(screen.getByText("Update Vendor"));
-    await waitFor(() => {
-      expect(mockUpdateVendor).toHaveBeenCalledWith(
-        "V-001",
-        expect.objectContaining({ name: "Acme Corp Updated" })
+  describe("Delete manufacturer", () => {
+    it("should delete a manufacturer successfully", async () => {
+      vi.mocked(api.getManufacturers).mockResolvedValue(mockManufacturers);
+      vi.mocked(api.deleteManufacturer).mockResolvedValue();
+
+      render(<Vendors />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
+      });
+
+      // Open delete dialog
+      fireEvent.click(screen.getByTestId("delete-manufacturer-1"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("delete-dialog")).toBeInTheDocument();
+        expect(screen.getByText(/Delete Manufacturer/)).toBeInTheDocument();
+      });
+
+      // Confirm delete
+      fireEvent.click(screen.getByTestId("confirm-delete-btn"));
+
+      await waitFor(() => {
+        expect(api.deleteManufacturer).toHaveBeenCalledWith(1);
+        expect(toast.success).toHaveBeenCalledWith("Manufacturer deleted successfully");
+      });
+    });
+
+    it("should show error when parts reference the manufacturer", async () => {
+      vi.mocked(api.getManufacturers).mockResolvedValue(mockManufacturers);
+      vi.mocked(api.deleteManufacturer).mockRejectedValue(
+        new Error("Cannot delete manufacturer - 5 parts reference this manufacturer")
       );
+
+      render(<Vendors />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
+      });
+
+      // Open delete dialog
+      fireEvent.click(screen.getByTestId("delete-manufacturer-1"));
+
+      // Confirm delete
+      fireEvent.click(screen.getByTestId("confirm-delete-btn"));
+
+      await waitFor(() => {
+        expect(toast.error).toHaveBeenCalledWith(
+          "Cannot delete: This manufacturer is referenced by existing parts",
+          expect.objectContaining({ duration: 5000 })
+        );
+      });
     });
   });
 
-  it("handles API error on fetch gracefully", async () => {
-    mockGetVendors.mockRejectedValueOnce(new Error("Network error"));
-    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    render(<Vendors />);
-    await waitFor(() => {
-      expect(consoleSpy).toHaveBeenCalledWith("Failed to fetch vendors:", expect.any(Error));
+  describe("Search/filter", () => {
+    it("should filter manufacturers by search query", async () => {
+      vi.mocked(api.getManufacturers).mockResolvedValue(mockManufacturers);
+
+      render(<Vendors />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
+        expect(screen.getByText("Analog Devices")).toBeInTheDocument();
+      });
+
+      // Search for "Texas"
+      const searchInput = screen.getByTestId("search-input");
+      fireEvent.change(searchInput, {
+        target: { value: "Texas" },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
+        expect(screen.queryByText("Analog Devices")).not.toBeInTheDocument();
+      });
+
+      // Clear search
+      fireEvent.change(searchInput, {
+        target: { value: "" },
+      });
+
+      await waitFor(() => {
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
+        expect(screen.getByText("Analog Devices")).toBeInTheDocument();
+      });
     });
-    consoleSpy.mockRestore();
   });
 });

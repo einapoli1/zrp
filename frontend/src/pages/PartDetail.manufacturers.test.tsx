@@ -1,103 +1,115 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "../test/test-utils";
 import PartDetail from "./PartDetail";
-import { api } from "../lib/api";
-import type { Part, PartManufacturer } from "../lib/api";
+import { api, type Part, type PartManufacturer, type Manufacturer } from "../lib/api";
+import { toast } from "sonner";
+import { useParams } from "react-router-dom";
 
-// Mock dependencies
+vi.mock("../lib/api");
+vi.mock("sonner");
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual("react-router-dom");
   return {
     ...actual,
-    useParams: () => ({ ipn: "RES-001" }),
-    useNavigate: () => vi.fn(),
+    useParams: vi.fn(),
+    useNavigate: vi.fn(() => vi.fn()),
   };
 });
 
-vi.mock("../hooks/useGitPLM", () => ({
-  useGitPLM: () => ({ configured: false, buildUrl: () => null }),
-}));
+const mockPart: Part = {
+  ipn: "IC-001",
+  category: "ICs",
+  description: "Test IC",
+  fields: {
+    _category: "ICs",
+    description: "Test IC",
+  },
+};
 
-vi.mock("sonner", async () => {
-  const actual = await vi.importActual("sonner");
-  return {
-    ...actual,
-    toast: {
-      success: vi.fn(),
-      error: vi.fn(),
-    },
-  };
-});
+const mockAvailableManufacturers: Manufacturer[] = [
+  {
+    id: 1,
+    name: "Texas Instruments",
+    contact_email: "sales@ti.com",
+    approved: true,
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: 2,
+    name: "Analog Devices",
+    contact_email: "info@analog.com",
+    approved: true,
+    created_at: "2024-01-02T00:00:00Z",
+    updated_at: "2024-01-02T00:00:00Z",
+  },
+];
 
-describe("PartDetail - Manufacturers", () => {
-  const mockPart: Part = {
-    ipn: "RES-001",
-    fields: {
-      description: "10k Resistor",
-      _category: "resistor",
-    },
-  };
+const mockPartManufacturers: PartManufacturer[] = [
+  {
+    id: 1,
+    part_id: 1,
+    manufacturer_id: 1,
+    manufacturer_name: "Texas Instruments",
+    mpn: "TPS54560ADDAR",
+    is_primary: true,
+    approved: true,
+    notes: "Primary source",
+    created_at: "2024-01-01T00:00:00Z",
+    updated_at: "2024-01-01T00:00:00Z",
+  },
+  {
+    id: 2,
+    part_id: 1,
+    manufacturer_id: 2,
+    manufacturer_name: "Analog Devices",
+    mpn: "LT8610EMSE",
+    is_primary: false,
+    approved: true,
+    notes: "Secondary source",
+    created_at: "2024-01-02T00:00:00Z",
+    updated_at: "2024-01-02T00:00:00Z",
+  },
+];
 
-  const mockManufacturers: PartManufacturer[] = [
-    {
-      id: 1,
-      part_id: "RES-001",
-      manufacturer: "Yageo",
-      mpn: "RC0805FR-0710KL",
-      is_primary: true,
-      approved: true,
-      notes: "Preferred source",
-      created_at: "2024-01-01",
-      updated_at: "2024-01-01",
-    },
-    {
-      id: 2,
-      part_id: "RES-001",
-      manufacturer: "Vishay",
-      mpn: "CRCW080510K0FKEA",
-      is_primary: false,
-      approved: true,
-      notes: "",
-      created_at: "2024-01-02",
-      updated_at: "2024-01-02",
-    },
-  ];
-
+describe("PartDetail - Manufacturers Section", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
-    // Mock API calls
-    vi.spyOn(api, "getPart").mockResolvedValue(mockPart);
-    vi.spyOn(api, "getPartManufacturers").mockResolvedValue({
-      manufacturers: mockManufacturers,
-      count: mockManufacturers.length,
+    vi.mocked(useParams).mockReturnValue({ ipn: "IC-001" });
+    vi.mocked(api.getPart).mockResolvedValue(mockPart);
+    vi.mocked(api.getPartManufacturers).mockResolvedValue({
+      manufacturers: mockPartManufacturers,
+      count: mockPartManufacturers.length,
     });
-    vi.spyOn(api, "getPartChanges").mockResolvedValue([]);
-    vi.spyOn(api, "getPartBOM").mockRejectedValue(new Error("Not found"));
-    vi.spyOn(api, "getPartCost").mockResolvedValue({ ipn: "RES-001" });
-    vi.spyOn(api, "getPartWhereUsed").mockResolvedValue([]);
+    vi.mocked(api.getManufacturers).mockResolvedValue(mockAvailableManufacturers);
+    vi.mocked(api.getPartCost).mockResolvedValue({} as any);
+    vi.mocked(api.getPartWhereUsed).mockResolvedValue([]);
+    vi.mocked(api.getPartChanges).mockResolvedValue([]);
+    vi.mocked(api.getGitPLMConfig).mockResolvedValue({ base_url: "" });
   });
 
   describe("Render manufacturers list", () => {
-    it("should render manufacturers table with data", async () => {
+    it("should display manufacturers table with normalized data", async () => {
       render(<PartDetail />);
 
       await waitFor(() => {
-        expect(screen.getByText("Manufacturers")).toBeInTheDocument();
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
+        expect(screen.getByText("Analog Devices")).toBeInTheDocument();
+        expect(screen.getByText("TPS54560ADDAR")).toBeInTheDocument();
+        expect(screen.getByText("LT8610EMSE")).toBeInTheDocument();
       });
 
-      // Check manufacturer data is displayed
-      expect(screen.getByText("Yageo")).toBeInTheDocument();
-      expect(screen.getByText("RC0805FR-0710KL")).toBeInTheDocument();
-      expect(screen.getByText("Vishay")).toBeInTheDocument();
-      expect(screen.getByText("CRCW080510K0FKEA")).toBeInTheDocument();
-      
-      // Check count badge
-      expect(screen.getByText("2")).toBeInTheDocument();
+      // Check primary badge
+      expect(screen.getByTestId("primary-badge-1")).toBeInTheDocument();
+      expect(screen.getByText("Primary")).toBeInTheDocument();
+
+      // Check approved checkmarks
+      expect(screen.getByTestId("approved-check-1")).toBeInTheDocument();
+      expect(screen.getByTestId("approved-check-2")).toBeInTheDocument();
     });
 
-    it("should render empty state when no manufacturers", async () => {
-      vi.spyOn(api, "getPartManufacturers").mockResolvedValue({
+    it("should show empty state when no manufacturers exist", async () => {
+      vi.mocked(api.getPartManufacturers).mockResolvedValue({
         manufacturers: [],
         count: 0,
       });
@@ -110,220 +122,252 @@ describe("PartDetail - Manufacturers", () => {
     });
   });
 
-  describe("Add manufacturer", () => {
-    it("should open dialog and save new manufacturer successfully", async () => {
-      const createSpy = vi.spyOn(api, "createPartManufacturer").mockResolvedValue({
+  describe("Add manufacturer with dropdown", () => {
+    it("should show autocomplete dropdown when adding manufacturer", async () => {
+      render(<PartDetail />);
+
+      await waitFor(() => {
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
+      });
+
+      // Open add dialog
+      fireEvent.click(screen.getByTestId("add-manufacturer-btn"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("manufacturer-input")).toBeInTheDocument();
+      });
+
+      // Type to trigger dropdown
+      const input = screen.getByTestId("manufacturer-input");
+      fireEvent.change(input, { target: { value: "Texas" } });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("manufacturer-dropdown")).toBeInTheDocument();
+        expect(screen.getByTestId("manufacturer-option-1")).toBeInTheDocument();
+        expect(screen.getByText("sales@ti.com")).toBeInTheDocument();
+      });
+    });
+
+    it("should add manufacturer via dropdown selection", async () => {
+      vi.mocked(api.createPartManufacturer).mockResolvedValue({
         id: 3,
-        message: "Manufacturer created",
+        message: "Manufacturer added successfully",
       });
 
       render(<PartDetail />);
 
       await waitFor(() => {
-        expect(screen.getByTestId("add-manufacturer-btn")).toBeInTheDocument();
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
       });
 
-      // Click add button
+      // Open add dialog
       fireEvent.click(screen.getByTestId("add-manufacturer-btn"));
 
       await waitFor(() => {
-        expect(screen.getByTestId("manufacturer-dialog")).toBeInTheDocument();
+        expect(screen.getByTestId("manufacturer-input")).toBeInTheDocument();
       });
 
-      // Fill in form
-      fireEvent.change(screen.getByTestId("manufacturer-input"), {
-        target: { value: "TDK" },
+      // Focus input to show dropdown
+      const input = screen.getByTestId("manufacturer-input");
+      fireEvent.focus(input);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("manufacturer-dropdown")).toBeInTheDocument();
       });
+
+      // Select manufacturer
+      fireEvent.click(screen.getByTestId("manufacturer-option-1"));
+
+      // Fill MPN
       fireEvent.change(screen.getByTestId("mpn-input"), {
-        target: { value: "C2012X7R1H103K125AB" },
+        target: { value: "TPS54560ADDAR" },
       });
 
       // Save
       fireEvent.click(screen.getByTestId("save-manufacturer-btn"));
 
       await waitFor(() => {
-        expect(createSpy).toHaveBeenCalledWith("RES-001", {
-          manufacturer: "TDK",
-          mpn: "C2012X7R1H103K125AB",
+        expect(api.createPartManufacturer).toHaveBeenCalledWith("IC-001", {
+          manufacturer_id: 1,
+          mpn: "TPS54560ADDAR",
           is_primary: false,
           approved: true,
           notes: "",
         });
-      });
-    });
-
-    it("should show validation errors for empty fields", async () => {
-      render(<PartDetail />);
-
-      await waitFor(() => {
-        expect(screen.getByTestId("add-manufacturer-btn")).toBeInTheDocument();
-      });
-
-      // Click add button
-      fireEvent.click(screen.getByTestId("add-manufacturer-btn"));
-
-      await waitFor(() => {
-        expect(screen.getByTestId("manufacturer-dialog")).toBeInTheDocument();
-      });
-
-      // Try to save without filling fields
-      fireEvent.click(screen.getByTestId("save-manufacturer-btn"));
-
-      await waitFor(() => {
-        expect(screen.getByText("Manufacturer is required")).toBeInTheDocument();
-        expect(screen.getByText("MPN is required")).toBeInTheDocument();
+        expect(toast.success).toHaveBeenCalledWith("Manufacturer added successfully");
       });
     });
   });
 
   describe("Edit manufacturer", () => {
-    it("should open dialog with pre-filled data and save changes", async () => {
-      const updateSpy = vi.spyOn(api, "updatePartManufacturer").mockResolvedValue({
-        message: "Manufacturer updated",
+    it("should edit existing manufacturer", async () => {
+      vi.mocked(api.updatePartManufacturer).mockResolvedValue({
+        message: "Manufacturer updated successfully",
       });
 
       render(<PartDetail />);
 
       await waitFor(() => {
-        expect(screen.getByTestId("edit-manufacturer-1")).toBeInTheDocument();
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
       });
 
-      // Click edit button
+      // Open edit dialog
       fireEvent.click(screen.getByTestId("edit-manufacturer-1"));
 
       await waitFor(() => {
-        expect(screen.getByTestId("manufacturer-dialog")).toBeInTheDocument();
+        expect(screen.getByTestId("manufacturer-input")).toBeInTheDocument();
+        expect(screen.getByTestId("mpn-input")).toHaveValue("TPS54560ADDAR");
       });
 
-      // Verify pre-filled data
-      expect(screen.getByTestId("manufacturer-input")).toHaveValue("Yageo");
-      expect(screen.getByTestId("mpn-input")).toHaveValue("RC0805FR-0710KL");
-
-      // Change manufacturer
-      fireEvent.change(screen.getByTestId("manufacturer-input"), {
-        target: { value: "Yageo (Updated)" },
+      // Update MPN
+      fireEvent.change(screen.getByTestId("mpn-input"), {
+        target: { value: "TPS54560BDDAR" },
       });
 
       // Save
       fireEvent.click(screen.getByTestId("save-manufacturer-btn"));
 
       await waitFor(() => {
-        expect(updateSpy).toHaveBeenCalledWith("RES-001", 1, expect.objectContaining({
-          manufacturer: "Yageo (Updated)",
-        }));
+        expect(api.updatePartManufacturer).toHaveBeenCalledWith(
+          "IC-001",
+          1,
+          expect.objectContaining({
+            mpn: "TPS54560BDDAR",
+          })
+        );
+        expect(toast.success).toHaveBeenCalledWith("Manufacturer updated successfully");
       });
     });
 
-    it("should warn when unchecking primary with no other primary", async () => {
-      // Mock with only one manufacturer that is primary
-      vi.spyOn(api, "getPartManufacturers").mockResolvedValue({
-        manufacturers: [mockManufacturers[0]],
-        count: 1,
-      });
-
+    it("should prevent setting all manufacturers to non-primary", async () => {
       render(<PartDetail />);
 
       await waitFor(() => {
-        expect(screen.getByTestId("edit-manufacturer-1")).toBeInTheDocument();
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
       });
 
-      // Click edit button
+      // Open edit dialog for primary manufacturer
       fireEvent.click(screen.getByTestId("edit-manufacturer-1"));
 
       await waitFor(() => {
-        expect(screen.getByTestId("manufacturer-dialog")).toBeInTheDocument();
+        expect(screen.getByTestId("primary-checkbox")).toBeInTheDocument();
       });
 
-      // Uncheck primary
-      fireEvent.click(screen.getByTestId("primary-checkbox"));
+      // Try to uncheck primary
+      const primaryCheckbox = screen.getByTestId("primary-checkbox");
+      fireEvent.click(primaryCheckbox);
 
       // Try to save
       fireEvent.click(screen.getByTestId("save-manufacturer-btn"));
 
       await waitFor(() => {
         expect(screen.getByText("At least one manufacturer must be primary")).toBeInTheDocument();
+        expect(api.updatePartManufacturer).not.toHaveBeenCalled();
       });
     });
   });
 
   describe("Delete manufacturer", () => {
-    it("should open confirmation dialog and delete successfully", async () => {
-      const deleteSpy = vi.spyOn(api, "deletePartManufacturer").mockResolvedValue({
-        message: "Manufacturer deleted",
+    it("should delete manufacturer successfully", async () => {
+      vi.mocked(api.deletePartManufacturer).mockResolvedValue({
+        message: "Manufacturer deleted successfully",
       });
 
       render(<PartDetail />);
 
       await waitFor(() => {
-        expect(screen.getByTestId("delete-manufacturer-2")).toBeInTheDocument();
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
       });
 
-      // Click delete button
+      // Open delete dialog
       fireEvent.click(screen.getByTestId("delete-manufacturer-2"));
 
       await waitFor(() => {
-        expect(screen.getByTestId("delete-manufacturer-dialog")).toBeInTheDocument();
+        const dialog = screen.getByTestId("delete-manufacturer-dialog");
+        expect(dialog).toBeInTheDocument();
+        expect(dialog).toHaveTextContent("Analog Devices");
       });
-
-      // Verify dialog shows manufacturer details (use getAllByText since it appears in table too)
-      const vishayElements = screen.getAllByText("Vishay");
-      expect(vishayElements.length).toBeGreaterThan(0);
-      const mpnElements = screen.getAllByText("CRCW080510K0FKEA");
-      expect(mpnElements.length).toBeGreaterThan(0);
 
       // Confirm delete
       fireEvent.click(screen.getByTestId("confirm-delete-manufacturer"));
 
       await waitFor(() => {
-        expect(deleteSpy).toHaveBeenCalledWith("RES-001", 2);
+        expect(api.deletePartManufacturer).toHaveBeenCalledWith("IC-001", 2);
+        expect(toast.success).toHaveBeenCalledWith("Manufacturer deleted successfully");
       });
     });
 
-    it("should show error when trying to delete last manufacturer", async () => {
-      const deleteSpy = vi.spyOn(api, "deletePartManufacturer").mockRejectedValue(
-        new Error("Cannot delete the last manufacturer")
+    it("should handle delete error", async () => {
+      vi.mocked(api.deletePartManufacturer).mockRejectedValue(
+        new Error("Failed to delete manufacturer")
       );
 
       render(<PartDetail />);
 
       await waitFor(() => {
-        expect(screen.getByTestId("delete-manufacturer-1")).toBeInTheDocument();
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
       });
 
-      // Click delete button
+      // Open delete dialog
       fireEvent.click(screen.getByTestId("delete-manufacturer-1"));
-
-      await waitFor(() => {
-        expect(screen.getByTestId("delete-manufacturer-dialog")).toBeInTheDocument();
-      });
 
       // Confirm delete
       fireEvent.click(screen.getByTestId("confirm-delete-manufacturer"));
 
       await waitFor(() => {
-        expect(deleteSpy).toHaveBeenCalledWith("RES-001", 1);
+        expect(toast.error).toHaveBeenCalledWith("Failed to delete manufacturer");
       });
     });
   });
 
-  describe("Primary badge display", () => {
-    it("should display primary badge for primary manufacturer", async () => {
+  describe("Autocomplete dropdown", () => {
+    it("should filter manufacturers by search query", async () => {
       render(<PartDetail />);
 
       await waitFor(() => {
-        expect(screen.getByTestId("primary-badge-1")).toBeInTheDocument();
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
       });
 
-      const primaryBadge = screen.getByTestId("primary-badge-1");
-      expect(primaryBadge).toHaveTextContent("Primary");
+      // Open add dialog
+      fireEvent.click(screen.getByTestId("add-manufacturer-btn"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("manufacturer-input")).toBeInTheDocument();
+      });
+
+      // Type "Analog" to filter
+      const input = screen.getByTestId("manufacturer-input");
+      fireEvent.change(input, { target: { value: "Analog" } });
+
+      await waitFor(() => {
+        expect(screen.getByTestId("manufacturer-dropdown")).toBeInTheDocument();
+        expect(screen.getByTestId("manufacturer-option-2")).toBeInTheDocument();
+        expect(screen.queryByTestId("manufacturer-option-1")).not.toBeInTheDocument();
+      });
     });
 
-    it("should display approved checkmark for approved manufacturers", async () => {
+    it("should show email in dropdown options", async () => {
       render(<PartDetail />);
 
       await waitFor(() => {
-        expect(screen.getByTestId("approved-check-1")).toBeInTheDocument();
-        expect(screen.getByTestId("approved-check-2")).toBeInTheDocument();
+        expect(screen.getByText("Texas Instruments")).toBeInTheDocument();
+      });
+
+      // Open add dialog
+      fireEvent.click(screen.getByTestId("add-manufacturer-btn"));
+
+      await waitFor(() => {
+        expect(screen.getByTestId("manufacturer-input")).toBeInTheDocument();
+      });
+
+      // Focus to show all options
+      const input = screen.getByTestId("manufacturer-input");
+      fireEvent.focus(input);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("manufacturer-dropdown")).toBeInTheDocument();
+        expect(screen.getByText("sales@ti.com")).toBeInTheDocument();
+        expect(screen.getByText("info@analog.com")).toBeInTheDocument();
       });
     });
   });

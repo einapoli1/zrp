@@ -195,13 +195,14 @@ function PartDetail() {
   const [creatingECO, setCreatingECO] = useState(false);
   const { configured: gitplmConfigured, buildUrl: gitplmUrl } = useGitPLM();
   
-  // Manufacturers state
+  // Manufacturers state (normalized architecture)
   const [manufacturers, setManufacturers] = useState<PartManufacturer[]>([]);
   const [manufacturersLoading, setManufacturersLoading] = useState(false);
   const [manufacturerDialogOpen, setManufacturerDialogOpen] = useState(false);
   const [editingManufacturer, setEditingManufacturer] = useState<PartManufacturer | null>(null);
   const [manufacturerForm, setManufacturerForm] = useState({
-    manufacturer: "",
+    manufacturer_id: 0,
+    manufacturer_name: "",
     mpn: "",
     is_primary: false,
     approved: true,
@@ -212,6 +213,11 @@ function PartDetail() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [manufacturerToDelete, setManufacturerToDelete] = useState<PartManufacturer | null>(null);
   const [deletingManufacturer, setDeletingManufacturer] = useState(false);
+  
+  // Manufacturer autocomplete state
+  const [availableManufacturers, setAvailableManufacturers] = useState<Array<{ id: number; name: string; contact_email?: string }>>([]);
+  const [manufacturerSearch, setManufacturerSearch] = useState("");
+  const [showManufacturerDropdown, setShowManufacturerDropdown] = useState(false);
 
   const fetchPendingChanges = async () => {
     if (!ipn) return;
@@ -291,7 +297,7 @@ function PartDetail() {
     }
   };
 
-  // Manufacturers handlers
+  // Manufacturers handlers (normalized with autocomplete)
   const fetchManufacturers = async () => {
     if (!ipn) return;
     setManufacturersLoading(true);
@@ -306,36 +312,51 @@ function PartDetail() {
     }
   };
 
+  const fetchAvailableManufacturers = async () => {
+    try {
+      const data = await api.getManufacturers({ approved: true });
+      setAvailableManufacturers(data);
+    } catch (error) {
+      console.error("Failed to fetch available manufacturers:", error);
+    }
+  };
+
   const openAddManufacturerDialog = () => {
     setEditingManufacturer(null);
     setManufacturerForm({
-      manufacturer: "",
+      manufacturer_id: 0,
+      manufacturer_name: "",
       mpn: "",
       is_primary: manufacturers.length === 0, // Default to primary if no manufacturers exist
       approved: true,
       notes: ""
     });
+    setManufacturerSearch("");
     setManufacturerFormErrors({});
     setManufacturerDialogOpen(true);
+    fetchAvailableManufacturers();
   };
 
   const openEditManufacturerDialog = (mfg: PartManufacturer) => {
     setEditingManufacturer(mfg);
     setManufacturerForm({
-      manufacturer: mfg.manufacturer,
+      manufacturer_id: mfg.manufacturer_id,
+      manufacturer_name: mfg.manufacturer_name,
       mpn: mfg.mpn,
       is_primary: mfg.is_primary,
       approved: mfg.approved,
       notes: mfg.notes || ""
     });
+    setManufacturerSearch(mfg.manufacturer_name);
     setManufacturerFormErrors({});
     setManufacturerDialogOpen(true);
+    fetchAvailableManufacturers();
   };
 
   const validateManufacturerForm = (): boolean => {
     const errors: Record<string, string> = {};
     
-    if (!manufacturerForm.manufacturer.trim()) {
+    if (!manufacturerForm.manufacturer_id || manufacturerForm.manufacturer_id === 0) {
       errors.manufacturer = "Manufacturer is required";
     }
     if (!manufacturerForm.mpn.trim()) {
@@ -354,6 +375,23 @@ function PartDetail() {
     return Object.keys(errors).length === 0;
   };
 
+  const handleManufacturerSelect = (mfg: { id: number; name: string; contact_email?: string }) => {
+    setManufacturerForm({
+      ...manufacturerForm,
+      manufacturer_id: mfg.id,
+      manufacturer_name: mfg.name,
+    });
+    setManufacturerSearch(mfg.name);
+    setShowManufacturerDropdown(false);
+  };
+
+  const filteredManufacturers = availableManufacturers.filter(
+    (m) =>
+      manufacturerSearch === "" ||
+      m.name.toLowerCase().includes(manufacturerSearch.toLowerCase()) ||
+      m.contact_email?.toLowerCase().includes(manufacturerSearch.toLowerCase())
+  );
+
   const handleSaveManufacturer = async () => {
     if (!ipn) return;
     
@@ -365,11 +403,23 @@ function PartDetail() {
     try {
       if (editingManufacturer) {
         // Update existing
-        await api.updatePartManufacturer(decodeURIComponent(ipn), editingManufacturer.id, manufacturerForm);
+        await api.updatePartManufacturer(decodeURIComponent(ipn), editingManufacturer.id, {
+          manufacturer_id: manufacturerForm.manufacturer_id,
+          mpn: manufacturerForm.mpn,
+          is_primary: manufacturerForm.is_primary,
+          approved: manufacturerForm.approved,
+          notes: manufacturerForm.notes,
+        });
         toast.success("Manufacturer updated successfully");
       } else {
         // Create new
-        await api.createPartManufacturer(decodeURIComponent(ipn), manufacturerForm);
+        await api.createPartManufacturer(decodeURIComponent(ipn), {
+          manufacturer_id: manufacturerForm.manufacturer_id,
+          mpn: manufacturerForm.mpn,
+          is_primary: manufacturerForm.is_primary,
+          approved: manufacturerForm.approved,
+          notes: manufacturerForm.notes,
+        });
         toast.success("Manufacturer added successfully");
       }
       
@@ -877,7 +927,7 @@ function PartDetail() {
                 <TableBody>
                   {manufacturers.map((mfg) => (
                     <TableRow key={mfg.id} data-testid={`manufacturer-row-${mfg.id}`}>
-                      <TableCell className="font-medium">{mfg.manufacturer}</TableCell>
+                      <TableCell className="font-medium">{mfg.manufacturer_name}</TableCell>
                       <TableCell className="font-mono text-sm">{mfg.mpn}</TableCell>
                       <TableCell>
                         {mfg.is_primary ? (
@@ -957,15 +1007,45 @@ function PartDetail() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="manufacturer">Manufacturer *</Label>
-              <Input
-                id="manufacturer"
-                value={manufacturerForm.manufacturer}
-                onChange={(e) => setManufacturerForm({ ...manufacturerForm, manufacturer: e.target.value })}
-                placeholder="e.g., Texas Instruments"
-                data-testid="manufacturer-input"
-              />
+              <div className="relative">
+                <Input
+                  id="manufacturer"
+                  value={manufacturerSearch}
+                  onChange={(e) => {
+                    setManufacturerSearch(e.target.value);
+                    setShowManufacturerDropdown(true);
+                  }}
+                  onFocus={() => setShowManufacturerDropdown(true)}
+                  placeholder="Search manufacturers..."
+                  data-testid="manufacturer-input"
+                  autoComplete="off"
+                />
+                {showManufacturerDropdown && filteredManufacturers.length > 0 && (
+                  <div 
+                    className="absolute z-10 w-full mt-1 bg-background border rounded-md shadow-lg max-h-60 overflow-auto"
+                    data-testid="manufacturer-dropdown"
+                  >
+                    {filteredManufacturers.map((mfg) => (
+                      <div
+                        key={mfg.id}
+                        className="px-3 py-2 hover:bg-muted cursor-pointer"
+                        onClick={() => handleManufacturerSelect(mfg)}
+                        data-testid={`manufacturer-option-${mfg.id}`}
+                      >
+                        <div className="font-medium">{mfg.name}</div>
+                        {mfg.contact_email && (
+                          <div className="text-sm text-muted-foreground">{mfg.contact_email}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
               {manufacturerFormErrors.manufacturer && (
                 <p className="text-sm text-destructive">{manufacturerFormErrors.manufacturer}</p>
+              )}
+              {manufacturerForm.manufacturer_id > 0 && (
+                <p className="text-sm text-muted-foreground">Selected: {manufacturerForm.manufacturer_name}</p>
               )}
             </div>
 
@@ -1056,7 +1136,7 @@ function PartDetail() {
                 <p>Are you sure you want to delete this manufacturer?</p>
                 {manufacturerToDelete && (
                   <div className="mt-2 p-3 bg-muted rounded-md">
-                    <p className="font-medium">{manufacturerToDelete.manufacturer}</p>
+                    <p className="font-medium">{manufacturerToDelete.manufacturer_name}</p>
                     <p className="text-sm font-mono">{manufacturerToDelete.mpn}</p>
                   </div>
                 )}

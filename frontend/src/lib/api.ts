@@ -30,14 +30,28 @@ export interface Part {
   fields?: Record<string, string>;
 }
 
+export interface Manufacturer {
+  id: number;
+  name: string;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  website?: string;
+  notes?: string;
+  approved: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface PartManufacturer {
   id: number;
-  part_id: string;
-  manufacturer: string;
+  part_id: number;
+  manufacturer_id: number;  // FK, not TEXT
+  manufacturer_name: string;  // From JOIN
   mpn: string;
   is_primary: boolean;
   approved: boolean;
-  notes: string;
+  notes?: string;
   created_at: string;
   updated_at: string;
 }
@@ -912,13 +926,47 @@ class ApiClient {
     });
   }
 
-  // Part Manufacturers
+  // Manufacturers (master table)
+  async getManufacturers(params?: { search?: string; approved?: boolean }): Promise<Manufacturer[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.approved !== undefined) searchParams.set('approved', params.approved.toString());
+    
+    const url = `/manufacturers${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.request<Manufacturer[]>(url);
+  }
+
+  async getManufacturer(id: number): Promise<Manufacturer> {
+    return this.request<Manufacturer>(`/manufacturers/${id}`);
+  }
+
+  async createManufacturer(data: Partial<Manufacturer>): Promise<Manufacturer> {
+    return this.request<Manufacturer>('/manufacturers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateManufacturer(id: number, data: Partial<Manufacturer>): Promise<Manufacturer> {
+    return this.request<Manufacturer>(`/manufacturers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteManufacturer(id: number): Promise<void> {
+    return this.request<void>(`/manufacturers/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Part Manufacturers (refactored to use manufacturer_id FK)
   async getPartManufacturers(ipn: string): Promise<{ manufacturers: PartManufacturer[]; count: number }> {
     return this.request<{ manufacturers: PartManufacturer[]; count: number }>(`/parts/${ipn}/manufacturers`);
   }
 
-  async createPartManufacturer(ipn: string, manufacturer: {
-    manufacturer: string;
+  async createPartManufacturer(ipn: string, data: {
+    manufacturer_id: number;
     mpn: string;
     is_primary?: boolean;
     approved?: boolean;
@@ -926,20 +974,14 @@ class ApiClient {
   }): Promise<{ id: number; message: string }> {
     return this.request<{ id: number; message: string }>(`/parts/${ipn}/manufacturers`, {
       method: 'POST',
-      body: JSON.stringify(manufacturer),
+      body: JSON.stringify(data),
     });
   }
 
-  async updatePartManufacturer(ipn: string, id: number, updates: {
-    manufacturer?: string;
-    mpn?: string;
-    is_primary?: boolean;
-    approved?: boolean;
-    notes?: string;
-  }): Promise<{ message: string }> {
+  async updatePartManufacturer(ipn: string, id: number, data: Partial<PartManufacturer>): Promise<{ message: string }> {
     return this.request<{ message: string }>(`/parts/${ipn}/manufacturers/${id}`, {
       method: 'PUT',
-      body: JSON.stringify(updates),
+      body: JSON.stringify(data),
     });
   }
 

@@ -1,617 +1,534 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
-import { 
-  Building, 
-  Plus, 
-  Phone,
-  Mail,
-  Globe,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  Download
-} from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
-import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
+import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import { Checkbox } from "../components/ui/checkbox";
+import { Label } from "../components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "../components/ui/table";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogFooter,
 } from "../components/ui/dialog";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "../components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "../components/ui/select";
-import { api, type Vendor } from "../lib/api";
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../components/ui/alert-dialog";
+import { Factory, Plus, Edit, Trash2, Search, CheckCircle, XCircle } from "lucide-react";
+import { api, type Manufacturer } from "../lib/api";
 import { toast } from "sonner";
-import { ConfirmDialog } from "../components/ConfirmDialog";
+import { Breadcrumb } from "../components/ui/breadcrumb";
 import { LoadingState } from "../components/LoadingState";
-function Vendors() {
-  const [vendors, setVendors] = useState<Vendor[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
-  const [vendorForm, setVendorForm] = useState({
+export function Vendors() {
+  const [manufacturers, setManufacturers] = useState<Manufacturer[]>([]);
+  const [filteredManufacturers, setFilteredManufacturers] = useState<Manufacturer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingManufacturer, setEditingManufacturer] = useState<Manufacturer | null>(null);
+  const [manufacturerForm, setManufacturerForm] = useState({
     name: "",
-    website: "",
     contact_name: "",
     contact_email: "",
     contact_phone: "",
+    website: "",
     notes: "",
-    status: "active",
-    lead_time_days: 0,
+    approved: true,
   });
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [manufacturerToDelete, setManufacturerToDelete] = useState<Manufacturer | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    fetchVendors();
+    fetchManufacturers();
   }, []);
 
-  const fetchVendors = async () => {
+  useEffect(() => {
+    filterManufacturers();
+  }, [searchQuery, manufacturers]);
+
+  const fetchManufacturers = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const data = await api.getVendors();
-      setVendors(data);
-    } catch (error) {
-      toast.error("Failed to fetch vendors"); console.error("Failed to fetch vendors:", error);
+      const data = await api.getManufacturers();
+      setManufacturers(data);
+    } catch (error: any) {
+      console.error("Failed to fetch manufacturers:", error);
+      toast.error(error.message || "Failed to fetch manufacturers");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleExport = (format: 'csv' | 'xlsx') => {
-    const params = new URLSearchParams();
-    params.set('format', format);
-    window.location.href = `/api/v1/vendors/export?${params.toString()}`;
-    toast.success(`Exporting vendors as ${format.toUpperCase()}`);
-  };
-
-  const handleCreateVendor = async () => {
-    try {
-      await api.createVendor(vendorForm);
-      setCreateDialogOpen(false);
-      resetForm();
-      fetchVendors();
-    } catch (error) {
-      toast.error("Failed to create vendor"); console.error("Failed to create vendor:", error);
+  const filterManufacturers = () => {
+    if (!searchQuery.trim()) {
+      setFilteredManufacturers(manufacturers);
+      return;
     }
+
+    const query = searchQuery.toLowerCase();
+    const filtered = manufacturers.filter(
+      (m) =>
+        m.name.toLowerCase().includes(query) ||
+        m.contact_name?.toLowerCase().includes(query) ||
+        m.contact_email?.toLowerCase().includes(query)
+    );
+    setFilteredManufacturers(filtered);
   };
 
-  const handleEditVendor = async () => {
-    if (!editingVendor) return;
-    
-    try {
-      await api.updateVendor(editingVendor.id, vendorForm);
-      setEditDialogOpen(false);
-      setEditingVendor(null);
-      resetForm();
-      fetchVendors();
-    } catch (error) {
-      toast.error("Failed to update vendor"); console.error("Failed to update vendor:", error);
-    }
-  };
-
-  const handleDeleteVendor = (vendorId: string, vendorName: string) => {
-    setDeleteTarget({ id: vendorId, name: vendorName });
-  };
-
-  const confirmDeleteVendor = async () => {
-    if (!deleteTarget) return;
-    try {
-      await api.deleteVendor(deleteTarget.id);
-      toast.success(`Vendor "${deleteTarget.name}" deleted`);
-      fetchVendors();
-    } catch (error) {
-      toast.error("Failed to delete vendor"); console.error("Failed to delete vendor:", error);
-    } finally {
-      setDeleteTarget(null);
-    }
-  };
-
-  const openEditDialog = (vendor: Vendor) => {
-    setEditingVendor(vendor);
-    setVendorForm({
-      name: vendor.name,
-      website: vendor.website || "",
-      contact_name: vendor.contact_name || "",
-      contact_email: vendor.contact_email || "",
-      contact_phone: vendor.contact_phone || "",
-      notes: vendor.notes || "",
-      status: vendor.status,
-      lead_time_days: vendor.lead_time_days,
-    });
-    setEditDialogOpen(true);
-  };
-
-  const resetForm = () => {
-    setVendorForm({
+  const openAddDialog = () => {
+    setEditingManufacturer(null);
+    setManufacturerForm({
       name: "",
-      website: "",
       contact_name: "",
       contact_email: "",
       contact_phone: "",
+      website: "",
       notes: "",
-      status: "active",
-      lead_time_days: 0,
+      approved: true,
     });
+    setFormErrors({});
+    setDialogOpen(true);
   };
 
-  const getStatusBadge = (status: string) => {
-    const variant = status === 'active' ? 'default' : 'secondary';
-    const color = status === 'active' ? 'text-green-700' : 'text-gray-700';
-    
-    return (
-      <Badge variant={variant}>
-        <span className={color}>{status.toUpperCase()}</span>
-      </Badge>
-    );
+  const openEditDialog = (manufacturer: Manufacturer) => {
+    setEditingManufacturer(manufacturer);
+    setManufacturerForm({
+      name: manufacturer.name,
+      contact_name: manufacturer.contact_name || "",
+      contact_email: manufacturer.contact_email || "",
+      contact_phone: manufacturer.contact_phone || "",
+      website: manufacturer.website || "",
+      notes: manufacturer.notes || "",
+      approved: manufacturer.approved,
+    });
+    setFormErrors({});
+    setDialogOpen(true);
   };
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!manufacturerForm.name.trim()) {
+      errors.name = "Name is required";
+    }
+
+    if (manufacturerForm.contact_email && !isValidEmail(manufacturerForm.contact_email)) {
+      errors.contact_email = "Invalid email address";
+    }
+
+    if (manufacturerForm.website && !isValidUrl(manufacturerForm.website)) {
+      errors.website = "Invalid URL";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const isValidEmail = (email: string): boolean => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  const isValidUrl = (url: string): boolean => {
+    try {
+      new URL(url);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const handleSave = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      if (editingManufacturer) {
+        await api.updateManufacturer(editingManufacturer.id, manufacturerForm);
+        toast.success("Manufacturer updated successfully");
+      } else {
+        await api.createManufacturer(manufacturerForm);
+        toast.success("Manufacturer added successfully");
+      }
+      
+      setDialogOpen(false);
+      fetchManufacturers();
+    } catch (error: any) {
+      console.error("Failed to save manufacturer:", error);
+      const errorMsg = error.message || "Failed to save manufacturer";
+      
+      // Check for fuzzy match suggestion in error message
+      if (errorMsg.includes("similar") || errorMsg.includes("Did you mean")) {
+        toast.error(errorMsg, { duration: 6000 });
+      } else {
+        toast.error(errorMsg);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openDeleteDialog = (manufacturer: Manufacturer) => {
+    setManufacturerToDelete(manufacturer);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!manufacturerToDelete) return;
+
+    setDeleting(true);
+    try {
+      await api.deleteManufacturer(manufacturerToDelete.id);
+      toast.success("Manufacturer deleted successfully");
+      setDeleteDialogOpen(false);
+      fetchManufacturers();
+    } catch (error: any) {
+      console.error("Failed to delete manufacturer:", error);
+      const errorMsg = error.message || "Failed to delete manufacturer";
+      
+      // Check for 409 conflict (parts reference this manufacturer)
+      if (error.message?.includes("409") || errorMsg.includes("reference") || errorMsg.includes("parts")) {
+        toast.error("Cannot delete: This manufacturer is referenced by existing parts", {
+          duration: 5000,
+        });
+      } else {
+        toast.error(errorMsg);
+      }
+    } finally {
+      setDeleting(false);
+    }
   };
 
   if (loading) {
-    return <LoadingState variant="spinner" message="Loading vendors..." />;
+    return <LoadingState />;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-start">
+    <div className="container mx-auto py-6 space-y-6">
+      <Breadcrumb
+        items={[
+          { label: "Home", href: "/" },
+          { label: "Manufacturers", href: "/vendors" },
+        ]}
+      />
+
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Vendors</h1>
-          <p className="text-muted-foreground">
-            Manage your supplier relationships and contact information.
+          <h1 className="text-3xl font-bold flex items-center">
+            <Factory className="h-8 w-8 mr-3" />
+            Manufacturers
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Manage manufacturers and suppliers for parts
           </p>
         </div>
-        <div className="flex gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem onClick={() => handleExport('csv')}>
-                Export as CSV
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport('xlsx')}>
-                Export as Excel
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Add Vendor
-              </Button>
-            </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Vendor</DialogTitle>
-            
-              <DialogDescription>
-                Complete the form below.
-              </DialogDescription>
-              </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="name">Company Name *</Label>
-                  <Input
-                    id="name"
-                    value={vendorForm.name}
-                    onChange={(e) => setVendorForm(prev => ({ ...prev, name: e.target.value }))}
-                    placeholder="Company name"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="status">Status</Label>
-                  <Select value={vendorForm.status} onValueChange={(value) => setVendorForm(prev => ({ ...prev, status: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="contact_name">Contact Name</Label>
-                  <Input
-                    id="contact_name"
-                    value={vendorForm.contact_name}
-                    onChange={(e) => setVendorForm(prev => ({ ...prev, contact_name: e.target.value }))}
-                    placeholder="Primary contact"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="lead_time_days">Lead Time (Days)</Label>
-                  <Input
-                    id="lead_time_days"
-                    type="number"
-                    min="0"
-                    value={vendorForm.lead_time_days}
-                    onChange={(e) => setVendorForm(prev => ({ ...prev, lead_time_days: parseInt(e.target.value) || 0 }))}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="contact_email">Email</Label>
-                <Input
-                  id="contact_email"
-                  type="email"
-                  value={vendorForm.contact_email}
-                  onChange={(e) => setVendorForm(prev => ({ ...prev, contact_email: e.target.value }))}
-                  placeholder="contact@vendor.com"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="contact_phone">Phone</Label>
-                  <Input
-                    id="contact_phone"
-                    value={vendorForm.contact_phone}
-                    onChange={(e) => setVendorForm(prev => ({ ...prev, contact_phone: e.target.value }))}
-                    placeholder="Phone number"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="website">Website</Label>
-                  <Input
-                    id="website"
-                    value={vendorForm.website}
-                    onChange={(e) => setVendorForm(prev => ({ ...prev, website: e.target.value }))}
-                    placeholder="https://vendor.com"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={vendorForm.notes}
-                  onChange={(e) => setVendorForm(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Additional notes..."
-                  rows={3}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateVendor} disabled={!vendorForm.name}>
-                Create Vendor
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-        </div>
+        <Button onClick={openAddDialog} data-testid="add-manufacturer-btn">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Manufacturer
+        </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Vendors</p>
-                <p className="text-2xl font-bold">{vendors.length}</p>
-              </div>
-              <Building className="h-8 w-8 text-blue-600" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Active</p>
-                <p className="text-2xl font-bold text-green-600">
-                  {vendors.filter(v => v.status === 'active').length}
-                </p>
-              </div>
-              <Badge variant="default" className="h-8 w-8 rounded-full flex items-center justify-center">
-                <span className="text-xs">✓</span>
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Inactive</p>
-                <p className="text-2xl font-bold text-gray-600">
-                  {vendors.filter(v => v.status === 'inactive').length}
-                </p>
-              </div>
-              <Badge variant="secondary" className="h-8 w-8 rounded-full flex items-center justify-center">
-                <span className="text-xs">—</span>
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Vendors Table */}
       <Card>
         <CardHeader>
-          <CardTitle>Vendor Directory</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>
+              All Manufacturers
+              {manufacturers.length > 0 && (
+                <Badge variant="secondary" className="ml-2">{manufacturers.length}</Badge>
+              )}
+            </CardTitle>
+            <div className="flex items-center space-x-2">
+              <div className="relative w-64">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search manufacturers..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-8"
+                  data-testid="search-input"
+                />
+              </div>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Company</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Lead Time</TableHead>
-                <TableHead>Added</TableHead>
-                <TableHead className="w-10"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {vendors.map((vendor) => (
-                <TableRow key={vendor.id}>
-                  <TableCell>
-                    <div>
-                      <Link 
-                        to={`/vendors/${vendor.id}`}
-                        className="font-medium text-blue-600 hover:underline"
-                      >
-                        {vendor.name}
-                      </Link>
-                      {vendor.website && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <Globe className="h-3 w-3 text-muted-foreground" />
-                          <a 
-                            href={vendor.website.startsWith('http') ? vendor.website : `https://${vendor.website}`}
+          {filteredManufacturers.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Contact</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Phone</TableHead>
+                    <TableHead>Website</TableHead>
+                    <TableHead>Approved</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredManufacturers.map((mfg) => (
+                    <TableRow key={mfg.id} data-testid={`manufacturer-row-${mfg.id}`}>
+                      <TableCell className="font-medium">{mfg.name}</TableCell>
+                      <TableCell>{mfg.contact_name || "—"}</TableCell>
+                      <TableCell>{mfg.contact_email || "—"}</TableCell>
+                      <TableCell>{mfg.contact_phone || "—"}</TableCell>
+                      <TableCell>
+                        {mfg.website ? (
+                          <a
+                            href={mfg.website}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-xs text-blue-600 hover:underline"
+                            className="text-primary hover:underline"
                           >
-                            Website
+                            {new URL(mfg.website).hostname}
                           </a>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {mfg.approved ? (
+                          <Badge variant="default" className="bg-green-600" data-testid={`approved-badge-${mfg.id}`}>
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Approved
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" data-testid={`unapproved-badge-${mfg.id}`}>
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Pending
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditDialog(mfg)}
+                            data-testid={`edit-manufacturer-${mfg.id}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openDeleteDialog(mfg)}
+                            data-testid={`delete-manufacturer-${mfg.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
                         </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{vendor.contact_name || "—"}</TableCell>
-                  <TableCell>
-                    {vendor.contact_email ? (
-                      <a 
-                        href={`mailto:${vendor.contact_email}`}
-                        className="text-blue-600 hover:underline flex items-center gap-1"
-                      >
-                        <Mail className="h-3 w-3" />
-                        {vendor.contact_email}
-                      </a>
-                    ) : "—"}
-                  </TableCell>
-                  <TableCell>
-                    {vendor.contact_phone ? (
-                      <a 
-                        href={`tel:${vendor.contact_phone}`}
-                        className="text-blue-600 hover:underline flex items-center gap-1"
-                      >
-                        <Phone className="h-3 w-3" />
-                        {vendor.contact_phone}
-                      </a>
-                    ) : "—"}
-                  </TableCell>
-                  <TableCell>{getStatusBadge(vendor.status)}</TableCell>
-                  <TableCell>
-                    {vendor.lead_time_days > 0 ? `${vendor.lead_time_days} days` : "—"}
-                  </TableCell>
-                  <TableCell>{formatDate(vendor.created_at)}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link to={`/vendors/${vendor.id}`}>View Details</Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => openEditDialog(vendor)}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          className="text-red-600"
-                          onClick={() => handleDeleteVendor(vendor.id, vendor.name)}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {vendors.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
-                    No vendors found
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : manufacturers.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Factory className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-lg font-medium">No manufacturers added</p>
+              <p className="text-sm mt-1">Get started by adding your first manufacturer</p>
+              <Button variant="outline" size="sm" className="mt-4" onClick={openAddDialog}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Manufacturer
+              </Button>
+            </div>
+          ) : (
+            <div className="text-center py-12 text-muted-foreground">
+              <Search className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p className="text-lg font-medium">No results found</p>
+              <p className="text-sm mt-1">Try adjusting your search query</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Edit Vendor Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent>
+      {/* Add/Edit Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-2xl" data-testid="manufacturer-dialog">
           <DialogHeader>
-            <DialogTitle>Edit Vendor</DialogTitle>
-          
-              <DialogDescription>
-                Update the information for this vendor.
-              </DialogDescription>
-              </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit_name">Company Name *</Label>
-                <Input
-                  id="edit_name"
-                  value={vendorForm.name}
-                  onChange={(e) => setVendorForm(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Company name"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_status">Status</Label>
-                <Select value={vendorForm.status} onValueChange={(value) => setVendorForm(prev => ({ ...prev, status: value }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit_contact_name">Contact Name</Label>
-                <Input
-                  id="edit_contact_name"
-                  value={vendorForm.contact_name}
-                  onChange={(e) => setVendorForm(prev => ({ ...prev, contact_name: e.target.value }))}
-                  placeholder="Primary contact"
-                />
-              </div>
-              <div>
-                <Label htmlFor="edit_lead_time_days">Lead Time (Days)</Label>
-                <Input
-                  id="edit_lead_time_days"
-                  type="number"
-                  min="0"
-                  value={vendorForm.lead_time_days}
-                  onChange={(e) => setVendorForm(prev => ({ ...prev, lead_time_days: parseInt(e.target.value) || 0 }))}
-                  placeholder="0"
-                />
-              </div>
-            </div>
+            <DialogTitle>
+              {editingManufacturer ? "Edit Manufacturer" : "Add Manufacturer"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingManufacturer
+                ? "Update manufacturer information."
+                : "Add a new manufacturer to the system."}
+            </DialogDescription>
+          </DialogHeader>
 
-            <div>
-              <Label htmlFor="edit_contact_email">Email</Label>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Name *</Label>
               <Input
-                id="edit_contact_email"
-                type="email"
-                value={vendorForm.contact_email}
-                onChange={(e) => setVendorForm(prev => ({ ...prev, contact_email: e.target.value }))}
-                placeholder="contact@vendor.com"
+                id="name"
+                value={manufacturerForm.name}
+                onChange={(e) =>
+                  setManufacturerForm({ ...manufacturerForm, name: e.target.value })
+                }
+                placeholder="e.g., Texas Instruments"
+                data-testid="name-input"
               />
+              {formErrors.name && (
+                <p className="text-sm text-destructive">{formErrors.name}</p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="edit_contact_phone">Phone</Label>
+              <div className="space-y-2">
+                <Label htmlFor="contact_name">Contact Name</Label>
                 <Input
-                  id="edit_contact_phone"
-                  value={vendorForm.contact_phone}
-                  onChange={(e) => setVendorForm(prev => ({ ...prev, contact_phone: e.target.value }))}
-                  placeholder="Phone number"
+                  id="contact_name"
+                  value={manufacturerForm.contact_name}
+                  onChange={(e) =>
+                    setManufacturerForm({ ...manufacturerForm, contact_name: e.target.value })
+                  }
+                  placeholder="e.g., John Doe"
+                  data-testid="contact-name-input"
                 />
               </div>
-              <div>
-                <Label htmlFor="edit_website">Website</Label>
+
+              <div className="space-y-2">
+                <Label htmlFor="contact_email">Contact Email</Label>
                 <Input
-                  id="edit_website"
-                  value={vendorForm.website}
-                  onChange={(e) => setVendorForm(prev => ({ ...prev, website: e.target.value }))}
-                  placeholder="https://vendor.com"
+                  id="contact_email"
+                  type="email"
+                  value={manufacturerForm.contact_email}
+                  onChange={(e) =>
+                    setManufacturerForm({ ...manufacturerForm, contact_email: e.target.value })
+                  }
+                  placeholder="e.g., sales@example.com"
+                  data-testid="contact-email-input"
                 />
+                {formErrors.contact_email && (
+                  <p className="text-sm text-destructive">{formErrors.contact_email}</p>
+                )}
               </div>
             </div>
 
-            <div>
-              <Label htmlFor="edit_notes">Notes</Label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="contact_phone">Contact Phone</Label>
+                <Input
+                  id="contact_phone"
+                  value={manufacturerForm.contact_phone}
+                  onChange={(e) =>
+                    setManufacturerForm({ ...manufacturerForm, contact_phone: e.target.value })
+                  }
+                  placeholder="e.g., +1-555-123-4567"
+                  data-testid="contact-phone-input"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="website">Website</Label>
+                <Input
+                  id="website"
+                  value={manufacturerForm.website}
+                  onChange={(e) =>
+                    setManufacturerForm({ ...manufacturerForm, website: e.target.value })
+                  }
+                  placeholder="e.g., https://example.com"
+                  data-testid="website-input"
+                />
+                {formErrors.website && (
+                  <p className="text-sm text-destructive">{formErrors.website}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
               <Textarea
-                id="edit_notes"
-                value={vendorForm.notes}
-                onChange={(e) => setVendorForm(prev => ({ ...prev, notes: e.target.value }))}
+                id="notes"
+                value={manufacturerForm.notes}
+                onChange={(e) =>
+                  setManufacturerForm({ ...manufacturerForm, notes: e.target.value })
+                }
                 placeholder="Additional notes..."
                 rows={3}
+                data-testid="notes-input"
               />
             </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="approved"
+                checked={manufacturerForm.approved}
+                onCheckedChange={(checked) =>
+                  setManufacturerForm({ ...manufacturerForm, approved: checked === true })
+                }
+                data-testid="approved-checkbox"
+              />
+              <Label htmlFor="approved" className="font-normal">
+                Approved (checked manufacturers appear in part selection)
+              </Label>
+            </div>
           </div>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
               Cancel
             </Button>
-            <Button onClick={handleEditVendor} disabled={!vendorForm.name}>
-              Update Vendor
+            <Button onClick={handleSave} disabled={saving} data-testid="save-btn">
+              {saving ? "Saving..." : editingManufacturer ? "Update" : "Add"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      <ConfirmDialog
-        open={!!deleteTarget}
-        onOpenChange={(open) => !open && setDeleteTarget(null)}
-        title="Delete Vendor"
-        description={`Are you sure you want to delete "${deleteTarget?.name}"? This action cannot be undone.`}
-        confirmLabel="Delete"
-        variant="destructive"
-        onConfirm={confirmDeleteVendor}
-      />
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent data-testid="delete-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Manufacturer</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete <strong>{manufacturerToDelete?.name}</strong>?
+              {" "}This action cannot be undone.
+              {" "}<br /><br />
+              <strong>Note:</strong> If this manufacturer is referenced by any parts, deletion will fail.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={deleting}
+              className="bg-destructive hover:bg-destructive/90"
+              data-testid="confirm-delete-btn"
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
-export default Vendors;
