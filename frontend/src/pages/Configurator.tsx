@@ -255,7 +255,8 @@ function Configurator() {
       
       // Refresh template
       const refreshed = await fetch(`/api/v1/configurator/templates/${editingTemplate.id}`);
-      const data = await refreshed.json();
+      const response_data = await refreshed.json();
+      const data = response_data.data || response_data;
       setEditingTemplate(data);
       
       // Reset form
@@ -281,7 +282,8 @@ function Configurator() {
       // Refresh template
       if (editingTemplate) {
         const refreshed = await fetch(`/api/v1/configurator/templates/${editingTemplate.id}`);
-        const data = await refreshed.json();
+        const response_data = await refreshed.json();
+        const data = response_data.data || response_data;
         setEditingTemplate(data);
       }
       
@@ -314,7 +316,8 @@ function Configurator() {
       
       // Refresh template
       const refreshed = await fetch(`/api/v1/configurator/templates/${editingTemplate.id}`);
-      const data = await refreshed.json();
+      const response_data = await refreshed.json();
+      const data = response_data.data || response_data;
       setEditingTemplate(data);
       
       setPartSearchOpen(false);
@@ -338,7 +341,8 @@ function Configurator() {
       // Refresh template
       if (editingTemplate) {
         const refreshed = await fetch(`/api/v1/configurator/templates/${editingTemplate.id}`);
-        const data = await refreshed.json();
+        const response_data = await refreshed.json();
+        const data = response_data.data || response_data;
         setEditingTemplate(data);
       }
       
@@ -366,7 +370,8 @@ function Configurator() {
       // Refresh template
       if (editingTemplate) {
         const refreshed = await fetch(`/api/v1/configurator/templates/${editingTemplate.id}`);
-        const data = await refreshed.json();
+        const response_data = await refreshed.json();
+        const data = response_data.data || response_data;
         setEditingTemplate(data);
       }
       
