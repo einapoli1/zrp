@@ -179,7 +179,7 @@ export function Vendors() {
       }
       
       setDialogOpen(false);
-      fetchManufacturers();
+      await fetchManufacturers();
     } catch (error: any) {
       console.error("Failed to save manufacturer:", error);
       const errorMsg = error.message || "Failed to save manufacturer";
@@ -208,7 +208,7 @@ export function Vendors() {
       await api.deleteManufacturer(manufacturerToDelete.id);
       toast.success("Manufacturer deleted successfully");
       setDeleteDialogOpen(false);
-      fetchManufacturers();
+      await fetchManufacturers();
     } catch (error: any) {
       console.error("Failed to delete manufacturer:", error);
       const errorMsg = error.message || "Failed to delete manufacturer";
