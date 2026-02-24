@@ -15,7 +15,9 @@ import {
   GitBranch,
   RefreshCw,
   Store,
-  Plus
+  Plus,
+  Check,
+  Factory
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -27,7 +29,12 @@ import {
   TableRow,
 } from "../components/ui/table";
 import { Input } from "../components/ui/input";
-import { api, type Part, type BOMNode, type PartCost, type WhereUsedEntry, type MarketPricingResult, type PartChange } from "../lib/api";
+import { Textarea } from "../components/ui/textarea";
+import { Checkbox } from "../components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "../components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "../components/ui/alert-dialog";
+import { Label } from "../components/ui/label";
+import { api, type Part, type BOMNode, type PartCost, type WhereUsedEntry, type MarketPricingResult, type PartChange, type PartManufacturer } from "../lib/api";
 import { useGitPLM } from "../hooks/useGitPLM";
 import { ExternalLink, Edit, Trash2, FilePlus } from "lucide-react";
 import { toast } from "sonner";
@@ -187,6 +194,24 @@ function PartDetail() {
   const [, setPendingLoading] = useState(false);
   const [creatingECO, setCreatingECO] = useState(false);
   const { configured: gitplmConfigured, buildUrl: gitplmUrl } = useGitPLM();
+  
+  // Manufacturers state
+  const [manufacturers, setManufacturers] = useState<PartManufacturer[]>([]);
+  const [manufacturersLoading, setManufacturersLoading] = useState(false);
+  const [manufacturerDialogOpen, setManufacturerDialogOpen] = useState(false);
+  const [editingManufacturer, setEditingManufacturer] = useState<PartManufacturer | null>(null);
+  const [manufacturerForm, setManufacturerForm] = useState({
+    manufacturer: "",
+    mpn: "",
+    is_primary: false,
+    approved: true,
+    notes: ""
+  });
+  const [manufacturerFormErrors, setManufacturerFormErrors] = useState<Record<string, string>>({});
+  const [savingManufacturer, setSavingManufacturer] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [manufacturerToDelete, setManufacturerToDelete] = useState<PartManufacturer | null>(null);
+  const [deletingManufacturer, setDeletingManufacturer] = useState(false);
 
   const fetchPendingChanges = async () => {
     if (!ipn) return;
@@ -266,10 +291,128 @@ function PartDetail() {
     }
   };
 
+  // Manufacturers handlers
+  const fetchManufacturers = async () => {
+    if (!ipn) return;
+    setManufacturersLoading(true);
+    try {
+      const data = await api.getPartManufacturers(decodeURIComponent(ipn));
+      setManufacturers(data.manufacturers || []);
+    } catch (error) {
+      console.error("Failed to fetch manufacturers:", error);
+      // Don't show toast - it's ok if manufacturers don't exist yet
+    } finally {
+      setManufacturersLoading(false);
+    }
+  };
+
+  const openAddManufacturerDialog = () => {
+    setEditingManufacturer(null);
+    setManufacturerForm({
+      manufacturer: "",
+      mpn: "",
+      is_primary: manufacturers.length === 0, // Default to primary if no manufacturers exist
+      approved: true,
+      notes: ""
+    });
+    setManufacturerFormErrors({});
+    setManufacturerDialogOpen(true);
+  };
+
+  const openEditManufacturerDialog = (mfg: PartManufacturer) => {
+    setEditingManufacturer(mfg);
+    setManufacturerForm({
+      manufacturer: mfg.manufacturer,
+      mpn: mfg.mpn,
+      is_primary: mfg.is_primary,
+      approved: mfg.approved,
+      notes: mfg.notes || ""
+    });
+    setManufacturerFormErrors({});
+    setManufacturerDialogOpen(true);
+  };
+
+  const validateManufacturerForm = (): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!manufacturerForm.manufacturer.trim()) {
+      errors.manufacturer = "Manufacturer is required";
+    }
+    if (!manufacturerForm.mpn.trim()) {
+      errors.mpn = "MPN is required";
+    }
+    
+    // Warn if unchecking primary and no other manufacturer is primary
+    if (!manufacturerForm.is_primary && editingManufacturer?.is_primary) {
+      const otherPrimary = manufacturers.find(m => m.id !== editingManufacturer.id && m.is_primary);
+      if (!otherPrimary) {
+        errors.is_primary = "At least one manufacturer must be primary";
+      }
+    }
+    
+    setManufacturerFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveManufacturer = async () => {
+    if (!ipn) return;
+    
+    if (!validateManufacturerForm()) {
+      return;
+    }
+    
+    setSavingManufacturer(true);
+    try {
+      if (editingManufacturer) {
+        // Update existing
+        await api.updatePartManufacturer(decodeURIComponent(ipn), editingManufacturer.id, manufacturerForm);
+        toast.success("Manufacturer updated successfully");
+      } else {
+        // Create new
+        await api.createPartManufacturer(decodeURIComponent(ipn), manufacturerForm);
+        toast.success("Manufacturer added successfully");
+      }
+      
+      setManufacturerDialogOpen(false);
+      fetchManufacturers();
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to save manufacturer";
+      toast.error(errorMessage);
+      console.error("Failed to save manufacturer:", error);
+    } finally {
+      setSavingManufacturer(false);
+    }
+  };
+
+  const openDeleteManufacturerDialog = (mfg: PartManufacturer) => {
+    setManufacturerToDelete(mfg);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteManufacturer = async () => {
+    if (!ipn || !manufacturerToDelete) return;
+    
+    setDeletingManufacturer(true);
+    try {
+      await api.deletePartManufacturer(decodeURIComponent(ipn), manufacturerToDelete.id);
+      toast.success("Manufacturer deleted successfully");
+      setDeleteDialogOpen(false);
+      setManufacturerToDelete(null);
+      fetchManufacturers();
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to delete manufacturer";
+      toast.error(errorMessage);
+      console.error("Failed to delete manufacturer:", error);
+    } finally {
+      setDeletingManufacturer(false);
+    }
+  };
+
   useEffect(() => {
     if (ipn) {
       fetchPartDetails();
       fetchPendingChanges();
+      fetchManufacturers();
     }
   }, [ipn]);
 
@@ -693,6 +836,246 @@ function PartDetail() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Manufacturers */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center">
+              <Factory className="h-5 w-5 mr-2" />
+              Manufacturers
+              {manufacturers.length > 0 && (
+                <Badge variant="secondary" className="ml-2">{manufacturers.length}</Badge>
+              )}
+            </CardTitle>
+            <Button size="sm" onClick={openAddManufacturerDialog} data-testid="add-manufacturer-btn">
+              <Plus className="h-4 w-4 mr-2" />
+              Add Manufacturer
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {manufacturersLoading ? (
+            <div className="space-y-3">
+              {Array.from({ length: 2 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </div>
+          ) : manufacturers.length > 0 ? (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Manufacturer</TableHead>
+                    <TableHead>MPN</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Approved</TableHead>
+                    <TableHead>Notes</TableHead>
+                    <TableHead className="w-[100px]">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {manufacturers.map((mfg) => (
+                    <TableRow key={mfg.id} data-testid={`manufacturer-row-${mfg.id}`}>
+                      <TableCell className="font-medium">{mfg.manufacturer}</TableCell>
+                      <TableCell className="font-mono text-sm">{mfg.mpn}</TableCell>
+                      <TableCell>
+                        {mfg.is_primary ? (
+                          <Badge variant="default" className="bg-blue-600" data-testid={`primary-badge-${mfg.id}`}>
+                            <Check className="h-3 w-3 mr-1" />
+                            Primary
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">Secondary</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {mfg.approved && (
+                          <Check className="h-4 w-4 text-green-600" data-testid={`approved-check-${mfg.id}`} />
+                        )}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground max-w-[200px] truncate">
+                        {mfg.notes || "—"}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => openEditManufacturerDialog(mfg)}
+                            data-testid={`edit-manufacturer-${mfg.id}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => openDeleteManufacturerDialog(mfg)}
+                            data-testid={`delete-manufacturer-${mfg.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              <Factory className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <p>No manufacturers added</p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-4"
+                onClick={openAddManufacturerDialog}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Add Manufacturer
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Add/Edit Manufacturer Dialog */}
+      <Dialog open={manufacturerDialogOpen} onOpenChange={setManufacturerDialogOpen}>
+        <DialogContent data-testid="manufacturer-dialog">
+          <DialogHeader>
+            <DialogTitle>
+              {editingManufacturer ? "Edit Manufacturer" : "Add Manufacturer"}
+            </DialogTitle>
+            <DialogDescription>
+              {editingManufacturer 
+                ? "Update manufacturer information for this part."
+                : "Add a new manufacturer for this part."}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="manufacturer">Manufacturer *</Label>
+              <Input
+                id="manufacturer"
+                value={manufacturerForm.manufacturer}
+                onChange={(e) => setManufacturerForm({ ...manufacturerForm, manufacturer: e.target.value })}
+                placeholder="e.g., Texas Instruments"
+                data-testid="manufacturer-input"
+              />
+              {manufacturerFormErrors.manufacturer && (
+                <p className="text-sm text-destructive">{manufacturerFormErrors.manufacturer}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="mpn">MPN *</Label>
+              <Input
+                id="mpn"
+                value={manufacturerForm.mpn}
+                onChange={(e) => setManufacturerForm({ ...manufacturerForm, mpn: e.target.value })}
+                placeholder="e.g., TPS54560ADDAR"
+                data-testid="mpn-input"
+              />
+              {manufacturerFormErrors.mpn && (
+                <p className="text-sm text-destructive">{manufacturerFormErrors.mpn}</p>
+              )}
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="is_primary"
+                checked={manufacturerForm.is_primary}
+                onCheckedChange={(checked) => 
+                  setManufacturerForm({ ...manufacturerForm, is_primary: checked === true })
+                }
+                data-testid="primary-checkbox"
+              />
+              <Label htmlFor="is_primary" className="font-normal">
+                Primary Source
+              </Label>
+            </div>
+            {manufacturerFormErrors.is_primary && (
+              <p className="text-sm text-destructive">{manufacturerFormErrors.is_primary}</p>
+            )}
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="approved"
+                checked={manufacturerForm.approved}
+                onCheckedChange={(checked) => 
+                  setManufacturerForm({ ...manufacturerForm, approved: checked === true })
+                }
+                data-testid="approved-checkbox"
+              />
+              <Label htmlFor="approved" className="font-normal">
+                Approved
+              </Label>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={manufacturerForm.notes}
+                onChange={(e) => setManufacturerForm({ ...manufacturerForm, notes: e.target.value })}
+                placeholder="Optional notes..."
+                rows={3}
+                data-testid="notes-input"
+              />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setManufacturerDialogOpen(false)}
+              disabled={savingManufacturer}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSaveManufacturer} 
+              disabled={savingManufacturer}
+              data-testid="save-manufacturer-btn"
+            >
+              {savingManufacturer ? "Saving..." : "Save"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent data-testid="delete-manufacturer-dialog">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div>
+                <p>Are you sure you want to delete this manufacturer?</p>
+                {manufacturerToDelete && (
+                  <div className="mt-2 p-3 bg-muted rounded-md">
+                    <p className="font-medium">{manufacturerToDelete.manufacturer}</p>
+                    <p className="text-sm font-mono">{manufacturerToDelete.mpn}</p>
+                  </div>
+                )}
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingManufacturer}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteManufacturer}
+              disabled={deletingManufacturer}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="confirm-delete-manufacturer"
+            >
+              {deletingManufacturer ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* BOM Tree for Assemblies */}
       {isAssembly && (

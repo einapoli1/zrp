@@ -178,6 +178,14 @@ func main() {
 			handleListCategories(w, r)
 		case parts[0] == "parts" && len(parts) == 2 && parts[1] == "check-ipn" && r.Method == "GET":
 			handleCheckIPN(w, r)
+		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "manufacturers" && r.Method == "GET":
+			handleGetPartManufacturers(w, r)
+		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "manufacturers" && r.Method == "POST":
+			handleCreatePartManufacturer(w, r)
+		case parts[0] == "parts" && len(parts) == 4 && parts[2] == "manufacturers" && r.Method == "PUT":
+			handleUpdatePartManufacturer(w, r)
+		case parts[0] == "parts" && len(parts) == 4 && parts[2] == "manufacturers" && r.Method == "DELETE":
+			handleDeletePartManufacturer(w, r)
 		case parts[0] == "parts" && len(parts) == 2 && r.Method == "GET":
 			handleGetPart(w, r, parts[1])
 		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "bom" && r.Method == "GET":

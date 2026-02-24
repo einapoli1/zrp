@@ -554,6 +554,21 @@ func runMigrations() error {
 		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 	)`)
 
+	// Part manufacturers table - supports multiple manufacturers per part
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS part_manufacturers (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		part_id TEXT NOT NULL,
+		manufacturer TEXT NOT NULL,
+		mpn TEXT NOT NULL,
+		is_primary INTEGER NOT NULL DEFAULT 0,
+		approved INTEGER NOT NULL DEFAULT 1,
+		notes TEXT DEFAULT '',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (part_id) REFERENCES parts(ipn) ON DELETE CASCADE,
+		UNIQUE(part_id, manufacturer, mpn)
+	)`)
+
 	tables = append(tables, `CREATE TABLE IF NOT EXISTS part_changes (
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		part_ipn TEXT NOT NULL,
@@ -761,6 +776,7 @@ func runMigrations() error {
 		"CREATE INDEX IF NOT EXISTS idx_audit_log_user_created ON audit_log(user_id, created_at)",
 		"CREATE INDEX IF NOT EXISTS idx_change_history_user_created ON change_history(user_id, created_at)",
 		"CREATE INDEX IF NOT EXISTS idx_email_log_address_sent ON email_log(to_address, sent_at)",
+		"CREATE INDEX IF NOT EXISTS idx_part_manufacturers_part_id ON part_manufacturers(part_id)",
 	}
 	for _, idx := range indexes {
 		if _, err := db.Exec(idx); err != nil {
@@ -771,6 +787,12 @@ func runMigrations() error {
 			// Log but continue - index will be created when schema is updated
 			log.Printf("Skipping index creation (table/column may not exist): %s - %v", idx, err)
 		}
+	}
+
+	// Migrate existing manufacturer/mpn data from parts table to part_manufacturers
+	if err := migrateExistingManufacturers(db); err != nil {
+		log.Printf("WARNING: Failed to migrate existing manufacturers: %v", err)
+		// Don't fail the entire migration if this fails
 	}
 
 	// Quality workflow improvements - add missing columns

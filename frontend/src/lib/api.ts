@@ -30,6 +30,18 @@ export interface Part {
   fields?: Record<string, string>;
 }
 
+export interface PartManufacturer {
+  id: number;
+  part_id: string;
+  manufacturer: string;
+  mpn: string;
+  is_primary: boolean;
+  approved: boolean;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -896,6 +908,43 @@ class ApiClient {
 
   async deletePart(ipn: string): Promise<void> {
     return this.request(`/parts/${ipn}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Part Manufacturers
+  async getPartManufacturers(ipn: string): Promise<{ manufacturers: PartManufacturer[]; count: number }> {
+    return this.request<{ manufacturers: PartManufacturer[]; count: number }>(`/parts/${ipn}/manufacturers`);
+  }
+
+  async createPartManufacturer(ipn: string, manufacturer: {
+    manufacturer: string;
+    mpn: string;
+    is_primary?: boolean;
+    approved?: boolean;
+    notes?: string;
+  }): Promise<{ id: number; message: string }> {
+    return this.request<{ id: number; message: string }>(`/parts/${ipn}/manufacturers`, {
+      method: 'POST',
+      body: JSON.stringify(manufacturer),
+    });
+  }
+
+  async updatePartManufacturer(ipn: string, id: number, updates: {
+    manufacturer?: string;
+    mpn?: string;
+    is_primary?: boolean;
+    approved?: boolean;
+    notes?: string;
+  }): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/parts/${ipn}/manufacturers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  async deletePartManufacturer(ipn: string, id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/parts/${ipn}/manufacturers/${id}`, {
       method: 'DELETE',
     });
   }
