@@ -12,25 +12,25 @@ import (
 // TestDatabaseMigrations verifies that all migrations run successfully
 // and that the schema is consistent with what the handlers expect
 func TestDatabaseMigrations(t *testing.T) {
-	// Create a fresh in-memory database
-	testDB, err := sql.Open("sqlite", ":memory:")
+	// Create a shared in-memory database with foreign keys enabled per connection
+	// Use cache=shared so all connections see the same database
+	testDB, err := sql.Open("sqlite", "file::memory:?mode=memory&cache=shared&_pragma=foreign_keys(1)")
 	if err != nil {
 		t.Fatalf("Failed to open test DB: %v", err)
 	}
 	defer testDB.Close()
 
-	// Enable foreign keys
-	if _, err := testDB.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		t.Fatalf("Failed to enable foreign keys: %v", err)
+	// Verify foreign keys are enabled
+	var fkEnabled int
+	if err := testDB.QueryRow("PRAGMA foreign_keys").Scan(&fkEnabled); err != nil {
+		t.Fatalf("Failed to check foreign keys: %v", err)
+	}
+	if fkEnabled != 1 {
+		t.Fatalf("Foreign keys not enabled")
 	}
 
-	// Run all migrations
-	oldDB := db
-	db = testDB
-	err = runMigrations()
-	db = oldDB
-
-	if err != nil {
+	// Run all migrations using the wrapper function
+	if err := runMigrationsOnDB(testDB); err != nil {
 		t.Fatalf("Migrations failed: %v", err)
 	}
 

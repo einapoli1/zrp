@@ -23,7 +23,9 @@ func initDB(path string) error {
 	if strings.Contains(path, "?") {
 		sep = "&"
 	}
-	db, err = sql.Open("sqlite", path+sep+"_journal_mode=WAL&_busy_timeout=10000&_foreign_keys=1")
+	// Use _pragma connection string parameters (supported by modernc.org/sqlite)
+	// _pragma=foreign_keys(1) ensures FK enforcement on EVERY connection in the pool
+	db, err = sql.Open("sqlite", path+sep+"_pragma=foreign_keys(1)&_pragma=journal_mode(WAL)&_pragma=busy_timeout(30000)")
 	if err != nil {
 		return err
 	}
@@ -34,22 +36,30 @@ func initDB(path string) error {
 	db.SetMaxIdleConns(5)   // Keep 5 connections alive
 	db.SetConnMaxLifetime(0) // Connections don't expire
 	
-	// Explicitly set WAL mode (some drivers don't parse connection string params correctly)
-	if _, err := db.Exec("PRAGMA journal_mode=WAL"); err != nil {
-		return fmt.Errorf("enable WAL mode: %w", err)
+	// Verify foreign keys are enabled (should be set via connection string)
+	var fkEnabled int
+	if err := db.QueryRow("PRAGMA foreign_keys").Scan(&fkEnabled); err != nil {
+		return fmt.Errorf("check foreign keys: %w", err)
 	}
-	
-	// Set busy timeout explicitly (30 seconds for high concurrency)
-	if _, err := db.Exec("PRAGMA busy_timeout=30000"); err != nil {
-		return fmt.Errorf("set busy_timeout: %w", err)
-	}
-	
-	// Ensure foreign keys are enforced for every connection
-	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		return fmt.Errorf("enable foreign keys: %w", err)
+	if fkEnabled != 1 {
+		// Fallback: try setting it explicitly if connection string didn't work
+		if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
+			return fmt.Errorf("enable foreign keys: %w", err)
+		}
+		log.Println("WARNING: foreign_keys not enabled via connection string, set via PRAGMA")
 	}
 	
 	return runMigrations()
+}
+
+// runMigrationsOnDB runs all migrations on a specific database connection
+// This is a wrapper for tests that need to run migrations on test databases
+func runMigrationsOnDB(database *sql.DB) error {
+	oldDB := db
+	db = database
+	err := runMigrations()
+	db = oldDB
+	return err
 }
 
 func runMigrations() error {
