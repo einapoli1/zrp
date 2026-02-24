@@ -29,6 +29,7 @@ func setupSearchTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			status TEXT DEFAULT 'draft',
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)

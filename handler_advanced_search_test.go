@@ -63,6 +63,7 @@ func setupAdvancedSearchTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			status TEXT DEFAULT 'draft',
 			priority TEXT DEFAULT 'normal',
 			affected_ipns TEXT,
@@ -87,6 +88,7 @@ func setupAdvancedSearchTestDB(t *testing.T) *sql.DB {
 			reorder_point REAL DEFAULT 0,
 			reorder_qty REAL DEFAULT 0,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			mpn TEXT,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
@@ -101,6 +103,7 @@ func setupAdvancedSearchTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			ipn TEXT,
 			serial_number TEXT,
 			defect_type TEXT,

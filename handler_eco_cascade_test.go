@@ -36,6 +36,7 @@ func setupECOCascadeTestEnv(t *testing.T) (*sql.DB, string, func()) {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			status TEXT DEFAULT 'draft',
 			priority TEXT DEFAULT 'normal',
 			affected_ipns TEXT,

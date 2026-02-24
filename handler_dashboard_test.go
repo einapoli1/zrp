@@ -24,7 +24,7 @@ func setupDashboardTestDB(t *testing.T) *sql.DB {
 
 	// Create all required tables
 	for _, stmt := range []string{
-		`CREATE TABLE ecos (id TEXT PRIMARY KEY, status TEXT DEFAULT 'draft', description TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
+		`CREATE TABLE ecos (id TEXT PRIMARY KEY, status TEXT DEFAULT 'draft' CHECK(status IN ('draft','review','approved','implemented','rejected','cancelled','pending')), description TEXT, type TEXT DEFAULT 'change', created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
 		`CREATE TABLE inventory (ipn TEXT PRIMARY KEY, qty_on_hand REAL DEFAULT 0, qty_reserved REAL DEFAULT 0, location TEXT, reorder_point REAL DEFAULT 0, reorder_qty REAL DEFAULT 0, description TEXT DEFAULT '', mpn TEXT DEFAULT '', updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`,
 		`CREATE TABLE purchase_orders (id TEXT PRIMARY KEY, vendor_id TEXT, status TEXT DEFAULT 'draft', total_cost REAL DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)`,
 		`CREATE TABLE po_lines (id INTEGER PRIMARY KEY AUTOINCREMENT, po_id TEXT NOT NULL, ipn TEXT NOT NULL, qty_ordered INTEGER DEFAULT 0, unit_price REAL DEFAULT 0, FOREIGN KEY (po_id) REFERENCES purchase_orders(id) ON DELETE CASCADE)`,

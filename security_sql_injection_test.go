@@ -93,6 +93,7 @@ func setupSQLInjectionTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			status TEXT DEFAULT 'draft',
 			priority TEXT DEFAULT 'normal',
 			affected_ipns TEXT,
@@ -117,6 +118,7 @@ func setupSQLInjectionTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			severity TEXT DEFAULT 'minor',
 			status TEXT DEFAULT 'open',
 			ipn TEXT,
@@ -134,6 +136,7 @@ func setupSQLInjectionTestDB(t *testing.T) *sql.DB {
 			serial_number TEXT NOT NULL,
 			status TEXT DEFAULT 'open',
 			issue_description TEXT,
+			type TEXT DEFAULT 'change',
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE invoices (
@@ -158,6 +161,7 @@ func setupSQLInjectionTestDB(t *testing.T) *sql.DB {
 			report_type TEXT DEFAULT 'failure',
 			status TEXT DEFAULT 'open',
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			device_ipn TEXT,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,

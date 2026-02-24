@@ -52,6 +52,7 @@ func setupComprehensiveXSSTestDB(t *testing.T) (*sql.DB, string) {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			ipn TEXT UNIQUE NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			category TEXT,
 			mpn TEXT,
 			manufacturer TEXT,
@@ -89,6 +90,7 @@ func setupComprehensiveXSSTestDB(t *testing.T) (*sql.DB, string) {
 			quote_id TEXT NOT NULL,
 			ipn TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			qty REAL NOT NULL,
 			unit_price REAL NOT NULL
 		);
@@ -96,6 +98,7 @@ func setupComprehensiveXSSTestDB(t *testing.T) (*sql.DB, string) {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			status TEXT DEFAULT 'draft'
 		);
 		CREATE TABLE devices (
@@ -103,18 +106,21 @@ func setupComprehensiveXSSTestDB(t *testing.T) (*sql.DB, string) {
 			name TEXT NOT NULL,
 			serial_number TEXT,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			notes TEXT
 		);
 		CREATE TABLE ncrs (
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			severity TEXT
 		);
 		CREATE TABLE capas (
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			type TEXT
 		);
 		CREATE TABLE docs (

@@ -91,7 +91,9 @@ func setupBulkUpdateTestDB(t *testing.T) func() {
 		CREATE TABLE ecos (
 			id TEXT PRIMARY KEY,
 			title TEXT,
-			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','open','approved','implemented','rejected')),
+			description TEXT DEFAULT '',
+			type TEXT DEFAULT 'change',
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','review','approved','implemented','rejected','cancelled','pending')),
 			priority TEXT,
 			created_at TEXT DEFAULT CURRENT_TIMESTAMP,
 			updated_at TEXT DEFAULT CURRENT_TIMESTAMP
