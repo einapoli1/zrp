@@ -66,8 +66,8 @@ test.describe('Product Configurator', () => {
     
     // Add first parameter (voltage - enum)
     // Scroll to the parameter form inputs (they're below the fold)
-    await page.locator('input[placeholder*="voltage"]').scrollIntoViewIfNeeded();
-    await page.fill('input[placeholder*="voltage"]', 'voltage');
+    await page.locator('input[placeholder*="voltage"]').last().scrollIntoViewIfNeeded();
+    await page.locator('input[placeholder*="voltage"]').last().fill('voltage');
     await page.selectOption('select', 'enum');
     await page.fill('input[placeholder*="120,208"]', '120V,208V,240V');
     await page.click('button:has-text("Add Parameter")');
@@ -83,7 +83,7 @@ test.describe('Product Configurator', () => {
     await expect(page.locator('h3:has-text("Add Parameter")')).toBeVisible();
     
     // Add second parameter (length - enum)
-    await page.fill('input[placeholder*="voltage"]', 'length');
+    await page.locator('input[placeholder*="voltage"]').last().fill('length');
     // Type should already be enum from previous
     await page.fill('input[placeholder*="120,208"]', '3ft,6ft,10ft');
     await page.click('button:has-text("Add Parameter")');
@@ -122,10 +122,10 @@ test.describe('Product Configurator', () => {
     // Add parameter
 
     
-    await page.locator('input[placeholder*="voltage"]').scrollIntoViewIfNeeded();
+    await page.locator('input[placeholder*="voltage"]').last().scrollIntoViewIfNeeded();
 
     
-    await page.fill('input[placeholder*="voltage"]', 'test');
+    await page.locator('input[placeholder*="voltage"]').last().fill('test');
     await page.selectOption('select', 'enum');
     await page.fill('input[placeholder*="120,208"]', 'A,B,C');
     await page.click('button:has-text("Add Parameter")');
@@ -212,17 +212,17 @@ test.describe('Product Configurator', () => {
     // Add voltage parameter
 
     
-    await page.locator('input[placeholder*="voltage"]').scrollIntoViewIfNeeded();
+    await page.locator('input[placeholder*="voltage"]').last().scrollIntoViewIfNeeded();
 
     
-    await page.fill('input[placeholder*="voltage"]', 'voltage');
+    await page.locator('input[placeholder*="voltage"]').last().fill('voltage');
     await page.selectOption('select', 'enum');
     await page.fill('input[placeholder*="120,208"]', '120V,208V');
     await page.click('button:has-text("Add Parameter")');
     await expect(page.locator('text=/parameter added/i')).toBeVisible({ timeout: 5000 });
     
     // Add length parameter
-    await page.fill('input[placeholder*="voltage"]', 'length');
+    await page.locator('input[placeholder*="voltage"]').last().fill('length');
     await page.fill('input[placeholder*="120,208"]', '3ft,6ft');
     await page.click('button:has-text("Add Parameter")');
     await expect(page.locator('text=/parameter added/i')).toBeVisible({ timeout: 5000 });
