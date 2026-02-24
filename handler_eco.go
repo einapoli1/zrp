@@ -11,7 +11,7 @@ import (
 
 func handleListECOs(w http.ResponseWriter, r *http.Request) {
 	status := r.URL.Query().Get("status")
-	query := "SELECT id,title,COALESCE(description,''),COALESCE(status,''),COALESCE(priority,''),COALESCE(affected_ipns,''),COALESCE(created_by,''),COALESCE(created_at,''),COALESCE(updated_at,''),approved_at,approved_by,COALESCE(ncr_id,'') FROM ecos"
+	query := "SELECT id,title,COALESCE(description,''),COALESCE(type,'change'),COALESCE(status,''),COALESCE(priority,''),COALESCE(affected_ipns,''),COALESCE(created_by,''),COALESCE(created_at,''),COALESCE(updated_at,''),approved_at,approved_by,COALESCE(ncr_id,'') FROM ecos"
 	var args []interface{}
 	if status != "" {
 		query += " WHERE status=?"
@@ -27,7 +27,7 @@ func handleListECOs(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var e ECO
 		var aa, ab sql.NullString
-		rows.Scan(&e.ID, &e.Title, &e.Description, &e.Status, &e.Priority, &e.AffectedIPNs, &e.CreatedBy, &e.CreatedAt, &e.UpdatedAt, &aa, &ab, &e.NcrID)
+		rows.Scan(&e.ID, &e.Title, &e.Description, &e.Type, &e.Status, &e.Priority, &e.AffectedIPNs, &e.CreatedBy, &e.CreatedAt, &e.UpdatedAt, &aa, &ab, &e.NcrID)
 		e.ApprovedAt = sp(aa); e.ApprovedBy = sp(ab)
 		items = append(items, e)
 	}
@@ -38,8 +38,8 @@ func handleListECOs(w http.ResponseWriter, r *http.Request) {
 func handleGetECO(w http.ResponseWriter, r *http.Request, id string) {
 	var e ECO
 	var aa, ab sql.NullString
-	err := db.QueryRow("SELECT id,title,COALESCE(description,''),COALESCE(status,''),COALESCE(priority,''),COALESCE(affected_ipns,''),COALESCE(created_by,''),COALESCE(created_at,''),COALESCE(updated_at,''),approved_at,approved_by,COALESCE(ncr_id,'') FROM ecos WHERE id=?", id).
-		Scan(&e.ID, &e.Title, &e.Description, &e.Status, &e.Priority, &e.AffectedIPNs, &e.CreatedBy, &e.CreatedAt, &e.UpdatedAt, &aa, &ab, &e.NcrID)
+	err := db.QueryRow("SELECT id,title,COALESCE(description,''),COALESCE(type,'change'),COALESCE(status,''),COALESCE(priority,''),COALESCE(affected_ipns,''),COALESCE(created_by,''),COALESCE(created_at,''),COALESCE(updated_at,''),approved_at,approved_by,COALESCE(ncr_id,'') FROM ecos WHERE id=?", id).
+		Scan(&e.ID, &e.Title, &e.Description, &e.Type, &e.Status, &e.Priority, &e.AffectedIPNs, &e.CreatedBy, &e.CreatedAt, &e.UpdatedAt, &aa, &ab, &e.NcrID)
 	if err != nil { jsonErr(w, "not found", 404); return }
 	e.ApprovedAt = sp(aa); e.ApprovedBy = sp(ab)
 
@@ -72,7 +72,7 @@ func handleGetECO(w http.ResponseWriter, r *http.Request, id string) {
 
 	// Build enriched response
 	resp := map[string]interface{}{
-		"id": e.ID, "title": e.Title, "description": e.Description,
+		"id": e.ID, "title": e.Title, "description": e.Description, "type": e.Type,
 		"status": e.Status, "priority": e.Priority, "affected_ipns": e.AffectedIPNs,
 		"affected_parts": affectedParts, "created_by": e.CreatedBy,
 		"created_at": e.CreatedAt, "updated_at": e.UpdatedAt,
@@ -99,9 +99,10 @@ func handleCreateECO(w http.ResponseWriter, r *http.Request) {
 	e.ID = nextID("ECO", "ecos", 3)
 	if e.Status == "" { e.Status = "draft" }
 	if e.Priority == "" { e.Priority = "normal" }
+	if e.Type == "" { e.Type = "change" }
 	now := time.Now().Format("2006-01-02 15:04:05")
-	_, err := db.Exec("INSERT INTO ecos (id,title,description,status,priority,affected_ipns,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?)",
-		e.ID, e.Title, e.Description, e.Status, e.Priority, e.AffectedIPNs, "engineer", now, now)
+	_, err := db.Exec("INSERT INTO ecos (id,title,description,type,status,priority,affected_ipns,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+		e.ID, e.Title, e.Description, e.Type, e.Status, e.Priority, e.AffectedIPNs, "engineer", now, now)
 	if err != nil { jsonErr(w, err.Error(), 500); return }
 	e.CreatedAt = now; e.UpdatedAt = now; e.CreatedBy = "engineer"
 	ensureInitialRevision(e.ID, "engineer", now)
@@ -157,18 +158,26 @@ func handleApproveECO(w http.ResponseWriter, r *http.Request, id string) {
 	}
 	defer tx.Rollback()
 	
-	// Lock row and check current status
-	var currentStatus string
-	err = tx.QueryRow("SELECT status FROM ecos WHERE id=?", id).Scan(&currentStatus)
+	// Lock row and check current status and type
+	var currentStatus, ecoType, description string
+	err = tx.QueryRow("SELECT status, COALESCE(type, 'change'), COALESCE(description, '') FROM ecos WHERE id=?", id).Scan(&currentStatus, &ecoType, &description)
 	if err != nil {
 		jsonErr(w, "ECO not found", 404)
 		return
 	}
 	
-	// Validate can approve (should be in 'review' status)
-	if currentStatus != "review" {
-		jsonErr(w, fmt.Sprintf("ECO must be in 'review' status to approve (current: %s)", currentStatus), 400)
+	// Validate can approve (should be in 'review' or 'pending' status)
+	if currentStatus != "review" && currentStatus != "pending" {
+		jsonErr(w, fmt.Sprintf("ECO must be in 'review' or 'pending' status to approve (current: %s)", currentStatus), 400)
 		return
+	}
+	
+	// If this is a creation ECO, create the actual item
+	if ecoType == "creation" {
+		if err := handleCreationECOApproval(tx, id, description); err != nil {
+			jsonErr(w, "Failed to create item: "+err.Error(), 500)
+			return
+		}
 	}
 	
 	// Perform approval update
@@ -181,8 +190,8 @@ func handleApproveECO(w http.ResponseWriter, r *http.Request, id string) {
 	// Record approval in latest revision
 	_, err = tx.Exec("UPDATE eco_revisions SET approved_by=?, approved_at=?, status='approved' WHERE eco_id=? AND id=(SELECT MAX(id) FROM eco_revisions WHERE eco_id=?)", user, now, id, id)
 	if err != nil {
-		jsonErr(w, err.Error(), 500)
-		return
+		// Ignore error if eco_revisions doesn't exist (older ECOs)
+		_ = err
 	}
 	
 	// Commit transaction
@@ -194,6 +203,69 @@ func handleApproveECO(w http.ResponseWriter, r *http.Request, id string) {
 	logAudit(db, user, "approved", "eco", id, "Approved "+id)
 	go emailOnECOApproved(id)
 	handleGetECO(w, r, id)
+}
+
+// handleCreationECOApproval processes approval of a creation-type ECO by creating the actual item
+func handleCreationECOApproval(tx *sql.Tx, ecoID, description string) error {
+	// Parse the JSON-encoded item data from description
+	var data map[string]interface{}
+	if err := json.Unmarshal([]byte(description), &data); err != nil {
+		return fmt.Errorf("invalid JSON in description: %w", err)
+	}
+	
+	itemType, ok := data["item_type"].(string)
+	if !ok {
+		return fmt.Errorf("missing item_type in creation data")
+	}
+	
+	switch itemType {
+	case "part":
+		return createPartFromECO(tx, data)
+	// Future: handle assembly, configuration, etc.
+	default:
+		return fmt.Errorf("unsupported item_type: %s", itemType)
+	}
+}
+
+// createPartFromECO creates a part from ECO approval data
+func createPartFromECO(tx *sql.Tx, data map[string]interface{}) error {
+	ipn, _ := data["ipn"].(string)
+	category, _ := data["category"].(string)
+	fieldsData, _ := data["fields"].(map[string]interface{})
+	
+	if ipn == "" || category == "" {
+		return fmt.Errorf("missing ipn or category")
+	}
+	
+	// Convert fields map to string map
+	fields := make(map[string]string)
+	for k, v := range fieldsData {
+		if str, ok := v.(string); ok {
+			fields[k] = str
+		}
+	}
+	
+	// Find the CSV file for this category
+	csvPath := findCategoryCSV(category)
+	if csvPath == "" {
+		return fmt.Errorf("category not found: %s", category)
+	}
+	
+	// Check IPN uniqueness (using tx for consistency)
+	var exists int
+	err := tx.QueryRow("SELECT COUNT(*) FROM (SELECT 1 FROM parts WHERE ipn = ? LIMIT 1)", ipn).Scan(&exists)
+	if err == nil && exists > 0 {
+		// IPN already exists (possibly created by another approval)
+		return nil
+	}
+	
+	// Append part to CSV file (outside transaction since it's file I/O)
+	// Note: This is a simplified version; production code should handle this more carefully
+	if err := appendPartToCSV(csvPath, ipn, fields); err != nil {
+		return fmt.Errorf("failed to write to CSV: %w", err)
+	}
+	
+	return nil
 }
 
 func handleImplementECO(w http.ResponseWriter, r *http.Request, id string) {

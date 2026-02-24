@@ -247,7 +247,8 @@ func setupTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT DEFAULT '',
-			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','review','approved','implemented','rejected','cancelled')),
+			type TEXT DEFAULT 'change',
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','review','approved','implemented','rejected','cancelled','pending')),
 			priority TEXT DEFAULT 'normal' CHECK(priority IN ('low','normal','high','critical')),
 			affected_ipns TEXT DEFAULT '',
 			created_by TEXT DEFAULT 'engineer',
@@ -260,6 +261,28 @@ func setupTestDB(t *testing.T) *sql.DB {
 	`)
 	if err != nil {
 		t.Fatalf("Failed to create ecos table: %v", err)
+	}
+
+	// Create settings table
+	_, err = testDB.Exec(`
+		CREATE TABLE IF NOT EXISTS settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL,
+			description TEXT,
+			updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create settings table: %v", err)
+	}
+
+	// Seed default settings
+	_, err = testDB.Exec(`
+		INSERT OR IGNORE INTO settings (key, value, description) VALUES 
+		('require_eco_approval_for_creation', 'false', 'Require ECO approval before creating new parts, assemblies, and configurations')
+	`)
+	if err != nil {
+		t.Fatalf("Failed to seed settings: %v", err)
 	}
 
 	// Create work_orders table

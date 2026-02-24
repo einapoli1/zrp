@@ -341,6 +341,18 @@ func main() {
 		case parts[0] == "manufacturers" && len(parts) == 2 && r.Method == "DELETE":
 			handleDeleteManufacturer(w, r)
 
+		// Settings
+		case parts[0] == "settings" && len(parts) == 1 && r.Method == "GET":
+			requireAuth(http.HandlerFunc(handleListSettings)).ServeHTTP(w, r)
+		case parts[0] == "settings" && len(parts) == 2 && r.Method == "GET":
+			requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handleGetSetting(w, r, parts[1])
+			})).ServeHTTP(w, r)
+		case parts[0] == "settings" && len(parts) == 2 && r.Method == "PUT":
+			requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handleUpdateSetting(w, r, parts[1])
+			})).ServeHTTP(w, r)
+
 		// Inventory
 		case parts[0] == "inventory" && len(parts) == 2 && parts[1] == "export" && r.Method == "GET":
 			handleExportInventory(w, r)

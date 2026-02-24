@@ -17,6 +17,7 @@ type ECO struct {
 	ID           string  `json:"id"`
 	Title        string  `json:"title"`
 	Description  string  `json:"description"`
+	Type         string  `json:"type,omitempty"` // "change", "creation", etc.
 	Status       string  `json:"status"`
 	Priority     string  `json:"priority"`
 	AffectedIPNs string  `json:"affected_ipns"`

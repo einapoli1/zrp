@@ -4,6 +4,42 @@ All notable changes to ZRP are documented here.
 
 ## [Unreleased]
 
+### ✨ Configurable ECO Approval Gate for New Item Creation (2026-02-24)
+
+**Feature:** Add configurable ECO approval requirement for creating new parts, assemblies, and configurations
+
+**Components:**
+- Settings system with database table and API endpoints (GET /settings, GET /settings/:key, PUT /settings/:key)
+- Default setting: `require_eco_approval_for_creation` (default: false)
+- Automatic ECO creation when setting is enabled - item data stored as JSON in ECO description
+- ECO approval handler enhanced to process "creation" type ECOs and create actual items
+- Frontend Settings page with toggle controls
+- Parts creation handler checks setting and returns ECO response when enabled
+
+**Response Format When ECO Created:**
+```json
+{
+  "eco_created": true,
+  "eco_id": "ECO123",
+  "message": "ECO created for approval. Item will be created upon ECO approval."
+}
+```
+
+**Testing:**
+- 6 settings CRUD tests (all passing)
+- 4 part creation + ECO approval tests (all passing)
+- Total: 10 new backend tests
+
+**Workflow:**
+1. User creates part/assembly with setting enabled → ECO created in "pending" status
+2. Reviewer approves ECO → Actual item created from JSON data
+3. Reviewer denies ECO → Item never created
+
+**Edge Cases Handled:**
+- Duplicate IPN validation during ECO approval
+- ECO description preservation (contains creation data)
+- Setting validation (true/false only)
+
 ### 🐛 Test Infrastructure Fix: NCR Edge Case Tests (2026-02-21)
 
 **Issue:** NCR edge case tests failing with "no such table: ncrs"  

@@ -463,12 +463,59 @@ Returns all test records for serial number "SN-12345".
 
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/settings` | List all system settings |
+| GET | `/settings/:key` | Get specific setting |
+| PUT | `/settings/:key` | Update setting value |
 | GET/PUT | `/settings/general` | General settings |
 | GET/PUT | `/settings/gitplm` | GitPLM config |
 | GET/PUT | `/settings/git-docs` | Git docs config |
 | POST | `/settings/digikey` | DigiKey settings |
 | POST | `/settings/mouser` | Mouser settings |
 | GET | `/settings/distributors` | All distributor settings |
+
+### GET /settings
+Returns all system settings.
+
+```json
+// Response
+{"data": [
+  {
+    "key": "require_eco_approval_for_creation",
+    "value": "false",
+    "description": "Require ECO approval before creating new parts, assemblies, and configurations",
+    "updated_at": "2026-02-24 04:11:03"
+  }
+]}
+```
+
+### GET /settings/:key
+Returns a specific setting by key.
+
+```json
+// Response
+{"data": {
+  "key": "require_eco_approval_for_creation",
+  "value": "false",
+  "description": "Require ECO approval before creating new parts, assemblies, and configurations",
+  "updated_at": "2026-02-24 04:11:03"
+}}
+```
+
+### PUT /settings/:key
+Updates a setting value.
+
+```json
+// Request
+{"value": "true"}
+
+// Response
+{"data": {
+  "key": "require_eco_approval_for_creation",
+  "value": "true",
+  "description": "Require ECO approval before creating new parts, assemblies, and configurations",
+  "updated_at": "2026-02-24 04:15:22"
+}}
+```
 
 ---
 

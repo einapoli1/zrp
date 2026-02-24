@@ -2269,6 +2269,22 @@ export interface ModuleInfo {
   actions: string[];
 }
 
+// Settings types
+export interface Setting {
+  key: string;
+  value: string;
+  description: string;
+  updated_at: string;
+}
+
+export interface CreateResponse {
+  eco_created?: boolean;
+  eco_id?: string;
+  message?: string;
+  // ... normal creation response fields (varies by entity type)
+  [key: string]: any;
+}
+
 // Export singleton instance
 export const api = new ApiClient();
 
@@ -2302,4 +2318,30 @@ export async function setRolePermissions(role: string, permissions: { module: st
     const err = await res.json();
     throw new Error(err.error || 'Failed to update permissions');
   }
+}
+// Settings API functions
+export async function getSettings(): Promise<Setting[]> {
+  const res = await fetch(`${API_BASE}/settings`);
+  const json = await res.json();
+  return json.data || [];
+}
+
+export async function getSetting(key: string): Promise<Setting> {
+  const res = await fetch(`${API_BASE}/settings/${key}`);
+  const json = await res.json();
+  return json.data;
+}
+
+export async function updateSetting(key: string, value: string): Promise<Setting> {
+  const res = await fetch(`${API_BASE}/settings/${key}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to update setting');
+  }
+  const json = await res.json();
+  return json.data;
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // gitplm CSV format: first row is headers, IPN is derived from filename/category
@@ -205,6 +207,25 @@ func handleCreatePart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Check if ECO approval is required for new item creation
+	requireApproval, _ := getSetting("require_eco_approval_for_creation")
+	if requireApproval == "true" {
+		// Create ECO instead of part
+		ecoID, err := createPartCreationECO(body.IPN, body.Category, body.Fields)
+		if err != nil {
+			jsonErr(w, err.Error(), 500)
+			return
+		}
+		// Return ECO creation response
+		jsonResp(w, map[string]interface{}{
+			"eco_created": true,
+			"eco_id":      ecoID,
+			"message":     "ECO created for approval. Item will be created upon ECO approval.",
+		})
+		return
+	}
+
+	// Normal creation flow (when setting is disabled)
 	// Find the CSV file for this category
 	csvPath := findCategoryCSV(body.Category)
 	if csvPath == "" {
@@ -695,4 +716,75 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	for _, p := range cats { d.TotalParts += len(p) }
 
 	jsonResp(w, d)
+}
+
+// createPartCreationECO creates an ECO for part creation approval
+func createPartCreationECO(ipn, category string, fields map[string]string) (string, error) {
+	// Encode the part data as JSON in the description
+	data := map[string]interface{}{
+		"item_type": "part",
+		"ipn":       ipn,
+		"category":  category,
+		"fields":    fields,
+	}
+	descBytes, err := json.Marshal(data)
+	if err != nil {
+		return "", err
+	}
+
+	ecoID := nextID("ECO", "ecos", 3)
+	title := fmt.Sprintf("Create Part: %s", ipn)
+	now := time.Now().Format("2006-01-02 15:04:05")
+
+	_, err = db.Exec("INSERT INTO ecos (id, title, description, type, status, priority, affected_ipns, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		ecoID, title, string(descBytes), "creation", "pending", "normal", ipn, "engineer", now, now)
+	if err != nil {
+		return "", err
+	}
+
+	logAudit(db, "system", "created", "eco", ecoID, "Created creation ECO for "+ipn)
+	return ecoID, nil
+}
+
+// appendPartToCSV appends a part to a category CSV file
+func appendPartToCSV(csvPath, ipn string, fields map[string]string) error {
+	// Read existing CSV
+	f, err := os.Open(csvPath)
+	if err != nil {
+		return err
+	}
+	csvReader := csv.NewReader(f)
+	csvReader.LazyQuotes = true
+	csvReader.TrimLeadingSpace = true
+	records, err := csvReader.ReadAll()
+	f.Close()
+	if err != nil || len(records) < 1 {
+		return fmt.Errorf("failed to parse CSV")
+	}
+
+	headers := records[0]
+
+	// Build the new row
+	row := make([]string, len(headers))
+	for i, h := range headers {
+		hl := strings.ToLower(h)
+		if hl == "ipn" || hl == "part_number" || hl == "pn" {
+			row[i] = ipn
+		} else if v, ok := fields[h]; ok {
+			row[i] = v
+		} else if v, ok := fields[strings.ToLower(h)]; ok {
+			row[i] = v
+		}
+	}
+
+	// Append to CSV
+	records = append(records, row)
+	wf, err := os.Create(csvPath)
+	if err != nil {
+		return err
+	}
+	csvWriter := csv.NewWriter(wf)
+	err = csvWriter.WriteAll(records)
+	wf.Close()
+	return err
 }

@@ -525,6 +525,12 @@ func runMigrations() error {
 			fetched_at TEXT NOT NULL,
 			UNIQUE(part_ipn, distributor)
 		)`,
+		`CREATE TABLE IF NOT EXISTS settings (
+			key TEXT PRIMARY KEY,
+			value TEXT NOT NULL,
+			description TEXT,
+			updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+		)`,
 	}
 	tables = append(tables, `CREATE TABLE IF NOT EXISTS capas (
 		id TEXT PRIMARY KEY, title TEXT NOT NULL,
@@ -665,6 +671,7 @@ func runMigrations() error {
 		"ALTER TABLE inventory ADD COLUMN mpn TEXT DEFAULT ''",
 		"ALTER TABLE users ADD COLUMN active INTEGER DEFAULT 1",
 		"ALTER TABLE ecos ADD COLUMN ncr_id TEXT DEFAULT ''",
+		"ALTER TABLE ecos ADD COLUMN type TEXT DEFAULT 'change'",
 		"ALTER TABLE notifications ADD COLUMN emailed INTEGER DEFAULT 0",
 		"ALTER TABLE notifications ADD COLUMN user_id TEXT DEFAULT ''",
 		"ALTER TABLE work_orders ADD COLUMN due_date TEXT DEFAULT ''",
@@ -920,6 +927,16 @@ func seedDB() {
 			db.Exec("INSERT INTO users (username, password_hash, display_name, role, active) VALUES (?, ?, ?, ?, 1)",
 				"engineer", string(hash), "Engineer", "user")
 		}
+	}
+
+	// Seed default settings
+	var settingCount int
+	db.QueryRow("SELECT COUNT(*) FROM settings WHERE key = 'require_eco_approval_for_creation'").Scan(&settingCount)
+	if settingCount == 0 {
+		db.Exec("INSERT INTO settings (key, value, description) VALUES (?, ?, ?)",
+			"require_eco_approval_for_creation",
+			"false",
+			"Require ECO approval before creating new parts, assemblies, and configurations")
 	}
 	// Seed viewer user
 	var viewCount int
