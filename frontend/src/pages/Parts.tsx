@@ -317,6 +317,26 @@ function Parts() {
       defaultVisible: true,
     },
     {
+      id: "manufacturer",
+      label: "Manufacturer",
+      accessor: (part) => {
+        const mfg = part.fields?.manufacturer || part.fields?.mfg;
+        return mfg ? <span className="text-sm">{mfg}</span> : <span className="text-muted-foreground">—</span>;
+      },
+      sortValue: (part) => part.fields?.manufacturer || part.fields?.mfg || "",
+      defaultVisible: false, // Hidden by default but available
+    },
+    {
+      id: "mpn",
+      label: "MPN",
+      accessor: (part) => {
+        const mpn = part.fields?.mpn || part.fields?.manufacturer_part_number;
+        return mpn ? <span className="font-mono text-sm">{mpn}</span> : <span className="text-muted-foreground">—</span>;
+      },
+      sortValue: (part) => part.fields?.mpn || part.fields?.manufacturer_part_number || "",
+      defaultVisible: false, // Hidden by default but available
+    },
+    {
       id: "cost",
       label: "Cost",
       accessor: (part) => part.cost ? `$${part.cost.toFixed(2)}` : "—",
