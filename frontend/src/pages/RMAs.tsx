@@ -12,11 +12,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { RotateCcw, Plus } from "lucide-react";
 import { api, type RMA } from "../lib/api";
 import { toast } from "sonner";
+import { EmptyState } from "../components/EmptyState";
+import { LoadingState } from "../components/LoadingState";
 function RMAs() {
   const navigate = useNavigate();
   const [rmas, setRMAs] = useState<RMA[]>([]);
   const [loading, setLoading] = useState(true);
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+    const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     serial_number: "",
     customer: "",
@@ -63,17 +65,6 @@ function RMAs() {
         return "outline";
     }
   };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading RMAs...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
@@ -161,50 +152,66 @@ function RMAs() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>RMA ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Device S/N</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rmas.length === 0 ? (
+          {loading ? (
+            <LoadingState variant="table" rows={5} />
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <div className="text-muted-foreground">
-                      No RMAs found. Create your first RMA to get started.
-                    </div>
-                  </TableCell>
+                  <TableHead>RMA ID</TableHead>
+                  <TableHead>Customer</TableHead>
+                  <TableHead>Device S/N</TableHead>
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Actions</TableHead>
                 </TableRow>
-              ) : (
-                rmas.map((rma) => (
-                  <TableRow key={rma.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/rmas/${rma.id}`)}>
-                    <TableCell className="font-medium">{rma.id}</TableCell>
-                    <TableCell>{rma.customer}</TableCell>
-                    <TableCell className="font-mono text-sm">{rma.serial_number}</TableCell>
-                    <TableCell>{rma.reason}</TableCell>
-                    <TableCell>
-                      <Badge variant={getStatusBadgeVariant(rma.status)}>
-                        {rma.status.charAt(0).toUpperCase() + rma.status.slice(1)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{new Date(rma.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell>
-                      <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/rmas/${rma.id}`); }}>
-                        View Details
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {rmas.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="p-0">
+                      <EmptyState
+                        icon={RotateCcw}
+                        title="No RMAs found"
+                        description="Create an RMA to manage device returns and warranty claims"
+                        action={
+                          <DialogTrigger asChild>
+                            <Button>
+                              <Plus className="h-4 w-4 mr-2" />
+                              Create RMA
+                            </Button>
+                          </DialogTrigger>
+                        }
+                      />
                     </TableCell>
                   </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  rmas.map((rma) => (
+                    <TableRow key={rma.id} className="cursor-pointer hover:bg-muted/50" onClick={() => navigate(`/rmas/${rma.id}`)}>
+                      <TableCell className="font-medium">{rma.id}</TableCell>
+                      <TableCell>{rma.customer}</TableCell>
+                      <TableCell className="font-mono text-sm">{rma.serial_number}</TableCell>
+                      <TableCell>{rma.reason}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(rma.status)}>
+                          {rma.status.charAt(0).toUpperCase() + rma.status.slice(1)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{new Date(rma.created_at).toLocaleDateString()}</TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" onClick={(e) => { e.stopPropagation(); navigate(`/rmas/${rma.id}`); }}>
+                          View Details
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

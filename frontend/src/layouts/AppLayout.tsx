@@ -86,6 +86,7 @@ const navigationItems = [
       { title: "ECOs", url: "/ecos", icon: FileText },
       { title: "Documents", url: "/documents", icon: FileText },
       { title: "Testing", url: "/testing", icon: ClipboardList },
+      { title: "Configurator", url: "/configurator", icon: Cog },
     ],
   },
   {

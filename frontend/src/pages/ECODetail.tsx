@@ -4,9 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Separator } from "../components/ui/separator";
-import { Skeleton } from "../components/ui/skeleton";
 import { 
-  ArrowLeft, 
   FileText, 
   Calendar, 
   User, 
@@ -25,6 +23,9 @@ import {
 } from "../components/ui/table";
 import { api, type ECO, type ECORevision, type PartChange } from "../lib/api";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
+
 interface ECOWithDetails extends ECO {
   affected_parts?: Array<{
     ipn: string;
@@ -164,32 +165,16 @@ function ECODetail() {
   const canReject = eco && ['draft', 'open'].includes(eco.status);
 
   if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Skeleton className="h-10 w-10" />
-          <Skeleton className="h-8 w-64" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <Skeleton className="h-96" />
-            <Skeleton className="h-48" />
-          </div>
-          <Skeleton className="h-64" />
-        </div>
-      </div>
-    );
+    return <LoadingState variant="spinner" message="Loading ECO..." />;
   }
 
   if (!eco) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => navigate('/ecos')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to ECOs
-          </Button>
-        </div>
+        <Breadcrumb items={[
+          { label: "ECOs", href: "/ecos" },
+          { label: "Not Found" }
+        ]} />
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />
@@ -207,19 +192,18 @@ function ECODetail() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[
+        { label: "ECOs", href: "/ecos" },
+        { label: `ECO-${eco.id}` }
+      ]} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" onClick={() => navigate('/ecos')}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to ECOs
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight font-mono">{eco.id}</h1>
-            <p className="text-muted-foreground">
-              {eco.title}
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight font-mono">{eco.id}</h1>
+          <p className="text-muted-foreground">
+            {eco.title}
+          </p>
         </div>
         <div className="flex items-center space-x-2">
           <Badge variant={statusConfig_.variant} className={statusConfig_.color}>
@@ -316,7 +300,8 @@ function ECODetail() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <Table>
+                <div className="overflow-x-auto">
+                  <Table>
                   <TableHeader>
                     <TableRow>
                       <TableHead>Part</TableHead>
@@ -342,6 +327,7 @@ function ECODetail() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           )}

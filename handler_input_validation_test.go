@@ -31,10 +31,14 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
 			username TEXT,
 			action TEXT,
-			entity_type TEXT,
-			entity_id TEXT,
-			details TEXT,
-			timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			module TEXT NOT NULL,
+			record_id TEXT NOT NULL,
+			summary TEXT,
+			before_value TEXT,
+			after_value TEXT,
+			ip_address TEXT,
+			user_agent TEXT,
+			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
 		`CREATE TABLE vendors (
 			id TEXT PRIMARY KEY,
@@ -64,6 +68,7 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			ipn TEXT,
 			serial_number TEXT,
 			defect_type TEXT,
@@ -93,6 +98,7 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 			qty_on_hand REAL DEFAULT 0,
 			location TEXT,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			mpn TEXT,
 			updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 		)`,
@@ -116,6 +122,7 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 			reported_by TEXT,
 			reported_at TEXT,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			root_cause TEXT,
 			resolution TEXT,
 			ncr_id TEXT,
@@ -128,6 +135,7 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			status TEXT DEFAULT 'draft',
 			priority TEXT DEFAULT 'normal',
 			affected_ipns TEXT,
@@ -164,6 +172,7 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 			reason TEXT,
 			status TEXT DEFAULT 'open',
 			defect_description TEXT,
+			type TEXT DEFAULT 'change',
 			resolution TEXT,
 			created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 			received_at TIMESTAMP,
@@ -224,8 +233,9 @@ func setupInputValidationDB(t *testing.T) *sql.DB {
 // Test Vendor Name Field - Max 255 chars
 func TestVendorNameLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name       string
@@ -266,8 +276,9 @@ func TestVendorNameLengthValidation(t *testing.T) {
 // Test Vendor Notes Field - Max 10000 chars
 func TestVendorNotesLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name    string
@@ -308,8 +319,9 @@ func TestVendorNotesLengthValidation(t *testing.T) {
 // Test Device Notes Field
 func TestDeviceNotesLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name    string
@@ -352,8 +364,9 @@ func TestDeviceNotesLengthValidation(t *testing.T) {
 // Test NCR Description Field - Max 1000 chars
 func TestNCRDescriptionLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name        string
@@ -394,8 +407,9 @@ func TestNCRDescriptionLengthValidation(t *testing.T) {
 // Test NCR Title Field - Max 255 chars
 func TestNCRTitleLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name    string
@@ -434,8 +448,9 @@ func TestNCRTitleLengthValidation(t *testing.T) {
 // Test Work Order Notes Field - Max 10000 chars
 func TestWorkOrderNotesLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name    string
@@ -475,8 +490,9 @@ func TestWorkOrderNotesLengthValidation(t *testing.T) {
 // Test Field Report Title - Max 255 chars
 func TestFieldReportTitleLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name    string
@@ -515,8 +531,9 @@ func TestFieldReportTitleLengthValidation(t *testing.T) {
 // Test Field Report Description - Max 1000 chars
 func TestFieldReportDescriptionLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name        string
@@ -556,8 +573,9 @@ func TestFieldReportDescriptionLengthValidation(t *testing.T) {
 // Test ECO Title - Max 255 chars
 func TestECOTitleLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name    string
@@ -595,8 +613,9 @@ func TestECOTitleLengthValidation(t *testing.T) {
 // Test ECO Description - Max 1000 chars
 func TestECODescriptionLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name        string
@@ -635,8 +654,9 @@ func TestECODescriptionLengthValidation(t *testing.T) {
 // Test CAPA Title - Max 255 chars
 func TestCAPATitleLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name    string
@@ -675,8 +695,9 @@ func TestCAPATitleLengthValidation(t *testing.T) {
 // Test RMA Defect Description - Max 1000 chars
 func TestRMADefectDescriptionLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name               string
@@ -716,8 +737,9 @@ func TestRMADefectDescriptionLengthValidation(t *testing.T) {
 // Test User Email Validation (format + length)
 func TestUserEmailValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name    string
@@ -760,8 +782,9 @@ func TestUserEmailValidation(t *testing.T) {
 // Test IPN Field Length - Max 100 chars
 func TestIPNLengthValidation(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	tests := []struct {
 		name    string
@@ -821,8 +844,9 @@ func TestAllTextFieldLimits(t *testing.T) {
 // Test that validation errors return proper HTTP 400 with error messages
 func TestValidationErrorResponseFormat(t *testing.T) {
 	oldDB := db
-	db = setupInputValidationDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDB := setupInputValidationDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = oldDB }()
 
 	// Test with oversized name
 	payload := map[string]interface{}{

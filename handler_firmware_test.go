@@ -27,8 +27,8 @@ func setupFirmwareTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL,
 			version TEXT NOT NULL,
-			category TEXT DEFAULT 'public',
-			status TEXT DEFAULT 'draft',
+			category TEXT DEFAULT 'public' CHECK(category IN ('public','beta','internal')),
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','active','paused','completed','cancelled')),
 			target_filter TEXT,
 			notes TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -45,9 +45,11 @@ func setupFirmwareTestDB(t *testing.T) *sql.DB {
 		CREATE TABLE campaign_devices (
 			campaign_id TEXT NOT NULL,
 			serial_number TEXT NOT NULL,
-			status TEXT DEFAULT 'pending',
+			status TEXT DEFAULT 'pending' CHECK(status IN ('pending','in_progress','success','failed','skipped')),
 			updated_at DATETIME,
-			PRIMARY KEY (campaign_id, serial_number)
+			PRIMARY KEY (campaign_id, serial_number),
+			FOREIGN KEY (campaign_id) REFERENCES firmware_campaigns(id) ON DELETE CASCADE,
+			FOREIGN KEY (serial_number) REFERENCES devices(serial_number) ON DELETE CASCADE
 		)
 	`)
 	if err != nil {
@@ -345,7 +347,9 @@ func TestHandleUpdateCampaign_Success(t *testing.T) {
 	update := map[string]interface{}{
 		"name":    "Updated Campaign",
 		"version": "v1.1.0",
+		"category": "public",
 		"status":  "active",
+		"target_filter": "",
 		"notes":   "Updated notes",
 	}
 
@@ -426,9 +430,13 @@ func TestHandleCampaignProgress(t *testing.T) {
 	defer func() { db.Close(); db = oldDB }()
 
 	insertTestCampaign(t, db, "FW-001", "Progress Test", "v1.0.0", "public", "active")
+	insertTestDevice(t, db, "SN-001", "IPN-001", "active")
+	insertTestDevice(t, db, "SN-002", "IPN-001", "active")
+	insertTestDevice(t, db, "SN-003", "IPN-001", "active")
+	insertTestDevice(t, db, "SN-004", "IPN-001", "active")
 	insertCampaignDevice(t, db, "FW-001", "SN-001", "pending")
-	insertCampaignDevice(t, db, "FW-001", "SN-002", "sent")
-	insertCampaignDevice(t, db, "FW-001", "SN-003", "updated")
+	insertCampaignDevice(t, db, "FW-001", "SN-002", "in_progress")
+	insertCampaignDevice(t, db, "FW-001", "SN-003", "success")
 	insertCampaignDevice(t, db, "FW-001", "SN-004", "failed")
 
 	req := httptest.NewRequest("GET", "/api/firmware/campaigns/FW-001/progress", nil)
@@ -452,11 +460,11 @@ func TestHandleCampaignProgress(t *testing.T) {
 	if int(progress["pending"].(float64)) != 1 {
 		t.Errorf("Expected pending 1, got %v", progress["pending"])
 	}
-	if int(progress["sent"].(float64)) != 1 {
-		t.Errorf("Expected sent 1, got %v", progress["sent"])
+	if int(progress["in_progress"].(float64)) != 1 {
+		t.Errorf("Expected in_progress 1, got %v", progress["in_progress"])
 	}
-	if int(progress["updated"].(float64)) != 1 {
-		t.Errorf("Expected updated 1, got %v", progress["updated"])
+	if int(progress["success"].(float64)) != 1 {
+		t.Errorf("Expected success 1, got %v", progress["success"])
 	}
 	if int(progress["failed"].(float64)) != 1 {
 		t.Errorf("Expected failed 1, got %v", progress["failed"])
@@ -470,13 +478,14 @@ func TestHandleMarkCampaignDevice_Success(t *testing.T) {
 	defer func() { db.Close(); db = oldDB }()
 
 	insertTestCampaign(t, db, "FW-001", "Mark Test", "v1.0.0", "public", "active")
+	insertTestDevice(t, db, "SN-001", "IPN-001", "active")
 	insertCampaignDevice(t, db, "FW-001", "SN-001", "pending")
 
 	tests := []struct {
 		name   string
 		status string
 	}{
-		{"Mark as updated", "updated"},
+		{"Mark as success", "success"},
 		{"Mark as failed", "failed"},
 	}
 
@@ -513,6 +522,7 @@ func TestHandleMarkCampaignDevice_ValidationErrors(t *testing.T) {
 	defer func() { db.Close(); db = oldDB }()
 
 	insertTestCampaign(t, db, "FW-001", "Validation Test", "v1.0.0", "public", "active")
+	insertTestDevice(t, db, "SN-001", "IPN-001", "active")
 	insertCampaignDevice(t, db, "FW-001", "SN-001", "pending")
 
 	tests := []struct {
@@ -556,7 +566,7 @@ func TestHandleMarkCampaignDevice_NotFound(t *testing.T) {
 
 	insertTestCampaign(t, db, "FW-001", "Not Found Test", "v1.0.0", "public", "active")
 
-	body, _ := json.Marshal(map[string]string{"status": "updated"})
+	body, _ := json.Marshal(map[string]string{"status": "success"})
 	req := httptest.NewRequest("PUT", "/api/firmware/campaigns/FW-001/devices/SN-999", bytes.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -575,8 +585,11 @@ func TestHandleCampaignDevices(t *testing.T) {
 	defer func() { db.Close(); db = oldDB }()
 
 	insertTestCampaign(t, db, "FW-001", "Devices Test", "v1.0.0", "public", "active")
+	insertTestDevice(t, db, "SN-001", "IPN-001", "active")
+	insertTestDevice(t, db, "SN-002", "IPN-001", "active")
+	insertTestDevice(t, db, "SN-003", "IPN-001", "active")
 	insertCampaignDevice(t, db, "FW-001", "SN-001", "pending")
-	insertCampaignDevice(t, db, "FW-001", "SN-002", "updated")
+	insertCampaignDevice(t, db, "FW-001", "SN-002", "success")
 	insertCampaignDevice(t, db, "FW-001", "SN-003", "failed")
 
 	req := httptest.NewRequest("GET", "/api/firmware/campaigns/FW-001/devices", nil)

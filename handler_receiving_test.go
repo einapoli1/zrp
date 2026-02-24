@@ -593,8 +593,6 @@ func TestHandleInspectReceiving_QuantityValidation_ExceedsReceived(t *testing.T)
 	db = setupReceivingTestDB(t)
 	defer func() { db.Close(); db = oldDB }()
 
-	riID := insertTestReceivingInspection(t, db, "PO-001", 1, "IPN-100", 100) // Received 100
-
 	tests := []struct {
 		name        string
 		qtyPassed   float64
@@ -612,6 +610,9 @@ func TestHandleInspectReceiving_QuantityValidation_ExceedsReceived(t *testing.T)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Create a fresh inspection record for each test (fix for duplicate inspection prevention)
+			riID := insertTestReceivingInspection(t, db, "PO-001", 1, "IPN-100", 100) // Received 100
+			
 			reqBody := fmt.Sprintf(`{
 				"qty_passed": %.0f,
 				"qty_failed": %.0f,

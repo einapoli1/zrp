@@ -128,7 +128,8 @@ function Shipments() {
           {shipments.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No shipments found. Create your first shipment to get started.</p>
           ) : (
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
@@ -154,6 +155,7 @@ function Shipments() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

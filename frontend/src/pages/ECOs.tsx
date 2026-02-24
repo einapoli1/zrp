@@ -37,11 +37,15 @@ import {
   TableHeader,
   TableRow,
 } from "../components/ui/table";
-import { Skeleton } from "../components/ui/skeleton";
 import { FileText, Plus, Calendar, User, Download } from "lucide-react";
 import { api, type ECO } from "../lib/api";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { LoadingState } from "../components/LoadingState";
+import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
+import { useHotkeys } from 'react-hotkeys-hook';
+import { KeyboardShortcutsHelp } from '../components/KeyboardShortcutsHelp';
 interface CreateECOData {
   title: string;
   description: string;
@@ -61,6 +65,7 @@ function ECOs() {
   const navigate = useNavigate();
   const [ecos, setECOs] = useState<ECO[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('all');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
@@ -74,18 +79,35 @@ function ECOs() {
     },
   });
 
+  // Keyboard shortcuts
+  useHotkeys('n', () => setCreateDialogOpen(true), { 
+    enableOnFormTags: false,
+    preventDefault: true 
+  });
+
+  useHotkeys('escape', () => {
+    if (createDialogOpen) setCreateDialogOpen(false);
+  }, {
+    enableOnFormTags: true,
+    preventDefault: true
+  });
+
   useEffect(() => {
     fetchECOs();
   }, [activeTab]);
 
   const fetchECOs = async () => {
     setLoading(true);
+    setError(null);
     try {
       const statusFilter = activeTab === 'all' ? undefined : activeTab;
       const data = await api.getECOs(statusFilter);
       setECOs(data);
-    } catch (error) {
-      toast.error("Failed to fetch ECOs"); console.error('Failed to fetch ECOs:', error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error";
+      setError(errorMessage);
+      toast.error(`Failed to fetch ECOs: ${errorMessage}`);
+      console.error('Failed to fetch ECOs:', error);
       setECOs([]);
     } finally {
       setLoading(false);
@@ -119,13 +141,16 @@ function ECOs() {
       };
       
       const newECO = await api.createECO(ecoData);
+      toast.success(`ECO "${data.title}" created successfully`);
       setCreateDialogOpen(false);
       form.reset();
       
       // Navigate to the new ECO detail page
       navigate(`/ecos/${newECO.id}`);
-    } catch (error) {
-      toast.error("Failed to create ECO"); console.error('Failed to create ECO:', error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to create ECO";
+      toast.error(`Failed to create ECO: ${errorMessage}`);
+      console.error('Failed to create ECO:', error);
     } finally {
       setCreating(false);
     }
@@ -157,19 +182,20 @@ function ECOs() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Engineering Change Orders</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Engineering Change Orders</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Manage design changes and product modifications
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export
+              <Button variant="outline" className="min-h-[44px] flex-1 sm:flex-none" aria-label="Export ECOs data">
+                <Download className="h-4 w-4 sm:mr-2" aria-hidden="true" />
+                <span className="hidden sm:inline" aria-hidden="true">Export</span>
+                <span className="sr-only">Export ECOs data</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -183,9 +209,10 @@ function ECOs() {
           </DropdownMenu>
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create ECO
+              <Button className="min-h-[44px] flex-1 sm:flex-none">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Create ECO</span>
+                <span className="sm:hidden">Create</span>
               </Button>
             </DialogTrigger>
           <DialogContent className="sm:max-w-[600px]">
@@ -306,31 +333,47 @@ function ECOs() {
 
             <TabsContent value={activeTab} className="mt-6">
               {loading ? (
-                <div className="space-y-3">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Skeleton key={i} className="h-16 w-full" />
-                  ))}
-                </div>
+                <LoadingState variant="table" rows={5} />
+              ) : error ? (
+                <ErrorState
+                  title="Failed to load ECOs"
+                  message={error}
+                  onRetry={fetchECOs}
+                />
               ) : (
-                <Table>
+                <div className="overflow-x-auto">
+                  <Table aria-label="Engineering Change Orders list">
+                  <caption className="sr-only">List of engineering change orders with ID, title, status, creator, and dates</caption>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ECO ID</TableHead>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Created By</TableHead>
-                      <TableHead>Created Date</TableHead>
-                      <TableHead>Updated Date</TableHead>
+                      <TableHead scope="col">ECO ID</TableHead>
+                      <TableHead scope="col">Title</TableHead>
+                      <TableHead scope="col">Status</TableHead>
+                      <TableHead scope="col">Created By</TableHead>
+                      <TableHead scope="col">Created Date</TableHead>
+                      <TableHead scope="col">Updated Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredECOs.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                          {activeTab === 'all' 
-                            ? 'No ECOs found' 
-                            : `No ${activeTab} ECOs found`
-                          }
+                        <TableCell colSpan={6} className="p-0">
+                          <EmptyState
+                            icon={FileText}
+                            title={activeTab === 'all' ? 'No ECOs found' : `No ${activeTab} ECOs found`}
+                            description={activeTab === 'all' 
+                              ? "Get started by creating your first Engineering Change Order" 
+                              : `Try switching to another tab or create a new ECO`
+                            }
+                            action={
+                              activeTab === 'all' ? (
+                                <Button onClick={() => setCreateDialogOpen(true)}>
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Create ECO
+                                </Button>
+                              ) : null
+                            }
+                          />
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -387,11 +430,19 @@ function ECOs() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               )}
             </TabsContent>
           </Tabs>
         </CardContent>
       </Card>
+      
+      <KeyboardShortcutsHelp 
+        shortcuts={[
+          { key: 'n', description: 'Create new ECO' },
+          { key: 'Esc', description: 'Close dialogs' },
+        ]}
+      />
     </div>
   );
 }

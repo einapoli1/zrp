@@ -8,9 +8,12 @@ import { Label } from "../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Dialog, DialogContent,
   DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
-import { Truck, Package, Printer, ArrowLeft } from "lucide-react";
+import { Truck, Package, Printer } from "lucide-react";
 import { api, type Shipment } from "../lib/api";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
+
 function ShipmentDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -56,18 +59,34 @@ function ShipmentDetail() {
     }
   };
 
-  if (loading) return <div className="p-6">Loading shipment...</div>;
-  if (!shipment) return <div className="p-6">Shipment not found</div>;
+  if (loading) return <LoadingState variant="spinner" message="Loading shipment..." />;
+  
+  if (!shipment) {
+    return (
+      <div className="space-y-6">
+        <Breadcrumb items={[
+          { label: "Shipments", href: "/shipments" },
+          { label: "Not Found" }
+        ]} />
+        <div className="text-center py-8">
+          <h2 className="text-2xl font-semibold mb-2">Shipment Not Found</h2>
+          <p className="text-muted-foreground">The requested shipment could not be found.</p>
+        </div>
+      </div>
+    );
+  }
 
   const canShip = shipment.status === "draft" || shipment.status === "packed";
   const canDeliver = shipment.status === "shipped";
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[
+        { label: "Shipments", href: "/shipments" },
+        { label: shipment.id }
+      ]} />
+
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="sm" onClick={() => navigate("/shipments")}>
-          <ArrowLeft className="h-4 w-4 mr-1" />Back
-        </Button>
         <div className="flex-1">
           <h1 className="text-3xl font-bold tracking-tight">{shipment.id}</h1>
           <div className="flex gap-2 mt-1">
@@ -133,7 +152,8 @@ function ShipmentDetail() {
             {(!shipment.lines || shipment.lines.length === 0) ? (
               <p className="text-muted-foreground">No line items</p>
             ) : (
-              <Table>
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>IPN</TableHead>
@@ -155,6 +175,7 @@ function ShipmentDetail() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             )}
           </CardContent>
         </Card>

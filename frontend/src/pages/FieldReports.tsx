@@ -269,7 +269,8 @@ function FieldReports() {
           {reports.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">No field reports found</p>
           ) : (
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>ID</TableHead>
@@ -295,6 +296,7 @@ function FieldReports() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

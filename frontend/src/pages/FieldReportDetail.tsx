@@ -7,9 +7,11 @@ import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { ArrowLeft, Search, FileWarning, Wrench } from "lucide-react";
+import { Search, FileWarning, Wrench } from "lucide-react";
 import { api, type FieldReport } from "../lib/api";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
 
 function FieldReportDetail() {
   const { id } = useParams<{ id: string }>();
@@ -76,21 +78,32 @@ function FieldReportDetail() {
   };
 
   if (loading) {
+    return <LoadingState variant="spinner" message="Loading field report..." />;
+  }
+
+  if (!report) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+      <div className="space-y-6">
+        <Breadcrumb items={[
+          { label: "Field Reports", href: "/field-reports" },
+          { label: "Not Found" }
+        ]} />
+        <div className="text-center py-8">
+          <h2 className="text-2xl font-semibold mb-2">Field Report Not Found</h2>
+          <p className="text-muted-foreground">The requested field report could not be found.</p>
+        </div>
       </div>
     );
   }
 
-  if (!report) return null;
-
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[
+        { label: "Field Reports", href: "/field-reports" },
+        { label: `${report.id}: ${report.title}` }
+      ]} />
+
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/field-reports")}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{report.id}: {report.title}</h1>
           <div className="flex gap-2 mt-1">

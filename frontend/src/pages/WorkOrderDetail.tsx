@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { 
-  ArrowLeft, 
   Package,
   AlertTriangle,
   CheckCircle,
@@ -45,6 +44,9 @@ import {
 // Tabs removed - not used in this component
 import { api, type WorkOrder, type Vendor, type WOSerial } from "../lib/api";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
+
 interface BOMItem {
   ipn: string;
   description: string;
@@ -309,27 +311,16 @@ function WorkOrderDetail() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-2 text-muted-foreground">Loading work order...</p>
-        </div>
-      </div>
-    );
+    return <LoadingState variant="spinner" message="Loading work order..." />;
   }
 
   if (!workOrder) {
     return (
       <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/work-orders">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Work Orders
-            </Link>
-          </Button>
-        </div>
+        <Breadcrumb items={[
+          { label: "Work Orders", href: "/work-orders" },
+          { label: "Not Found" }
+        ]} />
         <Card>
           <CardContent className="p-8 text-center">
             <h3 className="text-lg font-semibold mb-2">Work Order Not Found</h3>
@@ -344,20 +335,17 @@ function WorkOrderDetail() {
 
   return (
     <div className="space-y-6">
+      <Breadcrumb items={[
+        { label: "Work Orders", href: "/work-orders" },
+        { label: `WO-${workOrder.id}` }
+      ]} />
+
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/work-orders">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Work Orders
-            </Link>
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">{workOrder.id}</h1>
-            <p className="text-muted-foreground">
-              Work Order Details
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">{workOrder.id}</h1>
+          <p className="text-muted-foreground">
+            Work Order Details
+          </p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" asChild>
@@ -722,7 +710,8 @@ function WorkOrderDetail() {
           <CardContent>
             <div className="space-y-2">
               <p className="text-sm text-muted-foreground">Kitted on: {new Date(kittingResults.kitted_at).toLocaleString()}</p>
-              <Table>
+              <div className="overflow-x-auto">
+                <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>IPN</TableHead>
@@ -752,6 +741,7 @@ function WorkOrderDetail() {
                   ))}
                 </TableBody>
               </Table>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -774,7 +764,8 @@ function WorkOrderDetail() {
           <CardTitle>BOM vs Inventory Comparison</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
+          <div className="overflow-x-auto">
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Status</TableHead>
@@ -824,6 +815,7 @@ function WorkOrderDetail() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

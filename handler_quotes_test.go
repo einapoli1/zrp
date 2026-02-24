@@ -89,6 +89,17 @@ func setupQuotesTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create part_changes table: %v", err)
 	}
 
+	// Create id_sequences table (needed for nextID function)
+	_, err = testDB.Exec(`
+		CREATE TABLE id_sequences (
+			prefix TEXT PRIMARY KEY,
+			next_num INTEGER NOT NULL DEFAULT 1
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create id_sequences table: %v", err)
+	}
+
 	// Create purchase_orders and po_lines tables (needed for handleQuoteCost BOM lookup)
 	_, err = testDB.Exec(`
 		CREATE TABLE purchase_orders (

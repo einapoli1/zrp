@@ -28,6 +28,7 @@ func setupTransactionTestDB(t *testing.T) *sql.DB {
 			reorder_point REAL DEFAULT 0 CHECK(reorder_point >= 0),
 			reorder_qty REAL DEFAULT 0 CHECK(reorder_qty >= 0),
 			description TEXT DEFAULT '',
+			type TEXT DEFAULT 'change',
 			mpn TEXT DEFAULT '',
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
@@ -103,7 +104,8 @@ func setupTransactionTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
-			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','review','approved','implemented','rejected','cancelled')),
+			type TEXT DEFAULT 'change',
+			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','review','approved','implemented','rejected','cancelled','pending')),
 			priority TEXT DEFAULT 'normal' CHECK(priority IN ('low','normal','high','critical')),
 			affected_ipns TEXT,
 			created_by TEXT DEFAULT 'engineer',

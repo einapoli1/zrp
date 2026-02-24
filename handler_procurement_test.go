@@ -40,8 +40,20 @@ func setupProcurementTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to open test DB: %v", err)
 	}
 
+	// CRITICAL: SQLite :memory: databases are per-connection
+	// Set max connections to 1 so all goroutines share the same in-memory DB
+	testDB.SetMaxOpenConns(1)
+
 	if _, err := testDB.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		t.Fatalf("Failed to enable foreign keys: %v", err)
+	}
+
+	// Enable WAL mode and set busy timeout for better concurrency
+	if _, err := testDB.Exec("PRAGMA journal_mode = WAL"); err != nil {
+		t.Fatalf("Failed to enable WAL mode: %v", err)
+	}
+	if _, err := testDB.Exec("PRAGMA busy_timeout = 5000"); err != nil {
+		t.Fatalf("Failed to set busy timeout: %v", err)
 	}
 
 	// Create vendors table
@@ -155,17 +167,6 @@ func setupProcurementTestDB(t *testing.T) *sql.DB {
 		t.Fatalf("Failed to create part_changes table: %v", err)
 	}
 
-	// Create id_sequences table
-	_, err = testDB.Exec(`
-		CREATE TABLE id_sequences (
-			prefix TEXT PRIMARY KEY,
-			next_num INTEGER
-		)
-	`)
-	if err != nil {
-		t.Fatalf("Failed to create id_sequences table: %v", err)
-	}
-
 	// Create inventory_transactions table
 	_, err = testDB.Exec(`
 		CREATE TABLE inventory_transactions (
@@ -201,6 +202,17 @@ func setupProcurementTestDB(t *testing.T) *sql.DB {
 	`)
 	if err != nil {
 		t.Fatalf("Failed to create receiving_inspections table: %v", err)
+	}
+
+	// Create id_sequences table for concurrent-safe ID generation
+	_, err = testDB.Exec(`
+		CREATE TABLE id_sequences (
+			prefix TEXT PRIMARY KEY,
+			next_num INTEGER NOT NULL DEFAULT 1
+		)
+	`)
+	if err != nil {
+		t.Fatalf("Failed to create id_sequences table: %v", err)
 	}
 
 	return testDB

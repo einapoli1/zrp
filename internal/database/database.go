@@ -516,6 +516,90 @@ func RunMigrations(db *sql.DB, searchTableInit func(*sql.DB) error) error {
 		FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
 	)`)
 
+	// Manufacturers table - normalized manufacturer management
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS manufacturers (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL UNIQUE COLLATE NOCASE,
+		contact_name TEXT DEFAULT '',
+		contact_email TEXT DEFAULT '',
+		contact_phone TEXT DEFAULT '',
+		website TEXT DEFAULT '',
+		notes TEXT DEFAULT '',
+		approved INTEGER DEFAULT 1,
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+	)`)
+
+	// Part manufacturers table - supports multiple manufacturers per part
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS part_manufacturers (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		part_id TEXT NOT NULL,
+		manufacturer_id INTEGER,
+		mpn TEXT NOT NULL,
+		is_primary INTEGER NOT NULL DEFAULT 0,
+		approved INTEGER NOT NULL DEFAULT 1,
+		notes TEXT DEFAULT '',
+		created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY (part_id) REFERENCES parts(ipn) ON DELETE CASCADE,
+		FOREIGN KEY (manufacturer_id) REFERENCES manufacturers(id) ON DELETE RESTRICT,
+		UNIQUE(part_id, manufacturer_id, mpn)
+	)`)
+
+	// ID sequence table for concurrent-safe ID generation
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS id_sequences (
+		prefix TEXT PRIMARY KEY,
+		next_num INTEGER NOT NULL DEFAULT 1
+	)`)
+
+	// Settings table for application configuration
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS settings (
+		key TEXT PRIMARY KEY,
+		value TEXT NOT NULL,
+		description TEXT,
+		updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+	)`)
+
+	// Product Configurator tables
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS configuration_templates (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		name TEXT NOT NULL,
+		model_format TEXT NOT NULL,
+		created_at TEXT DEFAULT (datetime('now')),
+		updated_at TEXT DEFAULT (datetime('now'))
+	)`)
+
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS configuration_parameters (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		template_id INTEGER NOT NULL,
+		name TEXT NOT NULL,
+		type TEXT NOT NULL CHECK(type IN ('enum','range')),
+		values_json TEXT NOT NULL,
+		created_at TEXT DEFAULT (datetime('now')),
+		FOREIGN KEY (template_id) REFERENCES configuration_templates(id) ON DELETE CASCADE
+	)`)
+
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS configuration_parts (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		template_id INTEGER NOT NULL,
+		ipn TEXT NOT NULL,
+		quantity INTEGER NOT NULL DEFAULT 1 CHECK(quantity > 0),
+		include_all_variants INTEGER NOT NULL DEFAULT 0 CHECK(include_all_variants IN (0,1)),
+		constraints_json TEXT DEFAULT '{}',
+		created_at TEXT DEFAULT (datetime('now')),
+		FOREIGN KEY (template_id) REFERENCES configuration_templates(id) ON DELETE CASCADE
+	)`)
+
+	tables = append(tables, `CREATE TABLE IF NOT EXISTS configuration_generations (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		template_id INTEGER NOT NULL,
+		eco_id TEXT NOT NULL,
+		generated_at TEXT DEFAULT (datetime('now')),
+		variant_count INTEGER NOT NULL DEFAULT 0,
+		FOREIGN KEY (template_id) REFERENCES configuration_templates(id) ON DELETE CASCADE,
+		FOREIGN KEY (eco_id) REFERENCES ecos(id) ON DELETE CASCADE
+	)`)
+
 	for _, t := range tables {
 		if _, err := db.Exec(t); err != nil {
 			return fmt.Errorf("migration error: %w\nSQL: %s", err, t)
@@ -527,6 +611,7 @@ func RunMigrations(db *sql.DB, searchTableInit func(*sql.DB) error) error {
 		"ALTER TABLE inventory ADD COLUMN mpn TEXT DEFAULT ''",
 		"ALTER TABLE users ADD COLUMN active INTEGER DEFAULT 1",
 		"ALTER TABLE ecos ADD COLUMN ncr_id TEXT DEFAULT ''",
+		"ALTER TABLE ecos ADD COLUMN type TEXT DEFAULT 'change'",
 		"ALTER TABLE notifications ADD COLUMN emailed INTEGER DEFAULT 0",
 		"ALTER TABLE notifications ADD COLUMN user_id TEXT DEFAULT ''",
 		"ALTER TABLE work_orders ADD COLUMN due_date TEXT DEFAULT ''",
@@ -646,6 +731,17 @@ func RunMigrations(db *sql.DB, searchTableInit func(*sql.DB) error) error {
 		"CREATE INDEX IF NOT EXISTS idx_audit_log_user_created ON audit_log(user_id, created_at)",
 		"CREATE INDEX IF NOT EXISTS idx_change_history_user_created ON change_history(user_id, created_at)",
 		"CREATE INDEX IF NOT EXISTS idx_email_log_address_sent ON email_log(to_address, sent_at)",
+		
+		// Manufacturers and part manufacturers indexes
+		"CREATE INDEX IF NOT EXISTS idx_part_manufacturers_part_id ON part_manufacturers(part_id)",
+		"CREATE INDEX IF NOT EXISTS idx_part_manufacturers_manufacturer_id ON part_manufacturers(manufacturer_id)",
+		"CREATE INDEX IF NOT EXISTS idx_manufacturers_name ON manufacturers(name)",
+		
+		// Product Configurator indexes
+		"CREATE INDEX IF NOT EXISTS idx_configuration_parameters_template_id ON configuration_parameters(template_id)",
+		"CREATE INDEX IF NOT EXISTS idx_configuration_parts_template_id ON configuration_parts(template_id)",
+		"CREATE INDEX IF NOT EXISTS idx_configuration_generations_template_id ON configuration_generations(template_id)",
+		"CREATE INDEX IF NOT EXISTS idx_configuration_generations_eco_id ON configuration_generations(eco_id)",
 	}
 	for _, idx := range indexes {
 		if _, err := db.Exec(idx); err != nil {

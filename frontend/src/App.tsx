@@ -2,7 +2,7 @@ import React, { Suspense } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AppLayout } from "./layouts/AppLayout";
-import { LoadingSpinner } from "./components/LoadingSpinner";
+import { LoadingState } from "./components/LoadingState";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
 import { PermissionsProvider } from "./contexts/PermissionsContext";
 import { ErrorBoundary } from "./components/ErrorBoundary";
@@ -66,6 +66,7 @@ const Scan = React.lazy(() => import("./pages/Scan"));
 const RFQs = React.lazy(() => import("./pages/RFQs"));
 const RFQDetail = React.lazy(() => import("./pages/RFQDetail"));
 const Pricing = React.lazy(() => import("./pages/Pricing"));
+const Configurator = React.lazy(() => import("./pages/Configurator"));
 
 // All pages now have real implementations
 
@@ -76,7 +77,7 @@ function App() {
       <ErrorBoundary>
       <WebSocketProvider>
       <PermissionsProvider>
-      <Suspense fallback={<LoadingSpinner />}>
+      <Suspense fallback={<LoadingState />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           {/* Print routes - outside AppLayout for clean printing */}
@@ -92,6 +93,7 @@ function App() {
             <Route path="/parts/:ipn" element={<PartDetail />} />
             <Route path="/ecos" element={<ECOs />} />
             <Route path="/ecos/:id" element={<ECODetail />} />
+            <Route path="/configurator" element={<Configurator />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/documents/:id" element={<DocumentDetail />} />
             <Route path="/testing" element={<Testing />} />

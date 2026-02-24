@@ -108,9 +108,9 @@ func insertScanTestData(t *testing.T, testDB *sql.DB, partsDir string) {
 
 func TestHandleScanLookup_EmptyCode(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupScanTestDB(t)
-	defer db.Close()
+	testDB := setupScanTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	req := httptest.NewRequest("GET", "/api/scan?code=", nil)
 	w := httptest.NewRecorder()

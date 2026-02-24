@@ -482,7 +482,8 @@ function Documents() {
               ))}
             </div>
           ) : (
-            <Table>
+            <div className="overflow-x-auto">
+              <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
@@ -570,6 +571,7 @@ function Documents() {
                 )}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

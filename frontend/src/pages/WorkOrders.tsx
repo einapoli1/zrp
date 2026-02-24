@@ -8,13 +8,13 @@ import {
   CheckCircle,
   AlertTriangle,
   Calendar,
-  Download
+  Download,
+  ClipboardList
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
 import { Textarea } from "../components/ui/textarea";
 // Table used via ConfigurableTable
 import {
@@ -46,20 +46,58 @@ import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog
 import { Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
+import { useHotkeys } from 'react-hotkeys-hook';
+import { KeyboardShortcutsHelp } from '../components/KeyboardShortcutsHelp';
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../components/ui/form";
+
+interface CreateWorkOrderData {
+  assembly_ipn: string;
+  qty: number;
+  status: string;
+  priority: string;
+  notes: string;
+}
+
 function WorkOrders() {
   const [workOrders, setWorkOrders] = useState<WorkOrder[]>([]);
   const [parts, setParts] = useState<Part[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
 
-  const [woForm, setWoForm] = useState({
-    assembly_ipn: "",
-    qty: 1,
-    status: "open",
-    priority: "medium",
-    notes: "",
+  const woForm = useForm<CreateWorkOrderData>({
+    defaultValues: {
+      assembly_ipn: "",
+      qty: 1,
+      status: "open",
+      priority: "medium",
+      notes: "",
+    },
+  });
+
+  // Keyboard shortcuts
+  useHotkeys('n', () => setCreateDialogOpen(true), { 
+    enableOnFormTags: false,
+    preventDefault: true 
+  });
+
+  useHotkeys('escape', () => {
+    if (createDialogOpen) setCreateDialogOpen(false);
+    if (bulkEditOpen) setBulkEditOpen(false);
+  }, {
+    enableOnFormTags: true,
+    preventDefault: true
   });
 
   useEffect(() => {
@@ -70,10 +108,14 @@ function WorkOrders() {
   const fetchWorkOrders = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await api.getWorkOrders();
       setWorkOrders(data);
-    } catch (error) {
-      toast.error("Failed to fetch work orders"); console.error("Failed to fetch work orders:", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error";
+      setError(errorMessage);
+      toast.error(`Failed to fetch work orders: ${errorMessage}`);
+      console.error("Failed to fetch work orders:", error);
     } finally {
       setLoading(false);
     }
@@ -85,19 +127,24 @@ function WorkOrders() {
       // Filter to assemblies only (this would typically be based on a category or type field)
       const partsArray = Array.isArray(data) ? data : [];
       setParts(partsArray);
-    } catch (error) {
-      toast.error("Failed to fetch parts"); console.error("Failed to fetch parts:", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error";
+      toast.error(`Failed to fetch parts: ${errorMessage}`);
+      console.error("Failed to fetch parts:", error);
     }
   };
 
-  const handleCreateWO = async () => {
+  const handleCreateWO = async (data: CreateWorkOrderData) => {
     try {
-      await api.createWorkOrder(woForm);
+      await api.createWorkOrder(data);
+      toast.success(`Work order for ${data.assembly_ipn} created successfully`);
       setCreateDialogOpen(false);
-      resetForm();
+      woForm.reset();
       fetchWorkOrders();
-    } catch (error) {
-      toast.error("Failed to create work order"); console.error("Failed to create work order:", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Failed to create work order";
+      toast.error(`Failed to create work order: ${errorMessage}`);
+      console.error("Failed to create work order:", error);
     }
   };
 
@@ -106,16 +153,6 @@ function WorkOrders() {
     params.set('format', format);
     window.location.href = `/api/v1/workorders/export?${params.toString()}`;
     toast.success(`Exporting work orders as ${format.toUpperCase()}`);
-  };
-
-  const resetForm = () => {
-    setWoForm({
-      assembly_ipn: "",
-      qty: 1,
-      status: "open",
-      priority: "medium",
-      notes: "",
-    });
   };
 
   const getStatusBadge = (status: string) => {
@@ -194,8 +231,9 @@ function WorkOrders() {
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   };
 
+  const assemblyIpnValue = woForm.watch("assembly_ipn") || "";
   const filteredParts = parts.filter(part => 
-    part.ipn.toLowerCase().includes(woForm.assembly_ipn.toLowerCase())
+    part.ipn.toLowerCase().includes(assemblyIpnValue.toLowerCase())
   );
 
   const toggleSelectAll = () => {
@@ -359,19 +397,20 @@ function WorkOrders() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Work Orders</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Work Orders</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Manage production work orders and assembly tracking.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export
+              <Button variant="outline" className="min-h-[44px] flex-1 sm:flex-none" aria-label="Export work orders data">
+                <Download className="h-4 w-4 sm:mr-2" aria-hidden="true" />
+                <span className="hidden sm:inline" aria-hidden="true">Export</span>
+                <span className="sr-only">Export work orders data</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -385,99 +424,138 @@ function WorkOrders() {
           </DropdownMenu>
           <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Work Order
+              <Button className="min-h-[44px] flex-1 sm:flex-none">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Create Work Order</span>
+                <span className="sm:hidden">Create</span>
               </Button>
             </DialogTrigger>
           <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Create Work Order</DialogTitle>
-              <DialogDescription>
-                Create a new work order to track production of an assembly.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="assembly_ipn">Assembly IPN *</Label>
-                <Input
-                  id="assembly_ipn"
-                  value={woForm.assembly_ipn}
-                  onChange={(e) => setWoForm(prev => ({ ...prev, assembly_ipn: e.target.value }))}
-                  placeholder="Search for assembly..."
-                />
-                {woForm.assembly_ipn && filteredParts.length > 0 && (
-                  <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
-                    {filteredParts.slice(0, 5).map((part) => (
-                      <div
-                        key={part.ipn}
-                        className="p-2 hover:bg-muted cursor-pointer"
-                        onClick={() => setWoForm(prev => ({ ...prev, assembly_ipn: part.ipn }))}
-                      >
-                        <div className="font-medium">{part.ipn}</div>
-                        {part.description && (
-                          <div className="text-sm text-muted-foreground">{part.description}</div>
+            <Form {...woForm}>
+              <form onSubmit={woForm.handleSubmit(handleCreateWO)} className="space-y-6">
+                <DialogHeader>
+                  <DialogTitle>Create Work Order</DialogTitle>
+                  <DialogDescription>
+                    Create a new work order to track production of an assembly.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <FormField
+                    control={woForm.control}
+                    name="assembly_ipn"
+                    rules={{ required: 'Assembly IPN is required' }}
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Assembly IPN *</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Search for assembly..." {...field} />
+                        </FormControl>
+                        {field.value && filteredParts.length > 0 && (
+                          <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
+                            {filteredParts.slice(0, 5).map((part) => (
+                              <div
+                                key={part.ipn}
+                                className="p-2 hover:bg-muted cursor-pointer"
+                                onClick={() => field.onChange(part.ipn)}
+                              >
+                                <div className="font-medium">{part.ipn}</div>
+                                {part.description && (
+                                  <div className="text-sm text-muted-foreground">{part.description}</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
                         )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="qty">Quantity *</Label>
-                  <Input
-                    id="qty"
-                    type="number"
-                    min="1"
-                    value={woForm.qty}
-                    onChange={(e) => setWoForm(prev => ({ ...prev, qty: parseInt(e.target.value) || 1 }))}
-                    placeholder="1"
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField
+                      control={woForm.control}
+                      name="qty"
+                      rules={{ 
+                        required: 'Quantity is required',
+                        min: { value: 1, message: 'Quantity must be at least 1' }
+                      }}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quantity *</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min="1" 
+                              placeholder="1"
+                              {...field}
+                              onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={woForm.control}
+                      name="priority"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Priority</FormLabel>
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="low">Low</SelectItem>
+                              <SelectItem value="medium">Medium</SelectItem>
+                              <SelectItem value="high">High</SelectItem>
+                              <SelectItem value="critical">Critical</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={woForm.control}
+                    name="notes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Notes</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Optional work order notes..."
+                            rows={3}
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </div>
-                <div>
-                  <Label htmlFor="priority">Priority</Label>
-                  <Select value={woForm.priority} onValueChange={(value) => setWoForm(prev => ({ ...prev, priority: value }))}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="low">Low</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="critical">Critical</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={woForm.notes}
-                  onChange={(e) => setWoForm(prev => ({ ...prev, notes: e.target.value }))}
-                  placeholder="Optional work order notes..."
-                  rows={3}
-                />
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setCreateDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handleCreateWO} disabled={!woForm.assembly_ipn}>
-                Create Work Order
-              </Button>
-            </DialogFooter>
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setCreateDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    Create Work Order
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
           </DialogContent>
         </Dialog>
         </div>
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -566,28 +644,50 @@ function WorkOrders() {
           <CardTitle>Work Orders</CardTitle>
         </CardHeader>
         <CardContent>
-          <ConfigurableTable<WorkOrder>
-            tableName="work-orders"
-            columns={woColumns}
-            data={workOrders}
-            rowKey={(wo) => wo.id}
-            emptyMessage="No work orders found"
-            leadingColumn={{
-              header: (
-                <Checkbox
-                  checked={selectedItems.size === workOrders.length && workOrders.length > 0}
-                  onCheckedChange={toggleSelectAll}
-                />
-              ),
-              cell: (wo) => (
-                <Checkbox
-                  checked={selectedItems.has(wo.id)}
-                  onCheckedChange={() => toggleSelectItem(wo.id)}
-                />
-              ),
-              className: "w-12",
-            }}
-          />
+          {loading ? (
+            <LoadingState variant="table" rows={5} />
+          ) : error ? (
+            <ErrorState
+              title="Failed to load work orders"
+              message={error}
+              onRetry={fetchWorkOrders}
+            />
+          ) : (
+            <ConfigurableTable<WorkOrder>
+              tableName="work-orders"
+              columns={woColumns}
+              data={workOrders}
+              rowKey={(wo) => wo.id}
+              ariaLabel="Work orders list"
+              caption="List of all work orders with status, priority, assembly details, and actions"
+              emptyMessage="No work orders found"
+              emptyIcon={ClipboardList}
+              emptyDescription="Get started by creating your first work order."
+              emptyAction={
+                <Button onClick={() => setCreateDialogOpen(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Work Order
+                </Button>
+              }
+              leadingColumn={{
+                header: (
+                  <Checkbox
+                    checked={selectedItems.size === workOrders.length && workOrders.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                    aria-label="Select all work orders"
+                  />
+                ),
+                cell: (wo) => (
+                  <Checkbox
+                    checked={selectedItems.has(wo.id)}
+                    onCheckedChange={() => toggleSelectItem(wo.id)}
+                    aria-label={`Select work order ${wo.id}`}
+                  />
+                ),
+                className: "w-12",
+              }}
+            />
+          )}
         </CardContent>
       </Card>
       <BulkEditDialog
@@ -597,6 +697,13 @@ function WorkOrders() {
         selectedCount={selectedItems.size}
         onSubmit={handleBulkUpdate}
         title="Bulk Edit Work Orders"
+      />
+      
+      <KeyboardShortcutsHelp 
+        shortcuts={[
+          { key: 'n', description: 'Create new work order' },
+          { key: 'Esc', description: 'Close dialogs' },
+        ]}
       />
     </div>
   );

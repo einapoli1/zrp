@@ -618,24 +618,30 @@ func routeAPIv1(w http.ResponseWriter, r *http.Request) {
 
 // setupHealthTestDB creates an in-memory database with full schema
 func setupHealthTestDB(t *testing.T) *sql.DB {
-	testDB, err := sql.Open("sqlite", ":memory:")
+	// Use shared in-memory database with foreign keys enabled on ALL connections
+	// cache=shared ensures all connections see the same database (critical for connection pools)
+	testDB, err := sql.Open("sqlite", "file::memory:?mode=memory&cache=shared&_pragma=foreign_keys(1)")
 	if err != nil {
 		t.Fatalf("Failed to open test DB: %v", err)
 	}
 
-	// Enable foreign keys
-	if _, err := testDB.Exec("PRAGMA foreign_keys = ON"); err != nil {
-		t.Fatalf("Failed to enable foreign keys: %v", err)
+	// Verify foreign keys are enabled
+	var fkEnabled int
+	if err := testDB.QueryRow("PRAGMA foreign_keys").Scan(&fkEnabled); err != nil {
+		t.Fatalf("Failed to check foreign keys: %v", err)
+	}
+	if fkEnabled != 1 {
+		t.Fatalf("Foreign keys not enabled")
 	}
 
-	// Run all migrations by calling the actual migration function
-	// We'll temporarily replace the global db with our test db
-	oldDB := db
-	db = testDB
-	if err := runMigrations(); err != nil {
-		db = oldDB
+	// Run all migrations using the wrapper function
+	if err := runMigrationsOnDB(testDB); err != nil {
 		t.Fatalf("Failed to run migrations: %v", err)
 	}
+	
+	// Initialize permissions table
+	oldDB := db
+	db = testDB
 	if err := initPermissionsTable(); err != nil {
 		db = oldDB
 		t.Fatalf("Failed to init permissions: %v", err)

@@ -26,6 +26,7 @@ func setupBulkTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			status TEXT DEFAULT 'draft' CHECK(status IN ('draft','approved','implemented','rejected')),
 			priority TEXT DEFAULT 'normal',
 			affected_ipns TEXT,
@@ -47,6 +48,7 @@ func setupBulkTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			status TEXT DEFAULT 'pending' CHECK(status IN ('pending','in_progress','completed','cancelled')),
 			assigned_to TEXT,
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -63,6 +65,7 @@ func setupBulkTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			ipn TEXT,
 			serial_number TEXT,
 			defect_type TEXT,
@@ -104,6 +107,7 @@ func setupBulkTestDB(t *testing.T) *sql.DB {
 			reorder_point REAL,
 			reorder_qty REAL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			mpn TEXT,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
@@ -118,6 +122,7 @@ func setupBulkTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			customer TEXT,
 			status TEXT DEFAULT 'open' CHECK(status IN ('open','investigating','resolved','closed')),
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -133,6 +138,7 @@ func setupBulkTestDB(t *testing.T) *sql.DB {
 		CREATE TABLE parts (
 			ipn TEXT PRIMARY KEY,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			mpn TEXT,
 			status TEXT DEFAULT 'active' CHECK(status IN ('active','archived','obsolete')),
 			created_at DATETIME DEFAULT CURRENT_TIMESTAMP

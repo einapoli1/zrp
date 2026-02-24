@@ -22,33 +22,80 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        manualChunks: {
-          // Separate React and React DOM into their own chunk
-          'react-vendor': ['react', 'react-dom', 'react/jsx-runtime'],
-          // Router into separate chunk
-          'react-router': ['react-router-dom'],
-          // Radix UI components (large dependency)
-          'radix-ui': [
-            '@radix-ui/react-avatar',
-            '@radix-ui/react-checkbox',
-            '@radix-ui/react-dialog',
-            '@radix-ui/react-dropdown-menu',
-            '@radix-ui/react-label',
-            '@radix-ui/react-select',
-            '@radix-ui/react-separator',
-            '@radix-ui/react-slot',
-            '@radix-ui/react-tabs',
-            '@radix-ui/react-tooltip',
-          ],
-          // Form libraries
-          'form-libs': ['react-hook-form', '@hookform/resolvers', 'zod'],
-          // Icons (can be large)
-          'lucide': ['lucide-react'],
-          // Other utilities
-          'utils': ['clsx', 'tailwind-merge', 'class-variance-authority'],
+        manualChunks: (id) => {
+          // Node modules chunking - avoid circular dependencies by being specific
+          if (id.includes('node_modules')) {
+            // Barcode/QR code libraries (heavy) - isolate completely
+            if (id.includes('html5-qrcode') || id.includes('quagga') || id.includes('@zxing')) {
+              return 'barcode-libs';
+            }
+            // QR code generation (separate from scanner)
+            if (id.includes('qrcode.react')) {
+              return 'qrcode-gen';
+            }
+            // Command palette
+            if (id.includes('cmdk')) {
+              return 'cmdk';
+            }
+            // Core React - be very specific to avoid pulling in other deps
+            if (id.includes('node_modules/react/') && !id.includes('react-dom') && !id.includes('react-router')) {
+              return 'react-core';
+            }
+            if (id.includes('node_modules/react-dom/')) {
+              return 'react-core';
+            }
+            if (id.includes('scheduler')) {
+              return 'react-core';
+            }
+            // React Router
+            if (id.includes('react-router')) {
+              return 'react-router';
+            }
+            // Radix UI - keep together to avoid circular deps
+            if (id.includes('@radix-ui')) {
+              return 'radix-ui';
+            }
+            // Form libraries
+            if (id.includes('react-hook-form') || id.includes('zod') || id.includes('@hookform')) {
+              return 'form-libs';
+            }
+            // Icons
+            if (id.includes('lucide-react')) {
+              return 'lucide';
+            }
+            // Toast notifications
+            if (id.includes('sonner')) {
+              return 'toast';
+            }
+            // Utilities (lightweight)
+            if (id.includes('clsx') || id.includes('tailwind-merge') || id.includes('class-variance-authority')) {
+              return 'utils';
+            }
+            // Don't create a vendor chunk - let remaining modules stay in entry
+          }
+          
+          // App code chunking by feature
+          // UI components
+          if (id.includes('/components/ui/')) {
+            return 'ui-components';
+          }
+          // Common components
+          if (id.includes('/components/')) {
+            return 'components';
+          }
+          // API client
+          if (id.includes('/lib/api')) {
+            return 'api-client';
+          }
+          // Contexts
+          if (id.includes('/contexts/')) {
+            return 'contexts';
+          }
         },
       },
     },
+    // Increase chunk size warning limit
+    chunkSizeWarningLimit: 600,
   },
   server: {
     proxy: {

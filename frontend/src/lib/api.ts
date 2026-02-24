@@ -30,6 +30,32 @@ export interface Part {
   fields?: Record<string, string>;
 }
 
+export interface Manufacturer {
+  id: number;
+  name: string;
+  contact_name?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  website?: string;
+  notes?: string;
+  approved: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PartManufacturer {
+  id: number;
+  part_id: number;
+  manufacturer_id: number;  // FK, not TEXT
+  manufacturer_name: string;  // From JOIN
+  mpn: string;
+  is_primary: boolean;
+  approved: boolean;
+  notes?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface Category {
   id: string;
   name: string;
@@ -544,6 +570,11 @@ export interface DashboardStats {
   active_work_orders: number;
   pending_ecos: number;
   total_inventory_value: number;
+  open_ecos: number;
+  open_pos: number;
+  open_ncrs: number;
+  total_devices: number;
+  open_rmas: number;
 }
 
 export interface CalendarEvent {
@@ -662,8 +693,23 @@ class ApiClient {
         window.location.href = '/login';
         throw new Error('Session expired');
       }
+      
+      // Parse error response
       const body = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(body.error || `API error: ${response.statusText}`);
+      const errorMessage = body.error || body.message || response.statusText;
+      
+      // Handle specific status codes
+      if (response.status === 403) {
+        throw new Error(`Permission denied: ${errorMessage}`);
+      }
+      if (response.status === 404) {
+        throw new Error(`Not found: ${errorMessage}`);
+      }
+      if (response.status >= 500) {
+        throw new Error(`Server error: ${errorMessage}`);
+      }
+      
+      throw new Error(errorMessage);
     }
 
     const json = await response.json();
@@ -672,6 +718,35 @@ class ApiClient {
       return json.data as T;
     }
     return json as T;
+  }
+
+  // Generic HTTP methods for direct API access
+  async get<T = any>(endpoint: string): Promise<{ data: T }> {
+    const result = await this.request<T>(endpoint);
+    return { data: result };
+  }
+
+  async post<T = any>(endpoint: string, body?: any): Promise<{ data: T }> {
+    const result = await this.request<T>(endpoint, {
+      method: 'POST',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return { data: result };
+  }
+
+  async put<T = any>(endpoint: string, body?: any): Promise<{ data: T }> {
+    const result = await this.request<T>(endpoint, {
+      method: 'PUT',
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    return { data: result };
+  }
+
+  async delete<T = any>(endpoint: string): Promise<{ data: T }> {
+    const result = await this.request<T>(endpoint, {
+      method: 'DELETE',
+    });
+    return { data: result };
   }
 
   /** Like request(), but returns the full envelope including meta */
@@ -689,8 +764,22 @@ class ApiClient {
         window.location.href = '/login';
         throw new Error('Session expired');
       }
+      
       const errBody = await response.json().catch(() => ({ error: response.statusText }));
-      throw new Error(errBody.error || `API error: ${response.statusText}`);
+      const errorMessage = errBody.error || errBody.message || response.statusText;
+      
+      // Handle specific status codes
+      if (response.status === 403) {
+        throw new Error(`Permission denied: ${errorMessage}`);
+      }
+      if (response.status === 404) {
+        throw new Error(`Not found: ${errorMessage}`);
+      }
+      if (response.status >= 500) {
+        throw new Error(`Server error: ${errorMessage}`);
+      }
+      
+      throw new Error(errorMessage);
     }
     return response.json();
   }
@@ -782,6 +871,26 @@ class ApiClient {
     return this.request(`/parts/${ipn}/bom`);
   }
 
+  async saveBOM(ipn: string, items: Array<{ ipn: string; description: string; quantity: number; ref_des: string }>): Promise<{ success: boolean; assembly_ipn: string; item_count: number }> {
+    return this.request(`/parts/${ipn}/bom`, {
+      method: 'POST',
+      body: JSON.stringify({
+        assembly_ipn: ipn,
+        items: items,
+      }),
+    });
+  }
+
+  async updateBOM(ipn: string, items: Array<{ ipn: string; description: string; quantity: number; ref_des: string }>): Promise<{ success: boolean; assembly_ipn: string; item_count: number }> {
+    return this.request(`/parts/${ipn}/bom`, {
+      method: 'PUT',
+      body: JSON.stringify({
+        assembly_ipn: ipn,
+        items: items,
+      }),
+    });
+  }
+
   async getPartCost(ipn: string): Promise<PartCost> {
     return this.request(`/parts/${ipn}/cost`);
   }
@@ -813,6 +922,71 @@ class ApiClient {
 
   async deletePart(ipn: string): Promise<void> {
     return this.request(`/parts/${ipn}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Manufacturers (master table)
+  async getManufacturers(params?: { search?: string; approved?: boolean }): Promise<Manufacturer[]> {
+    const searchParams = new URLSearchParams();
+    if (params?.search) searchParams.set('search', params.search);
+    if (params?.approved !== undefined) searchParams.set('approved', params.approved.toString());
+    
+    const url = `/manufacturers${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
+    return this.request<Manufacturer[]>(url);
+  }
+
+  async getManufacturer(id: number): Promise<Manufacturer> {
+    return this.request<Manufacturer>(`/manufacturers/${id}`);
+  }
+
+  async createManufacturer(data: Partial<Manufacturer>): Promise<Manufacturer> {
+    return this.request<Manufacturer>('/manufacturers', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateManufacturer(id: number, data: Partial<Manufacturer>): Promise<Manufacturer> {
+    return this.request<Manufacturer>(`/manufacturers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteManufacturer(id: number): Promise<void> {
+    return this.request<void>(`/manufacturers/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  // Part Manufacturers (refactored to use manufacturer_id FK)
+  async getPartManufacturers(ipn: string): Promise<{ manufacturers: PartManufacturer[]; count: number }> {
+    return this.request<{ manufacturers: PartManufacturer[]; count: number }>(`/parts/${ipn}/manufacturers`);
+  }
+
+  async createPartManufacturer(ipn: string, data: {
+    manufacturer_id: number;
+    mpn: string;
+    is_primary?: boolean;
+    approved?: boolean;
+    notes?: string;
+  }): Promise<{ id: number; message: string }> {
+    return this.request<{ id: number; message: string }>(`/parts/${ipn}/manufacturers`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updatePartManufacturer(ipn: string, id: number, data: Partial<PartManufacturer>): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/parts/${ipn}/manufacturers/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deletePartManufacturer(ipn: string, id: number): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/parts/${ipn}/manufacturers/${id}`, {
       method: 'DELETE',
     });
   }
@@ -2095,6 +2269,22 @@ export interface ModuleInfo {
   actions: string[];
 }
 
+// Settings types
+export interface Setting {
+  key: string;
+  value: string;
+  description: string;
+  updated_at: string;
+}
+
+export interface CreateResponse {
+  eco_created?: boolean;
+  eco_id?: string;
+  message?: string;
+  // ... normal creation response fields (varies by entity type)
+  [key: string]: any;
+}
+
 // Export singleton instance
 export const api = new ApiClient();
 
@@ -2128,4 +2318,30 @@ export async function setRolePermissions(role: string, permissions: { module: st
     const err = await res.json();
     throw new Error(err.error || 'Failed to update permissions');
   }
+}
+// Settings API functions
+export async function getSettings(): Promise<Setting[]> {
+  const res = await fetch(`${API_BASE}/settings`);
+  const json = await res.json();
+  return json.data || [];
+}
+
+export async function getSetting(key: string): Promise<Setting> {
+  const res = await fetch(`${API_BASE}/settings/${key}`);
+  const json = await res.json();
+  return json.data;
+}
+
+export async function updateSetting(key: string, value: string): Promise<Setting> {
+  const res = await fetch(`${API_BASE}/settings/${key}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ value }),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error || 'Failed to update setting');
+  }
+  const json = await res.json();
+  return json.data;
 }

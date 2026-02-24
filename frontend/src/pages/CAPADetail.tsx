@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
@@ -7,12 +7,14 @@ import { Input } from "../components/ui/input";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Label } from "../components/ui/label";
-import { ArrowLeft, Save, ShieldCheck, CheckCircle } from "lucide-react";
+import { Save, ShieldCheck, CheckCircle } from "lucide-react";
 import { api, type CAPA } from "../lib/api";
 import { toast } from "sonner";
+import { Breadcrumb } from "../components/ui/breadcrumb";
+import { LoadingState } from "../components/LoadingState";
+
 function CAPADetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const [capa, setCAPA] = useState<CAPA | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
@@ -83,17 +85,32 @@ function CAPADetail() {
   const statusSteps = ["open", "in-progress", "verification", "closed"];
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-[400px]"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto" /></div>;
+    return <LoadingState variant="spinner" message="Loading CAPA..." />;
   }
 
   if (!capa) {
-    return <div className="p-6"><p>CAPA not found</p></div>;
+    return (
+      <div className="space-y-6">
+        <Breadcrumb items={[
+          { label: "CAPAs", href: "/capas" },
+          { label: "Not Found" }
+        ]} />
+        <div className="text-center py-8">
+          <h2 className="text-2xl font-semibold mb-2">CAPA Not Found</h2>
+          <p className="text-muted-foreground">The requested CAPA could not be found.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6 p-6">
+      <Breadcrumb items={[
+        { label: "CAPAs", href: "/capas" },
+        { label: `${capa.id}: ${capa.title}` }
+      ]} />
+
       <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/capas")}><ArrowLeft className="h-4 w-4" /></Button>
         <ShieldCheck className="h-5 w-5" />
         <h1 className="text-2xl font-bold">{capa.id}: {capa.title}</h1>
         <Badge variant={capa.type === "corrective" ? "destructive" : "default"}>{capa.type}</Badge>

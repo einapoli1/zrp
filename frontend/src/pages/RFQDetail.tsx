@@ -12,7 +12,7 @@ import { Dialog, DialogContent,
 import { LoadingState } from "../components/LoadingState";
 import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
-import { FormField } from "../components/FormField";
+import { Breadcrumb } from "../components/ui/breadcrumb";
 import { FileQuestion } from "lucide-react";
 
 const statusColors: Record<string, string> = {
@@ -81,7 +81,11 @@ export default function RFQDetail() {
 
   if (!rfq) {
     return (
-      <div className="p-6">
+      <div className="space-y-6">
+        <Breadcrumb items={[
+          { label: "RFQs", href: "/rfqs" },
+          { label: "Not Found" }
+        ]} />
         <EmptyState
           icon={FileQuestion}
           title="RFQ not found"
@@ -167,6 +171,11 @@ export default function RFQDetail() {
 
   return (
     <div className="p-6 space-y-4">
+      <Breadcrumb items={[
+        { label: "RFQs", href: "/rfqs" },
+        { label: rfq.title }
+      ]} />
+
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <h1 className="text-2xl font-bold">{rfq.title}</h1>

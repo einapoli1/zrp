@@ -64,6 +64,8 @@ Global search across parts, documents, ECOs, etc.
 | PUT | `/parts/{ipn}` | Update part |
 | DELETE | `/parts/{ipn}` | Delete part |
 | GET | `/parts/{ipn}/bom` | BOM tree |
+| POST | `/parts/{ipn}/bom` | Save/create BOM |
+| PUT | `/parts/{ipn}/bom` | Update BOM |
 | GET | `/parts/{ipn}/cost` | Cost info |
 | GET | `/parts/{ipn}/where-used` | Where-used |
 | GET | `/parts/{ipn}/changes` | List pending changes |
@@ -84,6 +86,34 @@ Global search across parts, documents, ECOs, etc.
 // Request
 {"ipn": "RES-001", "category": "Resistors", "fields": {"value": "10k", "package": "0603"}}
 ```
+
+### POST /parts/{ipn}/bom
+Save/create a BOM for an assembly part. The IPN must have a PCA- or ASY- prefix.
+
+**Validation:**
+- All IPNs in the BOM must exist in the parts database
+- Returns 400 error if any IPN is not found
+
+```json
+// Request
+{
+  "assembly_ipn": "PCA-MAIN-001",
+  "items": [
+    {"ipn": "RES-001", "description": "10K Resistor", "quantity": 2, "ref_des": "R1,R2"},
+    {"ipn": "CAP-001", "description": "10uF Capacitor", "quantity": 1, "ref_des": "C1"},
+    {"ipn": "IC-001", "description": "ATmega328P", "quantity": 1, "ref_des": "U1"}
+  ]
+}
+
+// Response
+{"data": {"success": true, "assembly_ipn": "PCA-MAIN-001", "item_count": 3}}
+
+// Error Response (invalid IPN)
+{"error": "part RES-999 not found"}
+```
+
+### PUT /parts/{ipn}/bom
+Update an existing BOM. Same request/response format as POST.
 
 ---
 
@@ -433,12 +463,59 @@ Returns all test records for serial number "SN-12345".
 
 | Method | Path | Description |
 |--------|------|-------------|
+| GET | `/settings` | List all system settings |
+| GET | `/settings/:key` | Get specific setting |
+| PUT | `/settings/:key` | Update setting value |
 | GET/PUT | `/settings/general` | General settings |
 | GET/PUT | `/settings/gitplm` | GitPLM config |
 | GET/PUT | `/settings/git-docs` | Git docs config |
 | POST | `/settings/digikey` | DigiKey settings |
 | POST | `/settings/mouser` | Mouser settings |
 | GET | `/settings/distributors` | All distributor settings |
+
+### GET /settings
+Returns all system settings.
+
+```json
+// Response
+{"data": [
+  {
+    "key": "require_eco_approval_for_creation",
+    "value": "false",
+    "description": "Require ECO approval before creating new parts, assemblies, and configurations",
+    "updated_at": "2026-02-24 04:11:03"
+  }
+]}
+```
+
+### GET /settings/:key
+Returns a specific setting by key.
+
+```json
+// Response
+{"data": {
+  "key": "require_eco_approval_for_creation",
+  "value": "false",
+  "description": "Require ECO approval before creating new parts, assemblies, and configurations",
+  "updated_at": "2026-02-24 04:11:03"
+}}
+```
+
+### PUT /settings/:key
+Updates a setting value.
+
+```json
+// Request
+{"value": "true"}
+
+// Response
+{"data": {
+  "key": "require_eco_approval_for_creation",
+  "value": "true",
+  "description": "Require ECO approval before creating new parts, assemblies, and configurations",
+  "updated_at": "2026-02-24 04:15:22"
+}}
+```
 
 ---
 
@@ -554,3 +631,74 @@ Returns calendar events for the specified month.
 | PUT | `/field-reports/{id}` | Update field report |
 | DELETE | `/field-reports/{id}` | Delete field report |
 | POST | `/field-reports/{id}/create-ncr` | Create NCR from report |
+
+---
+
+## Product Configurator
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/configurator/templates` | List all templates |
+| POST | `/configurator/templates` | Create template |
+| GET | `/configurator/templates/{id}` | Get template with parameters & parts |
+| PUT | `/configurator/templates/{id}` | Update template |
+| DELETE | `/configurator/templates/{id}` | Delete template |
+| POST | `/configurator/templates/{id}/parameters` | Add parameter |
+| PUT | `/configurator/parameters/{id}` | Update parameter |
+| DELETE | `/configurator/parameters/{id}` | Delete parameter |
+| POST | `/configurator/templates/{id}/parts` | Add part to pool |
+| PUT | `/configurator/parts/{id}` | Update part constraints |
+| DELETE | `/configurator/parts/{id}` | Remove part from pool |
+| GET | `/configurator/templates/{id}/preview` | Preview first 10 variants |
+| POST | `/configurator/templates/{id}/generate` | Generate all variants (creates ECO) |
+
+### POST /configurator/templates
+```json
+// Request
+{"name": "uATS 1.2kVA", "model_format": "PCA-uATS-{voltage}-{amperage}"}
+// Response
+{"id": 1, "name": "uATS 1.2kVA", "model_format": "PCA-uATS-{voltage}-{amperage}", "created_at": "...", "updated_at": "...", "parameters": [], "parts": []}
+```
+
+### POST /configurator/templates/{id}/parameters
+```json
+// Enum parameter
+{"name": "voltage", "type": "enum", "values_json": "[\"120V\",\"208V\",\"240V\"]"}
+
+// Range parameter
+{"name": "amperage", "type": "range", "values_json": "{\"min\":10,\"max\":100,\"unit\":\"A\"}"}
+```
+
+### POST /configurator/templates/{id}/parts
+```json
+{"ipn": "CAP-001", "quantity": 2, "include_all_variants": 1, "constraints_json": "{}"}
+
+// With constraints (only for 120V)
+{"ipn": "RES-001", "quantity": 1, "include_all_variants": 0, "constraints_json": "{\"voltage\":[\"120V\"]}"}
+```
+
+### GET /configurator/templates/{id}/preview
+```json
+// Response
+{"preview": [{"ipn": "PCA-uATS-120V-10A", "bom_count": 5}, ...], "total_count": 100, "showing_first": 10}
+```
+
+### POST /configurator/templates/{id}/generate
+```json
+// Response
+{"eco_id": "ECO-2026-042", "variant_count": 24, "preview": ["PCA-uATS-120V-10A", "PCA-uATS-120V-15A", ...]}
+```
+
+**Constraint Matching:**
+- **Enum constraints**: Part included if parameter value is in constraint array
+- **Range constraints**: Part included if parameter value >= min and <= max
+- **Multiple constraints**: All constraints must match (AND logic)
+- **Empty constraints**: Part included in all variants
+
+**Generation Process:**
+1. Cartesian product of all parameter values creates all combinations
+2. For each combination, generate IPN by replacing `{param}` placeholders
+3. Build BOM by including:
+   - All parts with `include_all_variants=true`
+   - Parts where constraints match the variant's parameters
+4. Create single ECO with all variants as proposed parts

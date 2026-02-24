@@ -182,10 +182,22 @@ func main() {
 			handleListCategories(w, r)
 		case parts[0] == "parts" && len(parts) == 2 && parts[1] == "check-ipn" && r.Method == "GET":
 			handleCheckIPN(w, r)
+		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "manufacturers" && r.Method == "GET":
+			handleGetPartManufacturers(w, r)
+		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "manufacturers" && r.Method == "POST":
+			handleCreatePartManufacturer(w, r)
+		case parts[0] == "parts" && len(parts) == 4 && parts[2] == "manufacturers" && r.Method == "PUT":
+			handleUpdatePartManufacturer(w, r)
+		case parts[0] == "parts" && len(parts) == 4 && parts[2] == "manufacturers" && r.Method == "DELETE":
+			handleDeletePartManufacturer(w, r)
 		case parts[0] == "parts" && len(parts) == 2 && r.Method == "GET":
 			handleGetPart(w, r, parts[1])
 		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "bom" && r.Method == "GET":
 			handlePartBOM(w, r, parts[1])
+		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "bom" && r.Method == "POST":
+			handleSaveBOM(w, r, parts[1])
+		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "bom" && r.Method == "PUT":
+			handleUpdateBOM(w, r, parts[1])
 		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "cost" && r.Method == "GET":
 			handlePartCost(w, r, parts[1])
 		case parts[0] == "parts" && len(parts) == 3 && parts[2] == "where-used" && r.Method == "GET":
@@ -253,6 +265,34 @@ func main() {
 		case parts[0] == "ecos" && len(parts) == 4 && parts[2] == "revisions" && r.Method == "GET":
 			handleGetECORevision(w, r, parts[1], parts[3])
 
+		// Product Configurator
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 2 && r.Method == "GET":
+			handleListConfigTemplates(w, r)
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 2 && r.Method == "POST":
+			handleCreateConfigTemplate(w, r)
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 3 && r.Method == "GET":
+			handleGetConfigTemplate(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 3 && r.Method == "PUT":
+			handleUpdateConfigTemplate(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 3 && r.Method == "DELETE":
+			handleDeleteConfigTemplate(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 4 && parts[3] == "parameters" && r.Method == "POST":
+			handleCreateConfigParameter(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 4 && parts[3] == "parts" && r.Method == "POST":
+			handleCreateConfigPart(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 4 && parts[3] == "preview" && r.Method == "GET":
+			handlePreviewConfigVariants(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 4 && parts[3] == "generate" && r.Method == "POST":
+			handleGenerateConfigVariants(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "parameters" && len(parts) == 3 && r.Method == "PUT":
+			handleUpdateConfigParameter(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "parameters" && len(parts) == 3 && r.Method == "DELETE":
+			handleDeleteConfigParameter(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "parts" && len(parts) == 3 && r.Method == "PUT":
+			handleUpdateConfigPart(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "parts" && len(parts) == 3 && r.Method == "DELETE":
+			handleDeleteConfigPart(w, r, parts[2])
+
 		// Documents
 		case parts[0] == "docs" && len(parts) == 1 && r.Method == "GET":
 			handleListDocs(w, r)
@@ -292,6 +332,30 @@ func main() {
 			handleUpdateVendor(w, r, parts[1])
 		case parts[0] == "vendors" && len(parts) == 2 && r.Method == "DELETE":
 			handleDeleteVendor(w, r, parts[1])
+
+		// Manufacturers
+		case parts[0] == "manufacturers" && len(parts) == 1 && r.Method == "GET":
+			handleListManufacturers(w, r)
+		case parts[0] == "manufacturers" && len(parts) == 1 && r.Method == "POST":
+			handleCreateManufacturer(w, r)
+		case parts[0] == "manufacturers" && len(parts) == 2 && r.Method == "GET":
+			handleGetManufacturer(w, r)
+		case parts[0] == "manufacturers" && len(parts) == 2 && r.Method == "PUT":
+			handleUpdateManufacturer(w, r)
+		case parts[0] == "manufacturers" && len(parts) == 2 && r.Method == "DELETE":
+			handleDeleteManufacturer(w, r)
+
+		// Settings
+		case parts[0] == "settings" && len(parts) == 1 && r.Method == "GET":
+			requireAuth(http.HandlerFunc(handleListSettings)).ServeHTTP(w, r)
+		case parts[0] == "settings" && len(parts) == 2 && r.Method == "GET":
+			requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handleGetSetting(w, r, parts[1])
+			})).ServeHTTP(w, r)
+		case parts[0] == "settings" && len(parts) == 2 && r.Method == "PUT":
+			requireAuth(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				handleUpdateSetting(w, r, parts[1])
+			})).ServeHTTP(w, r)
 
 		// Inventory
 		case parts[0] == "inventory" && len(parts) == 2 && parts[1] == "export" && r.Method == "GET":

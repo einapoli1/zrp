@@ -1,0 +1,105 @@
+=== RUN   TestSalesOrderSQLInjectionList
+=== RUN   TestSalesOrderSQLInjectionList/status_injection
+=== RUN   TestSalesOrderSQLInjectionList/customer_injection
+=== RUN   TestSalesOrderSQLInjectionList/customer_union
+--- PASS: TestSalesOrderSQLInjectionList (0.06s)
+    --- PASS: TestSalesOrderSQLInjectionList/status_injection (0.00s)
+    --- PASS: TestSalesOrderSQLInjectionList/customer_injection (0.00s)
+    --- PASS: TestSalesOrderSQLInjectionList/customer_union (0.00s)
+=== RUN   TestSalesOrderSQLInjectionCreate
+=== RUN   TestSalesOrderSQLInjectionCreate/customer_field
+=== RUN   TestSalesOrderSQLInjectionCreate/notes_field
+=== RUN   TestSalesOrderSQLInjectionCreate/IPN_field
+--- PASS: TestSalesOrderSQLInjectionCreate (0.06s)
+    --- PASS: TestSalesOrderSQLInjectionCreate/customer_field (0.00s)
+    --- PASS: TestSalesOrderSQLInjectionCreate/notes_field (0.00s)
+    --- PASS: TestSalesOrderSQLInjectionCreate/IPN_field (0.00s)
+=== RUN   TestSalesOrderLineValidation
+=== RUN   TestSalesOrderLineValidation/negative_quantity
+=== RUN   TestSalesOrderLineValidation/zero_quantity
+=== RUN   TestSalesOrderLineValidation/negative_unit_price
+=== RUN   TestSalesOrderLineValidation/missing_customer
+=== RUN   TestSalesOrderLineValidation/empty_lines_array
+=== RUN   TestSalesOrderLineValidation/null_lines
+=== RUN   TestSalesOrderLineValidation/very_large_quantity
+=== RUN   TestSalesOrderLineValidation/multiple_lines_mixed_valid/invalid
+--- PASS: TestSalesOrderLineValidation (0.07s)
+    --- PASS: TestSalesOrderLineValidation/negative_quantity (0.00s)
+    --- PASS: TestSalesOrderLineValidation/zero_quantity (0.00s)
+    --- PASS: TestSalesOrderLineValidation/negative_unit_price (0.00s)
+    --- PASS: TestSalesOrderLineValidation/missing_customer (0.00s)
+    --- PASS: TestSalesOrderLineValidation/empty_lines_array (0.00s)
+    --- PASS: TestSalesOrderLineValidation/null_lines (0.00s)
+    --- PASS: TestSalesOrderLineValidation/very_large_quantity (0.00s)
+    --- PASS: TestSalesOrderLineValidation/multiple_lines_mixed_valid/invalid (0.00s)
+=== RUN   TestSalesOrderTotalsAccuracy
+=== RUN   TestSalesOrderTotalsAccuracy/simple_total
+=== RUN   TestSalesOrderTotalsAccuracy/multiple_lines
+=== RUN   TestSalesOrderTotalsAccuracy/fractional_prices
+=== RUN   TestSalesOrderTotalsAccuracy/large_quantities
+    handler_sales_orders_enhanced_test.go:279: allocate failed: 400 {"error":"insufficient inventory for WIDGET-01: need 1000, available 972"}
+=== RUN   TestSalesOrderTotalsAccuracy/zero_price
+--- FAIL: TestSalesOrderTotalsAccuracy (0.06s)
+    --- PASS: TestSalesOrderTotalsAccuracy/simple_total (0.00s)
+    --- PASS: TestSalesOrderTotalsAccuracy/multiple_lines (0.00s)
+    --- PASS: TestSalesOrderTotalsAccuracy/fractional_prices (0.00s)
+    --- FAIL: TestSalesOrderTotalsAccuracy/large_quantities (0.00s)
+    --- PASS: TestSalesOrderTotalsAccuracy/zero_price (0.00s)
+=== RUN   TestSalesOrderStatusValidation
+=== RUN   TestSalesOrderStatusValidation/create_with_pending
+=== RUN   TestSalesOrderStatusValidation/create_with_cancelled
+=== RUN   TestSalesOrderStatusValidation/create_with_invalid
+=== RUN   TestSalesOrderStatusValidation/create_with_DRAFT
+=== RUN   TestSalesOrderStatusValidation/create_with_Draft
+=== RUN   TestSalesOrderStatusValidation/create_with_draft
+=== RUN   TestSalesOrderStatusValidation/create_with_confirmed
+=== RUN   TestSalesOrderStatusValidation/create_with_allocated
+=== RUN   TestSalesOrderStatusValidation/create_with_picked
+=== RUN   TestSalesOrderStatusValidation/create_with_shipped
+=== RUN   TestSalesOrderStatusValidation/create_with_invoiced
+=== RUN   TestSalesOrderStatusValidation/create_with_closed
+--- PASS: TestSalesOrderStatusValidation (0.06s)
+    --- PASS: TestSalesOrderStatusValidation/create_with_pending (0.00s)
+    --- PASS: TestSalesOrderStatusValidation/create_with_cancelled (0.00s)
+    --- PASS: TestSalesOrderStatusValidation/create_with_invalid (0.00s)
+    --- PASS: TestSalesOrderStatusValidation/create_with_DRAFT (0.00s)
+    --- PASS: TestSalesOrderStatusValidation/create_with_Draft (0.00s)
+    --- PASS: TestSalesOrderStatusValidation/create_with_draft (0.00s)
+    --- PASS: TestSalesOrderStatusValidation/create_with_confirmed (0.00s)
+    --- PASS: TestSalesOrderStatusValidation/create_with_allocated (0.00s)
+    --- PASS: TestSalesOrderStatusValidation/create_with_picked (0.00s)
+    --- PASS: TestSalesOrderStatusValidation/create_with_shipped (0.00s)
+    --- PASS: TestSalesOrderStatusValidation/create_with_invoiced (0.00s)
+    --- PASS: TestSalesOrderStatusValidation/create_with_closed (0.00s)
+=== RUN   TestSalesOrderConcurrentUpdates
+    handler_sales_orders_enhanced_test.go:384: update 0 failed with code 500
+    handler_sales_orders_enhanced_test.go:384: update 1 failed with code 500
+    handler_sales_orders_enhanced_test.go:384: update 2 failed with code 500
+    handler_sales_orders_enhanced_test.go:384: update 3 failed with code 500
+    handler_sales_orders_enhanced_test.go:384: update 4 failed with code 500
+    handler_sales_orders_enhanced_test.go:384: update 5 failed with code 500
+    handler_sales_orders_enhanced_test.go:384: update 6 failed with code 500
+    handler_sales_orders_enhanced_test.go:384: update 7 failed with code 500
+    handler_sales_orders_enhanced_test.go:384: update 8 failed with code 500
+    handler_sales_orders_enhanced_test.go:384: update 9 failed with code 404
+    handler_sales_orders_enhanced_test.go:393: failed to get order: 404
+--- FAIL: TestSalesOrderConcurrentUpdates (0.06s)
+=== RUN   TestSalesOrderConcurrentAllocations
+    handler_sales_orders_enhanced_test.go:445: Allocations: 0 succeeded, 5 failed
+--- PASS: TestSalesOrderConcurrentAllocations (0.06s)
+=== RUN   TestSalesOrderAuditTrail
+--- PASS: TestSalesOrderAuditTrail (0.06s)
+=== RUN   TestSalesOrderTimestamps
+    handler_sales_orders_enhanced_test.go:639: created_at should not change on update
+--- FAIL: TestSalesOrderTimestamps (0.16s)
+=== RUN   TestSalesOrderCRUD
+--- PASS: TestSalesOrderCRUD (0.06s)
+=== RUN   TestSalesOrderStatusFilter
+--- PASS: TestSalesOrderStatusFilter (0.06s)
+=== RUN   TestSalesOrderWorkflow
+--- PASS: TestSalesOrderWorkflow (0.06s)
+=== RUN   TestSalesOrderInvalidTransition
+--- PASS: TestSalesOrderInvalidTransition (0.06s)
+FAIL
+exit status 1
+FAIL	zrp	1.141s

@@ -16,7 +16,9 @@ import {
 import { api, type DashboardStats } from "../lib/api";
 import { LoadingState } from "../components/LoadingState";
 import { EmptyState } from "../components/EmptyState";
+import { ErrorState } from "../components/ErrorState";
 import { toast } from "sonner";
+import { KeyboardShortcutsHelp } from '../components/KeyboardShortcutsHelp';
 interface ExtendedDashboardStats extends DashboardStats {
   open_ecos: number;
   open_pos: number;
@@ -89,9 +91,11 @@ function Dashboard() {
   const [stats, setStats] = useState<ExtendedDashboardStats | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const [dashboardData, chartsData] = await Promise.all([
         api.getDashboard(),
@@ -101,11 +105,11 @@ function Dashboard() {
       // Extend the dashboard data with additional stats
       const extendedStats: ExtendedDashboardStats = {
         ...dashboardData,
-        open_ecos: chartsData?.eco_counts?.reduce((a: number, b: number) => a + b, 0) || 0,
-        open_pos: 12, // Mock data - replace with real API call
-        open_ncrs: 5, // Mock data - replace with real API call  
-        total_devices: 150, // Mock data - replace with real API call
-        open_rmas: 3, // Mock data - replace with real API call
+        open_ecos: chartsData?.eco_counts?.reduce((a: number, b: number) => a + b, 0) || dashboardData.open_ecos || 0,
+        open_pos: dashboardData.open_pos || 0,
+        open_ncrs: dashboardData.open_ncrs || 0,
+        total_devices: dashboardData.total_devices || 0,
+        open_rmas: dashboardData.open_rmas || 0,
       };
       
       setStats(extendedStats);
@@ -136,7 +140,9 @@ function Dashboard() {
       ]);
     } catch (error: any) {
       console.error("Failed to fetch dashboard data:", error);
-      toast.error("Failed to load dashboard data");
+      const errorMessage = error?.message || "Unable to load dashboard data";
+      setError(errorMessage);
+      toast.error(`Failed to load dashboard: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -158,6 +164,16 @@ function Dashboard() {
     return <LoadingState variant="spinner" message="Loading dashboard..." />;
   }
 
+  if (error) {
+    return (
+      <ErrorState
+        title="Failed to load dashboard"
+        message={error}
+        onRetry={fetchDashboardData}
+      />
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -168,7 +184,7 @@ function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {kpiCards.map((card) => {
           const Icon = card.icon;
           const value = stats?.[card.key as keyof ExtendedDashboardStats] || 0;
@@ -196,7 +212,7 @@ function Dashboard() {
         {/* ECO Status Chart */}
         <Card>
           <CardHeader>
-            <CardTitle>ECO Status</CardTitle>
+            <CardTitle level={2}>ECO Status</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[200px] flex items-center justify-center text-muted-foreground">
@@ -210,7 +226,7 @@ function Dashboard() {
         {/* Recent Activity */}
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
+            <CardTitle level={2}>Recent Activity</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
@@ -241,6 +257,12 @@ function Dashboard() {
           </CardContent>
         </Card>
       </div>
+      
+      <KeyboardShortcutsHelp 
+        shortcuts={[
+          { key: '?', description: 'Show keyboard shortcuts help' },
+        ]}
+      />
     </div>
   );
 }

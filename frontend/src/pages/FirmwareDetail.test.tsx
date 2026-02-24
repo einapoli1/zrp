@@ -24,12 +24,12 @@ vi.mock("../lib/api", () => ({
 
 import FirmwareDetail from "./FirmwareDetail";
 
-const runningCampaign: FirmwareCampaign = {
+const activeCampaign: FirmwareCampaign = {
   id: "FW-001",
   name: "Security Update Q1",
   version: "2.0.0",
   category: "Security Update",
-  status: "running",
+  status: "active",
   target_filter: "ipn:DEV-001",
   notes: "Critical security fixes",
   created_at: "2024-01-25T10:00:00Z",
@@ -37,7 +37,7 @@ const runningCampaign: FirmwareCampaign = {
 };
 
 const completedCampaign: FirmwareCampaign = {
-  ...runningCampaign,
+  ...activeCampaign,
   id: "FW-002",
   name: "Completed Update",
   status: "completed",
@@ -45,28 +45,28 @@ const completedCampaign: FirmwareCampaign = {
 };
 
 const failedCampaign: FirmwareCampaign = {
-  ...runningCampaign,
+  ...activeCampaign,
   id: "FW-003",
   name: "Failed Update",
   status: "failed",
 };
 
 const pausedCampaign: FirmwareCampaign = {
-  ...runningCampaign,
+  ...activeCampaign,
   id: "FW-004",
   name: "Paused Update",
   status: "paused",
 };
 
 const draftCampaign: FirmwareCampaign = {
-  ...runningCampaign,
+  ...activeCampaign,
   id: "FW-005",
   name: "Draft Update",
   status: "draft",
 };
 
 const mockDevices: CampaignDevice[] = [
-  { campaign_id: "FW-001", serial_number: "SN-100", status: "completed", updated_at: "2024-01-27T10:00:00Z" },
+  { campaign_id: "FW-001", serial_number: "SN-100", status: "success", updated_at: "2024-01-27T10:00:00Z" },
   { campaign_id: "FW-001", serial_number: "SN-101", status: "in_progress", updated_at: "2024-01-27T09:00:00Z" },
   { campaign_id: "FW-001", serial_number: "SN-102", status: "pending", updated_at: null as any },
   { campaign_id: "FW-001", serial_number: "SN-103", status: "failed", updated_at: "2024-01-27T08:00:00Z" },
@@ -87,7 +87,7 @@ function renderWithRoute(id = "FW-001") {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ shouldAdvanceTime: true });
-  mockGetFirmwareCampaign.mockResolvedValue(runningCampaign);
+  mockGetFirmwareCampaign.mockResolvedValue(activeCampaign);
   mockGetCampaignDevices.mockResolvedValue(mockDevices);
 });
 
@@ -241,7 +241,7 @@ describe("FirmwareDetail", () => {
   });
 
   it("shows 'All devices' when no target filter", async () => {
-    mockGetFirmwareCampaign.mockResolvedValue({ ...runningCampaign, target_filter: "" });
+    mockGetFirmwareCampaign.mockResolvedValue({ ...activeCampaign, target_filter: "" });
     renderWithRoute();
     await waitFor(() => {
       expect(screen.getByText("All devices")).toBeInTheDocument();
@@ -289,7 +289,7 @@ describe("FirmwareDetail", () => {
   });
 
   it("shows default when no notes", async () => {
-    mockGetFirmwareCampaign.mockResolvedValue({ ...runningCampaign, notes: "" });
+    mockGetFirmwareCampaign.mockResolvedValue({ ...activeCampaign, notes: "" });
     renderWithRoute();
     await waitFor(() => {
       expect(screen.getByText("No release notes available.")).toBeInTheDocument();
@@ -297,7 +297,7 @@ describe("FirmwareDetail", () => {
   });
 
   // Action buttons based on status
-  it("shows Pause Campaign button for running campaign", async () => {
+  it("shows Pause Campaign button for active campaign", async () => {
     renderWithRoute();
     await waitFor(() => {
       expect(screen.getByText("Pause Campaign")).toBeInTheDocument();
@@ -350,7 +350,7 @@ describe("FirmwareDetail", () => {
   });
 
   it("shows 'Not specified' for empty category", async () => {
-    mockGetFirmwareCampaign.mockResolvedValue({ ...runningCampaign, category: "" });
+    mockGetFirmwareCampaign.mockResolvedValue({ ...activeCampaign, category: "" });
     renderWithRoute();
     await waitFor(() => {
       expect(screen.getByText("Not specified")).toBeInTheDocument();
@@ -358,8 +358,8 @@ describe("FirmwareDetail", () => {
   });
 
   // Bug 2: Action button handlers
-  it("calls API to pause a running campaign", async () => {
-    mockUpdateFirmwareCampaign.mockResolvedValueOnce({ ...runningCampaign, status: "paused" });
+  it("calls API to pause an active campaign", async () => {
+    mockUpdateFirmwareCampaign.mockResolvedValueOnce({ ...activeCampaign, status: "paused" });
     renderWithRoute();
     await waitFor(() => screen.getByText("Pause Campaign"));
     fireEvent.click(screen.getByText("Pause Campaign"));
@@ -370,34 +370,34 @@ describe("FirmwareDetail", () => {
 
   it("calls API to start a paused campaign", async () => {
     mockGetFirmwareCampaign.mockResolvedValue(pausedCampaign);
-    mockUpdateFirmwareCampaign.mockResolvedValueOnce({ ...pausedCampaign, status: "running" });
+    mockUpdateFirmwareCampaign.mockResolvedValueOnce({ ...pausedCampaign, status: "active" });
     renderWithRoute("FW-004");
     await waitFor(() => screen.getByText("Start Campaign"));
     fireEvent.click(screen.getByText("Start Campaign"));
     await waitFor(() => {
-      expect(mockUpdateFirmwareCampaign).toHaveBeenCalledWith("FW-004", { status: "running" });
+      expect(mockUpdateFirmwareCampaign).toHaveBeenCalledWith("FW-004", { status: "active" });
     });
   });
 
   it("calls API to start a draft campaign", async () => {
     mockGetFirmwareCampaign.mockResolvedValue(draftCampaign);
-    mockUpdateFirmwareCampaign.mockResolvedValueOnce({ ...draftCampaign, status: "running" });
+    mockUpdateFirmwareCampaign.mockResolvedValueOnce({ ...draftCampaign, status: "active" });
     renderWithRoute("FW-005");
     await waitFor(() => screen.getByText("Start Campaign"));
     fireEvent.click(screen.getByText("Start Campaign"));
     await waitFor(() => {
-      expect(mockUpdateFirmwareCampaign).toHaveBeenCalledWith("FW-005", { status: "running" });
+      expect(mockUpdateFirmwareCampaign).toHaveBeenCalledWith("FW-005", { status: "active" });
     });
   });
 
   it("calls API to retry a failed campaign", async () => {
     mockGetFirmwareCampaign.mockResolvedValue(failedCampaign);
-    mockUpdateFirmwareCampaign.mockResolvedValueOnce({ ...failedCampaign, status: "running" });
+    mockUpdateFirmwareCampaign.mockResolvedValueOnce({ ...failedCampaign, status: "active" });
     renderWithRoute("FW-003");
     await waitFor(() => screen.getByText("Retry Failed"));
     fireEvent.click(screen.getByText("Retry Failed"));
     await waitFor(() => {
-      expect(mockUpdateFirmwareCampaign).toHaveBeenCalledWith("FW-003", { status: "running" });
+      expect(mockUpdateFirmwareCampaign).toHaveBeenCalledWith("FW-003", { status: "active" });
     });
   });
 

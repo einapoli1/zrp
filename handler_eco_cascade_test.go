@@ -36,6 +36,7 @@ func setupECOCascadeTestEnv(t *testing.T) (*sql.DB, string, func()) {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			status TEXT DEFAULT 'draft',
 			priority TEXT DEFAULT 'normal',
 			affected_ipns TEXT,
@@ -543,8 +544,25 @@ func TestECOPartRevisionCascade(t *testing.T) {
 
 	t.Logf("Created ECO: %s", ecoID)
 
-	// Step 4: Approve ECO
-	t.Log("Step 4: Approving ECO")
+	// Step 4: Update ECO to review status
+	t.Log("Step 4a: Updating ECO to review status")
+	updateBody := map[string]interface{}{
+		"title":    "Update RES-100 to v1.1",
+		"status":   "review",
+		"priority": "normal",
+	}
+	updateJSON, _ := json.Marshal(updateBody)
+	req = httptest.NewRequest("PUT", "/api/v1/ecos/"+ecoID, bytes.NewBuffer(updateJSON))
+	w = httptest.NewRecorder()
+
+	handleUpdateECO(w, req, ecoID)
+
+	if w.Code != 200 {
+		t.Fatalf("Failed to update ECO to review: %d - %s", w.Code, w.Body.String())
+	}
+
+	// Step 4b: Approve ECO
+	t.Log("Step 4b: Approving ECO")
 	req = httptest.NewRequest("POST", "/api/v1/ecos/"+ecoID+"/approve", nil)
 	w = httptest.NewRecorder()
 

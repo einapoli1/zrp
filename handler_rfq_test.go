@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http/httptest"
 	"testing"
 
@@ -757,7 +758,7 @@ func TestHandleUpdateRFQQuote_Success(t *testing.T) {
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	handleUpdateRFQQuote(w, req, "RFQ-UPDATE", string(rune(quoteID)))
+	handleUpdateRFQQuote(w, req, "RFQ-UPDATE", fmt.Sprintf("%d", quoteID))
 
 	if w.Code != 200 {
 		t.Errorf("Expected status 200, got %d", w.Code)

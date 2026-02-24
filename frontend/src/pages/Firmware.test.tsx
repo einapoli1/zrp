@@ -25,7 +25,7 @@ vi.mock("../lib/api", () => ({
 import Firmware from "./Firmware";
 
 const allStatusCampaigns: FirmwareCampaign[] = [
-  { id: "FW-R", name: "Running Campaign", version: "2.0.0", category: "Security Update", status: "running", target_filter: "", notes: "", created_at: "2024-01-25", started_at: "2024-01-26" },
+  { id: "FW-R", name: "Active Campaign", version: "2.0.0", category: "Security Update", status: "active", target_filter: "", notes: "", created_at: "2024-01-25", started_at: "2024-01-26" },
   { id: "FW-C", name: "Completed Campaign", version: "1.5.0", category: "Bug Fix", status: "completed", target_filter: "", notes: "", created_at: "2024-01-10", completed_at: "2024-01-20" },
   { id: "FW-P", name: "Paused Campaign", version: "1.3.0", category: "", status: "paused", target_filter: "", notes: "", created_at: "2024-01-15" },
   { id: "FW-D", name: "Draft Campaign", version: "3.0.0", category: "", status: "draft", target_filter: "", notes: "", created_at: "2024-01-20" },
@@ -111,8 +111,8 @@ describe("Firmware", () => {
     await waitFor(() => {
       expect(screen.getByText("Total Campaigns")).toBeInTheDocument();
     });
-    // "Running" may also appear as a badge in the table
-    expect(screen.getAllByText("Running").length).toBeGreaterThanOrEqual(1);
+    // "Active" may also appear as a badge in the table
+    expect(screen.getAllByText("Active").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Completed").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText("Paused/Draft")).toBeInTheDocument();
   });
@@ -242,12 +242,12 @@ describe("Firmware", () => {
     });
   });
 
-  it("calls API to pause a running campaign and does not navigate", async () => {
-    const runningCampaigns: FirmwareCampaign[] = [
-      { id: "FW-R", name: "Running", version: "2.0.0", category: "", status: "running", target_filter: "", notes: "", created_at: "2024-01-25" },
+  it("calls API to pause an active campaign and does not navigate", async () => {
+    const activeCampaigns: FirmwareCampaign[] = [
+      { id: "FW-R", name: "Active", version: "2.0.0", category: "", status: "active", target_filter: "", notes: "", created_at: "2024-01-25" },
     ];
-    mockGetFirmwareCampaigns.mockResolvedValueOnce(runningCampaigns);
-    mockUpdateFirmwareCampaign.mockResolvedValueOnce({ ...runningCampaigns[0], status: "paused" });
+    mockGetFirmwareCampaigns.mockResolvedValueOnce(activeCampaigns);
+    mockUpdateFirmwareCampaign.mockResolvedValueOnce({ ...activeCampaigns[0], status: "paused" });
     render(<Firmware />);
     await waitFor(() => screen.getByText("FW-R"));
     mockNavigate.mockClear();
@@ -266,14 +266,14 @@ describe("Firmware", () => {
       { id: "FW-P", name: "Paused", version: "1.0.0", category: "", status: "paused", target_filter: "", notes: "", created_at: "2024-01-25" },
     ];
     mockGetFirmwareCampaigns.mockResolvedValueOnce(pausedCampaigns);
-    mockUpdateFirmwareCampaign.mockResolvedValueOnce({ ...pausedCampaigns[0], status: "running" });
+    mockUpdateFirmwareCampaign.mockResolvedValueOnce({ ...pausedCampaigns[0], status: "active" });
     render(<Firmware />);
     await waitFor(() => screen.getByText("FW-P"));
     mockNavigate.mockClear();
     const playBtn = screen.getByRole("row", { name: /FW-P/ }).querySelector("button");
     fireEvent.click(playBtn!);
     await waitFor(() => {
-      expect(mockUpdateFirmwareCampaign).toHaveBeenCalledWith("FW-P", { status: "running" });
+      expect(mockUpdateFirmwareCampaign).toHaveBeenCalledWith("FW-P", { status: "active" });
     });
     expect(mockNavigate).not.toHaveBeenCalledWith("/firmware/FW-P");
   });

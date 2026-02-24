@@ -5,9 +5,13 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
+
+// testDBMutex prevents concurrent modification of the global db variable during tests
+var testDBMutex sync.Mutex
 
 func unmarshalResp[T any](body []byte) (T, error) {
 	var wrapper struct {
@@ -18,8 +22,15 @@ func unmarshalResp[T any](body []byte) (T, error) {
 }
 
 func TestCAPACRUD(t *testing.T) {
+	testDBMutex.Lock()
+	defer testDBMutex.Unlock()
+	
 	oldDB := db; db = setupTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	defer func() {
+		time.Sleep(50 * time.Millisecond) // Wait for background goroutines
+		db.Close()
+		db = oldDB
+	}()
 	cookie := loginAdmin(t, db)
 
 	// List (empty)
@@ -68,6 +79,9 @@ func TestCAPACRUD(t *testing.T) {
 		t.Fatalf("expected 'NCR-001', got '%s'", fetched.LinkedNCRID)
 	}
 
+	// Wait for create goroutines to complete
+	time.Sleep(10 * time.Millisecond)
+
 	// Update
 	updateBody := `{"title":"Fix solder defect","type":"corrective","status":"in_progress","root_cause":"Insufficient flux","action_plan":"Update profile","owner":"engineer1","due_date":"2026-03-01"}`
 	w = httptest.NewRecorder()
@@ -92,8 +106,15 @@ func TestCAPACRUD(t *testing.T) {
 }
 
 func TestCAPACloseRequiresEffectivenessAndApproval(t *testing.T) {
+	testDBMutex.Lock()
+	defer testDBMutex.Unlock()
+	
 	oldDB := db; db = setupTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	defer func() {
+		time.Sleep(50 * time.Millisecond) // Wait for background goroutines
+		db.Close()
+		db = oldDB
+	}()
 	cookie := loginAdmin(t, db)
 
 	// Create
@@ -101,6 +122,8 @@ func TestCAPACloseRequiresEffectivenessAndApproval(t *testing.T) {
 	req := authedRequest("POST", "/api/v1/capas", []byte(`{"title":"Test close","type":"corrective","owner":"eng"}`), cookie)
 	handleCreateCAPA(w, req)
 	c, _ := unmarshalResp[CAPA](w.Body.Bytes())
+	
+	time.Sleep(10 * time.Millisecond) // Wait for create goroutines
 
 	// Close without effectiveness
 	w = httptest.NewRecorder()
@@ -109,6 +132,8 @@ func TestCAPACloseRequiresEffectivenessAndApproval(t *testing.T) {
 	if w.Code != 400 {
 		t.Fatalf("expected 400 (no effectiveness), got %d: %s", w.Code, w.Body.String())
 	}
+	
+	time.Sleep(10 * time.Millisecond) // Wait for update goroutines
 
 	// Close with effectiveness but no approvals
 	w = httptest.NewRecorder()
@@ -117,6 +142,8 @@ func TestCAPACloseRequiresEffectivenessAndApproval(t *testing.T) {
 	if w.Code != 400 {
 		t.Fatalf("expected 400 (no approvals), got %d: %s", w.Code, w.Body.String())
 	}
+	
+	time.Sleep(10 * time.Millisecond) // Wait for update goroutines
 
 	// Close with all requirements
 	w = httptest.NewRecorder()
@@ -138,8 +165,18 @@ func TestCAPACloseRequiresEffectivenessAndApproval(t *testing.T) {
 }
 
 func TestCAPADashboard(t *testing.T) {
-	oldDB := db; db = setupTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	testDBMutex.Lock()
+	defer testDBMutex.Unlock()
+	
+	oldDB := db
+	testDB := setupTestDB(t)
+	db = testDB
+	defer func() {
+		// Wait for background goroutines to complete before closing db
+		time.Sleep(50 * time.Millisecond)
+		db.Close()
+		db = oldDB
+	}()
 
 	pastDate := time.Now().AddDate(0, 0, -5).Format("2006-01-02")
 	futureDate := time.Now().AddDate(0, 0, 30).Format("2006-01-02")
@@ -149,17 +186,21 @@ func TestCAPADashboard(t *testing.T) {
 		body := fmt.Sprintf(`{"title":"CAPA %d","type":"corrective","owner":"eng1","due_date":"%s"}`, i, dd)
 		req := httptest.NewRequest("POST", "/api/v1/capas", strings.NewReader(body))
 		req.Header.Set("Content-Type", "application/json")
+		
 		handleCreateCAPA(w, req)
 		if w.Code != 200 {
 			t.Fatalf("create %d: %d %s", i, w.Code, w.Body.String())
 		}
+		
+		// Small delay to ensure background goroutines complete before next iteration
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/api/v1/capas/dashboard", nil)
 	handleCAPADashboard(w, req)
 	if w.Code != 200 {
-		t.Fatalf("dashboard: expected 200, got %d", w.Code)
+		t.Fatalf("dashboard: expected 200, got %d: %s", w.Code, w.Body.String())
 	}
 	dash, _ := unmarshalResp[map[string]interface{}](w.Body.Bytes())
 	if int(dash["total_open"].(float64)) != 3 {
@@ -171,8 +212,15 @@ func TestCAPADashboard(t *testing.T) {
 }
 
 func TestCAPAGetNotFound(t *testing.T) {
+	testDBMutex.Lock()
+	defer testDBMutex.Unlock()
+	
 	oldDB := db; db = setupTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	defer func() {
+		time.Sleep(50 * time.Millisecond) // Wait for background goroutines
+		db.Close()
+		db = oldDB
+	}()
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("GET", "/api/v1/capas/CAPA-999", nil)
@@ -183,8 +231,15 @@ func TestCAPAGetNotFound(t *testing.T) {
 }
 
 func TestCAPAPreventiveType(t *testing.T) {
+	testDBMutex.Lock()
+	defer testDBMutex.Unlock()
+	
 	oldDB := db; db = setupTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	defer func() {
+		time.Sleep(50 * time.Millisecond) // Wait for background goroutines
+		db.Close()
+		db = oldDB
+	}()
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/api/v1/capas", strings.NewReader(`{"title":"Prevent recurrence","type":"preventive","linked_rma_id":"RMA-001"}`))
@@ -203,8 +258,15 @@ func TestCAPAPreventiveType(t *testing.T) {
 }
 
 func TestCAPADefaultType(t *testing.T) {
+	testDBMutex.Lock()
+	defer testDBMutex.Unlock()
+	
 	oldDB := db; db = setupTestDB(t)
-	defer func() { db.Close(); db = oldDB }()
+	defer func() {
+		time.Sleep(50 * time.Millisecond) // Wait for background goroutines
+		db.Close()
+		db = oldDB
+	}()
 
 	w := httptest.NewRecorder()
 	req := httptest.NewRequest("POST", "/api/v1/capas", strings.NewReader(`{"title":"Default type test"}`))

@@ -63,6 +63,7 @@ func setupAdvancedSearchTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			status TEXT DEFAULT 'draft',
 			priority TEXT DEFAULT 'normal',
 			affected_ipns TEXT,
@@ -87,6 +88,7 @@ func setupAdvancedSearchTestDB(t *testing.T) *sql.DB {
 			reorder_point REAL DEFAULT 0,
 			reorder_qty REAL DEFAULT 0,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			mpn TEXT,
 			updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 		)
@@ -101,6 +103,7 @@ func setupAdvancedSearchTestDB(t *testing.T) *sql.DB {
 			id TEXT PRIMARY KEY,
 			title TEXT NOT NULL,
 			description TEXT,
+			type TEXT DEFAULT 'change',
 			ipn TEXT,
 			serial_number TEXT,
 			defect_type TEXT,
@@ -290,9 +293,9 @@ func insertAdvancedSearchTestData(t *testing.T, db *sql.DB) {
 
 func TestHandleAdvancedSearch_InvalidJSON(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupAdvancedSearchTestDB(t)
-	defer db.Close()
+	testDB := setupAdvancedSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	req := httptest.NewRequest("POST", "/api/advanced-search", bytes.NewBufferString("invalid json"))
 	w := httptest.NewRecorder()
@@ -306,9 +309,9 @@ func TestHandleAdvancedSearch_InvalidJSON(t *testing.T) {
 
 func TestHandleAdvancedSearch_WorkOrders(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupAdvancedSearchTestDB(t)
-	defer db.Close()
+	testDB := setupAdvancedSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertAdvancedSearchTestData(t, db)
 
@@ -402,9 +405,9 @@ func TestHandleAdvancedSearch_WorkOrders(t *testing.T) {
 
 func TestHandleAdvancedSearch_ECOs(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupAdvancedSearchTestDB(t)
-	defer db.Close()
+	testDB := setupAdvancedSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertAdvancedSearchTestData(t, db)
 
@@ -441,9 +444,9 @@ func TestHandleAdvancedSearch_ECOs(t *testing.T) {
 
 func TestHandleAdvancedSearch_Inventory(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupAdvancedSearchTestDB(t)
-	defer db.Close()
+	testDB := setupAdvancedSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertAdvancedSearchTestData(t, db)
 
@@ -478,9 +481,9 @@ func TestHandleAdvancedSearch_Inventory(t *testing.T) {
 
 func TestHandleAdvancedSearch_Pagination(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupAdvancedSearchTestDB(t)
-	defer db.Close()
+	testDB := setupAdvancedSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertAdvancedSearchTestData(t, db)
 
@@ -536,9 +539,9 @@ func TestHandleAdvancedSearch_Pagination(t *testing.T) {
 
 func TestHandleAdvancedSearch_UnsupportedEntity(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupAdvancedSearchTestDB(t)
-	defer db.Close()
+	testDB := setupAdvancedSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	query := SearchQuery{
 		EntityType: "unsupported_entity",
@@ -563,9 +566,9 @@ func TestHandleAdvancedSearch_UnsupportedEntity(t *testing.T) {
 
 func TestHandleAdvancedSearch_SQLInjection(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupAdvancedSearchTestDB(t)
-	defer db.Close()
+	testDB := setupAdvancedSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertAdvancedSearchTestData(t, db)
 
@@ -601,9 +604,9 @@ func TestHandleAdvancedSearch_SQLInjection(t *testing.T) {
 
 func TestHandleSaveSavedSearch(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupAdvancedSearchTestDB(t)
-	defer db.Close()
+	testDB := setupAdvancedSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	savedSearch := SavedSearch{
 		Name:       "My Pending Work Orders",
@@ -656,9 +659,9 @@ func TestHandleSaveSavedSearch(t *testing.T) {
 
 func TestHandleGetSavedSearches(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupAdvancedSearchTestDB(t)
-	defer db.Close()
+	testDB := setupAdvancedSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	// Insert test saved searches
 	filters := `[{"field":"status","operator":"eq","value":"pending"}]`
@@ -730,9 +733,9 @@ func TestHandleGetSavedSearches(t *testing.T) {
 
 func TestHandleDeleteSavedSearch(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupAdvancedSearchTestDB(t)
-	defer db.Close()
+	testDB := setupAdvancedSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	filters := `[{"field":"status","operator":"eq","value":"pending"}]`
 	db.Exec(`INSERT INTO saved_searches (id, name, entity_type, filters, created_by) 
@@ -803,9 +806,9 @@ func TestHandleGetQuickFilters(t *testing.T) {
 
 func TestHandleGetSearchHistory(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupAdvancedSearchTestDB(t)
-	defer db.Close()
+	testDB := setupAdvancedSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	// Insert search history
 	filters := `[{"field":"status","operator":"eq","value":"pending"}]`
@@ -879,9 +882,9 @@ func TestHandleGetSearchHistory(t *testing.T) {
 
 func TestHandleAdvancedSearch_DevicesAndNCRsAndPOs(t *testing.T) {
 	origDB := db
-	defer func() { db = origDB }()
-	db = setupAdvancedSearchTestDB(t)
-	defer db.Close()
+	testDB := setupAdvancedSearchTestDB(t)
+	db = testDB
+	defer func() { testDB.Close(); db = origDB }()
 
 	insertAdvancedSearchTestData(t, db)
 

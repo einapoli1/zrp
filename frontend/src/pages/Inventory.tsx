@@ -14,7 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Badge } from "../components/ui/badge";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
 import { Checkbox } from "../components/ui/checkbox";
 // Table used via ConfigurableTable
 import {
@@ -36,28 +35,48 @@ import { toast } from "sonner";
 import { api, type InventoryItem } from "../lib/api";
 import { ConfigurableTable, type ColumnDef } from "../components/ConfigurableTable";
 import { BulkEditDialog, type BulkEditField } from "../components/BulkEditDialog";
+import { LoadingState } from "../components/LoadingState";
+import { ErrorState } from "../components/ErrorState";
 // Lazy load BarcodeScanner to reduce initial bundle size (329KB chunk)
 const BarcodeScanner = lazy(() => import("../components/BarcodeScanner").then(m => ({ default: m.BarcodeScanner })));
 import { ConfirmDialog } from "../components/ConfirmDialog";
+import { useForm } from "react-hook-form";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../components/ui/form";
+
+interface ReceiveInventoryData {
+  ipn: string;
+  qty: string;
+  reference: string;
+  notes: string;
+}
 
 function Inventory() {
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [showLowStock, setShowLowStock] = useState(false);
   const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
   const [receiveDialogOpen, setReceiveDialogOpen] = useState(false);
   const [bulkEditOpen, setBulkEditOpen] = useState(false);
   const [parts, setParts] = useState<{ ipn: string; description?: string }[]>([]);
-
-  // Quick receive form state
-  const [receiveForm, setReceiveForm] = useState({
-    ipn: "",
-    qty: "",
-    reference: "",
-    notes: "",
-  });
   const [showScanner, setShowScanner] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+
+  const receiveForm = useForm<ReceiveInventoryData>({
+    defaultValues: {
+      ipn: "",
+      qty: "",
+      reference: "",
+      notes: "",
+    },
+  });
 
   useEffect(() => {
     fetchInventory();
@@ -67,10 +86,14 @@ function Inventory() {
   const fetchInventory = async () => {
     try {
       setLoading(true);
+      setError(null);
       const data = await api.getInventory(showLowStock);
       setInventory(data);
-    } catch (error) {
-      toast.error("Failed to fetch inventory"); console.error("Failed to fetch inventory:", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error";
+      setError(errorMessage);
+      toast.error(`Failed to fetch inventory: ${errorMessage}`);
+      console.error("Failed to fetch inventory:", error);
     } finally {
       setLoading(false);
     }
@@ -81,27 +104,36 @@ function Inventory() {
       const data = await api.getParts();
       const partsArray = Array.isArray(data) ? data : [];
       setParts(partsArray.map(p => ({ ipn: p.ipn, description: p.description })));
-    } catch (error) {
-      toast.error("Failed to fetch parts"); console.error("Failed to fetch parts:", error);
+    } catch (error: any) {
+      const errorMessage = error?.message || "Network error";
+      toast.error(`Failed to fetch parts: ${errorMessage}`);
+      console.error("Failed to fetch parts:", error);
     }
   };
 
-  const handleQuickReceive = async () => {
+  const handleQuickReceive = async (data: ReceiveInventoryData) => {
     try {
+      const qty = parseFloat(data.qty);
+      if (isNaN(qty) || qty <= 0) {
+        receiveForm.setError("qty", { message: "Please enter a valid quantity" });
+        return;
+      }
+      
       await api.createInventoryTransaction({
-        ipn: receiveForm.ipn,
+        ipn: data.ipn,
         type: "receive",
-        qty: parseFloat(receiveForm.qty),
-        reference: receiveForm.reference || undefined,
-        notes: receiveForm.notes || undefined,
+        qty,
+        reference: data.reference || undefined,
+        notes: data.notes || undefined,
       });
       
+      toast.success(`Received ${qty} units of ${data.ipn}`);
       setReceiveDialogOpen(false);
-      setReceiveForm({ ipn: "", qty: "", reference: "", notes: "" });
-      toast.success(`Received ${receiveForm.qty} units of ${receiveForm.ipn}`);
+      receiveForm.reset();
       fetchInventory();
     } catch (error: any) {
-      toast.error(error.message || "Failed to receive inventory");
+      const errorMessage = error?.message || "Failed to receive inventory";
+      toast.error(`Failed to receive inventory: ${errorMessage}`);
     }
   };
 
@@ -175,8 +207,9 @@ function Inventory() {
     return item.reorder_point > 0 && item.qty_on_hand <= item.reorder_point;
   };
 
+  const ipnValue = receiveForm.watch("ipn") || "";
   const filteredParts = parts.filter(part => 
-    part.ipn.toLowerCase().includes(receiveForm.ipn.toLowerCase())
+    part.ipn.toLowerCase().includes(ipnValue.toLowerCase())
   );
 
   const inventoryColumns: ColumnDef<InventoryItem>[] = [
@@ -259,7 +292,7 @@ function Inventory() {
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => {
-                setReceiveForm((prev) => ({ ...prev, ipn: item.ipn }));
+                receiveForm.setValue("ipn", item.ipn);
                 setReceiveDialogOpen(true);
               }}
             >
@@ -285,26 +318,28 @@ function Inventory() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
+      <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Inventory</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Inventory</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Manage your inventory levels and stock tracking.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <Button
             variant={showLowStock ? "default" : "outline"}
+            className="min-h-[44px] flex-1 sm:flex-none"
             onClick={() => setShowLowStock(!showLowStock)}
           >
-            <AlertTriangle className="h-4 w-4 mr-2" />
-            {showLowStock ? "Show All" : "Low Stock"}
+            <AlertTriangle className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">{showLowStock ? "Show All" : "Low Stock"}</span>
+            <span className="sm:hidden">{showLowStock ? "All" : "Low"}</span>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">
-                <Download className="h-4 w-4 mr-2" />
-                Export
+              <Button variant="outline" className="min-h-[44px] flex-1 sm:flex-none">
+                <Download className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Export</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -318,108 +353,136 @@ function Inventory() {
           </DropdownMenu>
           <Dialog open={receiveDialogOpen} onOpenChange={setReceiveDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Quick Receive
+              <Button className="min-h-[44px] flex-1 sm:flex-none">
+                <Plus className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Quick Receive</span>
+                <span className="sm:hidden">Receive</span>
               </Button>
             </DialogTrigger>
             <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Quick Receive Inventory</DialogTitle>
-              
-              <DialogDescription>
-                Record received items and update inventory.
-              </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <Label htmlFor="ipn">IPN</Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowScanner(!showScanner)}
-                    >
-                      <ScanLine className="h-4 w-4 mr-1" />
-                      {showScanner ? "Hide Scanner" : "Scan Barcode"}
-                    </Button>
-                  </div>
-                  {showScanner && (
-                    <div className="mb-2">
-                      <Suspense fallback={<div className="h-64 bg-muted animate-pulse rounded" />}>
-                        <BarcodeScanner
-                          onScan={(code) => {
-                            setReceiveForm(prev => ({ ...prev, ipn: code }));
-                            setShowScanner(false);
-                          }}
-                        />
-                      </Suspense>
-                    </div>
-                  )}
-                  <Input
-                    id="ipn"
-                    value={receiveForm.ipn}
-                    onChange={(e) => setReceiveForm(prev => ({ ...prev, ipn: e.target.value }))}
-                    placeholder="Search IPN..."
-                  />
-                  {receiveForm.ipn && filteredParts.length > 0 && (
-                    <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
-                      {filteredParts.slice(0, 5).map((part) => (
-                        <div
-                          key={part.ipn}
-                          className="p-2 hover:bg-muted cursor-pointer"
-                          onClick={() => setReceiveForm(prev => ({ ...prev, ipn: part.ipn }))}
-                        >
-                          <div className="font-medium">{part.ipn}</div>
-                          {part.description && (
-                            <div className="text-sm text-muted-foreground">{part.description}</div>
+              <Form {...receiveForm}>
+                <form onSubmit={receiveForm.handleSubmit(handleQuickReceive)} className="space-y-6">
+                  <DialogHeader>
+                    <DialogTitle>Quick Receive Inventory</DialogTitle>
+                    <DialogDescription>
+                      Record received items and update inventory.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <FormField
+                      control={receiveForm.control}
+                      name="ipn"
+                      rules={{ required: 'IPN is required' }}
+                      render={({ field }) => (
+                        <FormItem>
+                          <div className="flex items-center justify-between mb-1">
+                            <FormLabel>IPN *</FormLabel>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setShowScanner(!showScanner)}
+                            >
+                              <ScanLine className="h-4 w-4 mr-1" />
+                              {showScanner ? "Hide Scanner" : "Scan Barcode"}
+                            </Button>
+                          </div>
+                          {showScanner && (
+                            <div className="mb-2">
+                              <Suspense fallback={<div className="h-64 bg-muted animate-pulse rounded" />}>
+                                <BarcodeScanner
+                                  onScan={(code) => {
+                                    field.onChange(code);
+                                    setShowScanner(false);
+                                  }}
+                                />
+                              </Suspense>
+                            </div>
                           )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="qty">Quantity</Label>
-                  <Input
-                    id="qty"
-                    type="number"
-                    value={receiveForm.qty}
-                    onChange={(e) => setReceiveForm(prev => ({ ...prev, qty: e.target.value }))}
-                    placeholder="0"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="reference">Reference</Label>
-                  <Input
-                    id="reference"
-                    value={receiveForm.reference}
-                    onChange={(e) => setReceiveForm(prev => ({ ...prev, reference: e.target.value }))}
-                    placeholder="PO number, invoice, etc."
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="notes">Notes</Label>
-                  <Input
-                    id="notes"
-                    value={receiveForm.notes}
-                    onChange={(e) => setReceiveForm(prev => ({ ...prev, notes: e.target.value }))}
-                    placeholder="Optional notes"
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setReceiveDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleQuickReceive}
-                  disabled={!receiveForm.ipn || !receiveForm.qty}
-                >
-                  Receive
-                </Button>
-              </DialogFooter>
+                          <FormControl>
+                            <Input placeholder="Search IPN..." {...field} />
+                          </FormControl>
+                          {field.value && filteredParts.length > 0 && (
+                            <div className="mt-2 border rounded-md max-h-40 overflow-y-auto">
+                              {filteredParts.slice(0, 5).map((part) => (
+                                <div
+                                  key={part.ipn}
+                                  className="p-2 hover:bg-muted cursor-pointer"
+                                  onClick={() => field.onChange(part.ipn)}
+                                >
+                                  <div className="font-medium">{part.ipn}</div>
+                                  {part.description && (
+                                    <div className="text-sm text-muted-foreground">{part.description}</div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={receiveForm.control}
+                      name="qty"
+                      rules={{ 
+                        required: 'Quantity is required',
+                        validate: (value) => {
+                          const num = parseFloat(value);
+                          if (isNaN(num) || num <= 0) return 'Quantity must be greater than 0';
+                          return true;
+                        }
+                      }}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Quantity *</FormLabel>
+                          <FormControl>
+                            <Input type="number" placeholder="0" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={receiveForm.control}
+                      name="reference"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Reference</FormLabel>
+                          <FormControl>
+                            <Input placeholder="PO number, invoice, etc." {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={receiveForm.control}
+                      name="notes"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Notes</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Optional notes" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                  <DialogFooter>
+                    <Button type="button" variant="outline" onClick={() => setReceiveDialogOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button type="submit">
+                      Receive
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
             </DialogContent>
           </Dialog>
         </div>
@@ -501,29 +564,53 @@ function Inventory() {
           <CardTitle>Inventory Items</CardTitle>
         </CardHeader>
         <CardContent>
-          <ConfigurableTable<InventoryItem>
-            tableName="inventory"
-            columns={inventoryColumns}
-            data={inventory}
-            rowKey={(item) => item.ipn}
-            rowClassName={(item) => isLowStock(item) ? "bg-destructive/5" : ""}
-            emptyMessage={showLowStock ? "No low stock items found" : "No inventory items found"}
-            leadingColumn={{
-              header: (
-                <Checkbox
-                  checked={selectedItems.size === inventory.length && inventory.length > 0}
-                  onCheckedChange={toggleSelectAll}
-                />
-              ),
-              cell: (item) => (
-                <Checkbox
-                  checked={selectedItems.has(item.ipn)}
-                  onCheckedChange={() => toggleSelectItem(item.ipn)}
-                />
-              ),
-              className: "w-12",
-            }}
-          />
+          {loading ? (
+            <LoadingState variant="table" rows={5} />
+          ) : error ? (
+            <ErrorState
+              title="Failed to load inventory"
+              message={error}
+              onRetry={fetchInventory}
+            />
+          ) : (
+            <ConfigurableTable<InventoryItem>
+              tableName="inventory"
+              columns={inventoryColumns}
+              data={inventory}
+              rowKey={(item) => item.ipn}
+              rowClassName={(item) => isLowStock(item) ? "bg-destructive/5" : ""}
+              emptyMessage={showLowStock ? "No low stock items found" : "No inventory items found"}
+              emptyIcon={Package}
+              emptyDescription={
+                showLowStock
+                  ? "All inventory levels are healthy."
+                  : "Get started by receiving your first items."
+              }
+              emptyAction={
+                showLowStock ? undefined : (
+                  <Button onClick={() => setReceiveDialogOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Quick Receive
+                  </Button>
+                )
+              }
+              leadingColumn={{
+                header: (
+                  <Checkbox
+                    checked={selectedItems.size === inventory.length && inventory.length > 0}
+                    onCheckedChange={toggleSelectAll}
+                  />
+                ),
+                cell: (item) => (
+                  <Checkbox
+                    checked={selectedItems.has(item.ipn)}
+                    onCheckedChange={() => toggleSelectItem(item.ipn)}
+                  />
+                ),
+                className: "w-12",
+              }}
+            />
+          )}
         </CardContent>
       </Card>
 

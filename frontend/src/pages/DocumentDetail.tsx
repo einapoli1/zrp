@@ -5,9 +5,8 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Separator } from "../components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { Label } from "../components/ui/label";
+import { Skeleton } from "../components/ui/skeleton";
 import {
-  ArrowLeft,
   FileText,
   Calendar,
   User,
@@ -20,6 +19,7 @@ import { api, type Document, type DocumentVersion, type DiffLine } from "../lib/
 import { LoadingState } from "../components/LoadingState";
 import { EmptyState } from "../components/EmptyState";
 import { ErrorState } from "../components/ErrorState";
+import { Breadcrumb } from "../components/ui/breadcrumb";
 
 const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: "Draft", variant: "secondary" },
@@ -110,31 +110,34 @@ export default function DocumentDetail() {
 
   if (error) {
     return (
-      <div className="p-6">
+      <div className="space-y-6">
+        <Breadcrumb items={[
+          { label: "Documents", href: "/documents" },
+          { label: "Error" }
+        ]} />
         <ErrorState
           title="Failed to load document"
           message={error}
           onRetry={fetchDoc}
         />
-        <div className="mt-4">
-          <Button variant="outline" onClick={() => navigate("/documents")}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back to Documents
-          </Button>
-        </div>
       </div>
     );
   }
 
   if (!doc) {
     return (
-      <div className="p-6">
+      <div className="space-y-6">
+        <Breadcrumb items={[
+          { label: "Documents", href: "/documents" },
+          { label: "Not Found" }
+        ]} />
         <EmptyState
           icon={FileText}
           title="Document not found"
           description="The document you're looking for doesn't exist or has been deleted."
           action={
             <Button variant="outline" onClick={() => navigate("/documents")}>
-              <ArrowLeft className="mr-2 h-4 w-4" /> Back to Documents
+              Back to Documents
             </Button>
           }
         />
@@ -147,20 +150,20 @@ export default function DocumentDetail() {
 
   return (
     <div className="space-y-6 p-6">
+      <Breadcrumb items={[
+        { label: "Documents", href: "/documents" },
+        { label: `${doc.id} Rev ${doc.revision}` }
+      ]} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="outline" size="sm" onClick={() => navigate("/documents")}>
-            <ArrowLeft className="mr-2 h-4 w-4" /> Back
-          </Button>
-          <div>
-            <div className="flex items-center space-x-2">
-              <h1 className="text-2xl font-bold">{doc.title}</h1>
-              <Badge variant={status.variant}>{status.label}</Badge>
-              <Badge variant="outline">Rev {doc.revision}</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground">{doc.id}</p>
+        <div>
+          <div className="flex items-center space-x-2">
+            <h1 className="text-2xl font-bold">{doc.title}</h1>
+            <Badge variant={status.variant}>{status.label}</Badge>
+            <Badge variant="outline">Rev {doc.revision}</Badge>
           </div>
+          <p className="text-sm text-muted-foreground">{doc.id}</p>
         </div>
         <div className="flex items-center space-x-2">
           {doc.status === "draft" && (
