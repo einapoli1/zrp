@@ -807,6 +807,55 @@ func runMigrations() error {
 		log.Printf("Search tables migration warning: %v", err)
 	}
 
+	// Product Configurator tables
+	configuratorTables := []string{
+		`CREATE TABLE IF NOT EXISTS configuration_templates (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT NOT NULL,
+			model_format TEXT NOT NULL,
+			created_at TEXT DEFAULT (datetime('now')),
+			updated_at TEXT DEFAULT (datetime('now'))
+		)`,
+		`CREATE TABLE IF NOT EXISTS configuration_parameters (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			template_id INTEGER NOT NULL,
+			name TEXT NOT NULL,
+			type TEXT NOT NULL CHECK(type IN ('enum','range')),
+			values_json TEXT NOT NULL,
+			created_at TEXT DEFAULT (datetime('now')),
+			FOREIGN KEY (template_id) REFERENCES configuration_templates(id) ON DELETE CASCADE
+		)`,
+		`CREATE TABLE IF NOT EXISTS configuration_parts (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			template_id INTEGER NOT NULL,
+			ipn TEXT NOT NULL,
+			quantity INTEGER NOT NULL DEFAULT 1 CHECK(quantity > 0),
+			include_all_variants INTEGER NOT NULL DEFAULT 0 CHECK(include_all_variants IN (0,1)),
+			constraints_json TEXT DEFAULT '{}',
+			created_at TEXT DEFAULT (datetime('now')),
+			FOREIGN KEY (template_id) REFERENCES configuration_templates(id) ON DELETE CASCADE
+		)`,
+		`CREATE TABLE IF NOT EXISTS configuration_generations (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			template_id INTEGER NOT NULL,
+			eco_id TEXT NOT NULL,
+			generated_at TEXT DEFAULT (datetime('now')),
+			variant_count INTEGER NOT NULL DEFAULT 0,
+			FOREIGN KEY (template_id) REFERENCES configuration_templates(id) ON DELETE CASCADE,
+			FOREIGN KEY (eco_id) REFERENCES ecos(id) ON DELETE CASCADE
+		)`,
+		`CREATE INDEX IF NOT EXISTS idx_configuration_parameters_template_id ON configuration_parameters(template_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_configuration_parts_template_id ON configuration_parts(template_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_configuration_generations_template_id ON configuration_generations(template_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_configuration_generations_eco_id ON configuration_generations(eco_id)`,
+	}
+	
+	for _, tbl := range configuratorTables {
+		if _, err := db.Exec(tbl); err != nil {
+			log.Printf("Configurator migration warning: %v\nSQL: %s", err, tbl)
+		}
+	}
+
 	return nil
 }
 

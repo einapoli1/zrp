@@ -584,3 +584,74 @@ Returns calendar events for the specified month.
 | PUT | `/field-reports/{id}` | Update field report |
 | DELETE | `/field-reports/{id}` | Delete field report |
 | POST | `/field-reports/{id}/create-ncr` | Create NCR from report |
+
+---
+
+## Product Configurator
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/configurator/templates` | List all templates |
+| POST | `/configurator/templates` | Create template |
+| GET | `/configurator/templates/{id}` | Get template with parameters & parts |
+| PUT | `/configurator/templates/{id}` | Update template |
+| DELETE | `/configurator/templates/{id}` | Delete template |
+| POST | `/configurator/templates/{id}/parameters` | Add parameter |
+| PUT | `/configurator/parameters/{id}` | Update parameter |
+| DELETE | `/configurator/parameters/{id}` | Delete parameter |
+| POST | `/configurator/templates/{id}/parts` | Add part to pool |
+| PUT | `/configurator/parts/{id}` | Update part constraints |
+| DELETE | `/configurator/parts/{id}` | Remove part from pool |
+| GET | `/configurator/templates/{id}/preview` | Preview first 10 variants |
+| POST | `/configurator/templates/{id}/generate` | Generate all variants (creates ECO) |
+
+### POST /configurator/templates
+```json
+// Request
+{"name": "uATS 1.2kVA", "model_format": "PCA-uATS-{voltage}-{amperage}"}
+// Response
+{"id": 1, "name": "uATS 1.2kVA", "model_format": "PCA-uATS-{voltage}-{amperage}", "created_at": "...", "updated_at": "...", "parameters": [], "parts": []}
+```
+
+### POST /configurator/templates/{id}/parameters
+```json
+// Enum parameter
+{"name": "voltage", "type": "enum", "values_json": "[\"120V\",\"208V\",\"240V\"]"}
+
+// Range parameter
+{"name": "amperage", "type": "range", "values_json": "{\"min\":10,\"max\":100,\"unit\":\"A\"}"}
+```
+
+### POST /configurator/templates/{id}/parts
+```json
+{"ipn": "CAP-001", "quantity": 2, "include_all_variants": 1, "constraints_json": "{}"}
+
+// With constraints (only for 120V)
+{"ipn": "RES-001", "quantity": 1, "include_all_variants": 0, "constraints_json": "{\"voltage\":[\"120V\"]}"}
+```
+
+### GET /configurator/templates/{id}/preview
+```json
+// Response
+{"preview": [{"ipn": "PCA-uATS-120V-10A", "bom_count": 5}, ...], "total_count": 100, "showing_first": 10}
+```
+
+### POST /configurator/templates/{id}/generate
+```json
+// Response
+{"eco_id": "ECO-2026-042", "variant_count": 24, "preview": ["PCA-uATS-120V-10A", "PCA-uATS-120V-15A", ...]}
+```
+
+**Constraint Matching:**
+- **Enum constraints**: Part included if parameter value is in constraint array
+- **Range constraints**: Part included if parameter value >= min and <= max
+- **Multiple constraints**: All constraints must match (AND logic)
+- **Empty constraints**: Part included in all variants
+
+**Generation Process:**
+1. Cartesian product of all parameter values creates all combinations
+2. For each combination, generate IPN by replacing `{param}` placeholders
+3. Build BOM by including:
+   - All parts with `include_all_variants=true`
+   - Parts where constraints match the variant's parameters
+4. Create single ECO with all variants as proposed parts

@@ -544,3 +544,66 @@ Track and compare supplier price quotes per IPN across vendors.
 - **Add Price Quote** — modal form with IPN autocomplete from parts DB, vendor name, unit price, currency, quantity break, lead time, quote date, and notes.
 - **Price History** — click any IPN to see all quotes across vendors with an SVG line chart showing price trends over time (one line per vendor, color-coded legend).
 - **Parts Integration** — Parts detail modal includes a "📊 Price Quotes" tab showing the supplier price chart and table for that IPN.
+
+---
+
+## Product Configurator
+
+**Purpose**: Generate all possible product variants with BOMs through the ECO process
+
+**Key Features**:
+- Template-based configuration with parameter placeholders
+- Enum and range parameter types
+- Conditional part inclusion via constraints
+- Preview before generation
+- ECO-based variant creation for approval workflow
+
+**Workflow**:
+1. Create configuration template with model format (e.g., `PCA-uATS-{voltage}-{amperage}`)
+2. Define parameters:
+   - **Enum**: Discrete values (e.g., `["120V", "208V", "240V"]`)
+   - **Range**: Min/max values (e.g., `{"min": 10, "max": 100, "unit": "A"}`)
+3. Build parts pool:
+   - Mark common parts with "include_all_variants"
+   - Set parameter constraints for conditional parts
+4. Preview first 10 variants to verify configuration
+5. Generate all variants → creates ECO with proposed parts
+6. ECO approval creates all parts and BOMs
+
+**Database Tables**:
+- `configuration_templates`: Template definitions
+- `configuration_parameters`: Parameter definitions (enum/range)
+- `configuration_parts`: Parts pool with constraints
+- `configuration_generations`: Generation history
+
+**Constraints**:
+- Model format must contain at least one `{param}` placeholder
+- Parameter names: alphanumeric + underscore only
+- Part IPNs must exist in parts table
+- Constraint values must match parameter definitions
+
+**Example**:
+```
+Template: "uATS 1.2kVA"
+Model Format: "PCA-uATS-{voltage}-{amperage}"
+Parameters:
+  - voltage: enum ["120V", "208V"]
+  - amperage: enum ["10A", "15A", "20A"]
+Parts:
+  - CAP-001 (qty: 2, all variants)
+  - RES-120V (qty: 1, constraint: voltage=120V)
+  - RES-208V (qty: 1, constraint: voltage=208V)
+
+Generates 6 variants:
+  - PCA-uATS-120V-10A (BOM: CAP-001 x2, RES-120V x1)
+  - PCA-uATS-120V-15A (BOM: CAP-001 x2, RES-120V x1)
+  - PCA-uATS-120V-20A (BOM: CAP-001 x2, RES-120V x1)
+  - PCA-uATS-208V-10A (BOM: CAP-001 x2, RES-208V x1)
+  - PCA-uATS-208V-15A (BOM: CAP-001 x2, RES-208V x1)
+  - PCA-uATS-208V-20A (BOM: CAP-001 x2, RES-208V x1)
+```
+
+**Integration**:
+- Creates ECOs with status="pending" and type="configuration"
+- ECO approval workflow remains unchanged
+- Variants appear in parts table only after ECO approval

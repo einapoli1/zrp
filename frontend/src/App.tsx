@@ -66,6 +66,7 @@ const Scan = React.lazy(() => import("./pages/Scan"));
 const RFQs = React.lazy(() => import("./pages/RFQs"));
 const RFQDetail = React.lazy(() => import("./pages/RFQDetail"));
 const Pricing = React.lazy(() => import("./pages/Pricing"));
+const Configurator = React.lazy(() => import("./pages/Configurator"));
 
 // All pages now have real implementations
 
@@ -92,6 +93,7 @@ function App() {
             <Route path="/parts/:ipn" element={<PartDetail />} />
             <Route path="/ecos" element={<ECOs />} />
             <Route path="/ecos/:id" element={<ECODetail />} />
+            <Route path="/configurator" element={<Configurator />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/documents/:id" element={<DocumentDetail />} />
             <Route path="/testing" element={<Testing />} />

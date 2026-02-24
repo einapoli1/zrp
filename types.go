@@ -428,4 +428,43 @@ type InvoiceLine struct {
 	Total       float64 `json:"total"`
 }
 
+// Product Configurator types
+type ConfigurationTemplate struct {
+	ID          int                       `json:"id"`
+	Name        string                    `json:"name"`
+	ModelFormat string                    `json:"model_format"`
+	CreatedAt   string                    `json:"created_at"`
+	UpdatedAt   string                    `json:"updated_at"`
+	Parameters  []ConfigurationParameter  `json:"parameters,omitempty"`
+	Parts       []ConfigurationPart       `json:"parts,omitempty"`
+}
+
+type ConfigurationParameter struct {
+	ID         int    `json:"id"`
+	TemplateID int    `json:"template_id"`
+	Name       string `json:"name"`
+	Type       string `json:"type"` // "enum" or "range"
+	ValuesJSON string `json:"values_json"`
+	CreatedAt  string `json:"created_at"`
+}
+
+type ConfigurationPart struct {
+	ID                 int    `json:"id"`
+	TemplateID         int    `json:"template_id"`
+	IPN                string `json:"ipn"`
+	Quantity           int    `json:"quantity"`
+	IncludeAllVariants int    `json:"include_all_variants"` // SQLite boolean (0/1)
+	ConstraintsJSON    string `json:"constraints_json"`
+	CreatedAt          string `json:"created_at"`
+	Description        string `json:"description,omitempty"` // Enriched from parts
+}
+
+type ConfigurationGeneration struct {
+	ID           int    `json:"id"`
+	TemplateID   int    `json:"template_id"`
+	EcoID        string `json:"eco_id"`
+	GeneratedAt  string `json:"generated_at"`
+	VariantCount int    `json:"variant_count"`
+}
+
 var _ = time.Now // keep time imported

@@ -253,6 +253,34 @@ func main() {
 		case parts[0] == "ecos" && len(parts) == 4 && parts[2] == "revisions" && r.Method == "GET":
 			handleGetECORevision(w, r, parts[1], parts[3])
 
+		// Product Configurator
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 2 && r.Method == "GET":
+			handleListConfigTemplates(w, r)
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 2 && r.Method == "POST":
+			handleCreateConfigTemplate(w, r)
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 3 && r.Method == "GET":
+			handleGetConfigTemplate(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 3 && r.Method == "PUT":
+			handleUpdateConfigTemplate(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 3 && r.Method == "DELETE":
+			handleDeleteConfigTemplate(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 4 && parts[3] == "parameters" && r.Method == "POST":
+			handleCreateConfigParameter(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 4 && parts[3] == "parts" && r.Method == "POST":
+			handleCreateConfigPart(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 4 && parts[3] == "preview" && r.Method == "GET":
+			handlePreviewConfigVariants(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "templates" && len(parts) == 4 && parts[3] == "generate" && r.Method == "POST":
+			handleGenerateConfigVariants(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "parameters" && len(parts) == 3 && r.Method == "PUT":
+			handleUpdateConfigParameter(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "parameters" && len(parts) == 3 && r.Method == "DELETE":
+			handleDeleteConfigParameter(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "parts" && len(parts) == 3 && r.Method == "PUT":
+			handleUpdateConfigPart(w, r, parts[2])
+		case parts[0] == "configurator" && parts[1] == "parts" && len(parts) == 3 && r.Method == "DELETE":
+			handleDeleteConfigPart(w, r, parts[2])
+
 		// Documents
 		case parts[0] == "docs" && len(parts) == 1 && r.Method == "GET":
 			handleListDocs(w, r)

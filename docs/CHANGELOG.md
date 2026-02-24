@@ -1,3 +1,160 @@
+## [2026-02-23] - Product Variant Configurator
+
+### Summary
+Added complete product configurator module that generates all possible variant configurations with BOMs via the ECO approval process. Includes **34+ backend tests** covering template CRUD, parameter/part management, constraint matching, and generation logic, plus **11+ frontend tests** for UI interactions.
+
+### Features Added
+1. **Database Schema**
+   - ✅ **`configuration_templates`** - Template definitions with model format
+   - ✅ **`configuration_parameters`** - Enum and range parameter definitions
+   - ✅ **`configuration_parts`** - Parts pool with constraints
+   - ✅ **`configuration_generations`** - Generation history with ECO linkage
+   - ✅ **Foreign key constraints** with cascade delete
+   - ✅ **Indexes** for performance
+
+2. **Backend API** (handler_configurator.go)
+   - ✅ **GET `/api/v1/configurator/templates`** - List all templates
+   - ✅ **POST `/api/v1/configurator/templates`** - Create template
+   - ✅ **GET `/api/v1/configurator/templates/:id`** - Get with parameters & parts
+   - ✅ **PUT `/api/v1/configurator/templates/:id`** - Update template
+   - ✅ **DELETE `/api/v1/configurator/templates/:id`** - Delete template (cascades)
+   - ✅ **POST `/api/v1/configurator/templates/:id/parameters`** - Add parameter
+   - ✅ **PUT `/api/v1/configurator/parameters/:id`** - Update parameter
+   - ✅ **DELETE `/api/v1/configurator/parameters/:id`** - Delete parameter
+   - ✅ **POST `/api/v1/configurator/templates/:id/parts`** - Add part
+   - ✅ **PUT `/api/v1/configurator/parts/:id`** - Update part/constraints
+   - ✅ **DELETE `/api/v1/configurator/parts/:id`** - Remove part
+   - ✅ **GET `/api/v1/configurator/templates/:id/preview`** - Preview first 10 variants
+   - ✅ **POST `/api/v1/configurator/templates/:id/generate`** - Generate all variants (creates ECO)
+
+3. **Generation Engine**
+   - ✅ **Cartesian product generator** - All parameter combinations
+   - ✅ **IPN generation** - Replaces {param} placeholders with values
+   - ✅ **BOM builder** - Includes parts based on constraints
+   - ✅ **Enum constraint matching** - Value in allowed array
+   - ✅ **Range constraint matching** - Value within min/max
+   - ✅ **Multi-constraint logic** - All constraints must match (AND)
+   - ✅ **ECO integration** - Creates pending ECO with all variants
+   - ✅ **Generation history tracking**
+
+4. **Frontend UI** (Configurator.tsx)
+   - ✅ **Templates List tab** - Table with name, format, parameter/part counts
+   - ✅ **Template Editor tab**
+     - Name and model format fields with validation
+     - Parameters section: add/delete, enum/range types, multi-value input
+     - Parts pool section: add/delete, quantity, "all variants" checkbox
+     - Constraints modal: per-parameter constraint editing
+   - ✅ **Preview & Generate tab**
+     - Template dropdown selector
+     - Preview button (first 10 variants)
+     - Generate button (creates ECO, redirects)
+   - ✅ **Part search** with autocomplete
+   - ✅ **Validation feedback** - Model format placeholders, parameter names, etc.
+
+5. **Validation**
+   - ✅ **Model format** - Must contain at least one {param} placeholder
+   - ✅ **Parameter names** - Alphanumeric + underscore only
+   - ✅ **Part IPNs** - Must exist in parts table
+   - ✅ **Constraint values** - Must match parameter definition
+   - ✅ **JSON validation** - Enum arrays, range objects
+
+6. **Test Coverage (45+ tests total)**
+   - **Backend (34+ tests)**:
+     - ✅ Template CRUD (5 tests)
+     - ✅ Parameter CRUD (5 tests)
+     - ✅ Part pool CRUD (5 tests)
+     - ✅ Generation with enum parameters (3 tests)
+     - ✅ Generation with range parameters (3 tests)
+     - ✅ Generation with "all variants" parts (2 tests)
+     - ✅ Constraint matching logic (8 tests)
+     - ✅ ECO creation verification (3 tests)
+   - **Frontend (11+ tests)**:
+     - ✅ Template creation (2 tests)
+     - ✅ Parameter add/edit/delete (3 tests)
+     - ✅ Part pool add/edit/delete (3 tests)
+     - ✅ Constraint editing (2 tests)
+     - ✅ Preview generation (1 test)
+
+### Files Added/Modified
+- 📝 **`db.go`** - Added 4 new tables + indexes (migration)
+- 📝 **`types.go`** - Added ConfigurationTemplate, ConfigurationParameter, ConfigurationPart, ConfigurationGeneration types
+- 📝 **`handler_configurator.go`** - **NEW** (665 lines, 26KB)
+  - Template CRUD handlers (5)
+  - Parameter CRUD handlers (3)
+  - Part CRUD handlers (3)
+  - Preview/generate handlers (2)
+  - Generation engine with constraint matching
+  - Helper functions (isValidParameterName, generateVariants, generateCombinations, matchesConstraints)
+- 📝 **`handler_configurator_test.go`** - **NEW** (522 lines, 26KB, 34+ tests)
+- 📝 **`main.go`** - Added 14 configurator routes
+- 📝 **`frontend/src/pages/Configurator.tsx`** - **NEW** (880 lines, 33KB)
+  - 3-tab layout (List, Editor, Generate)
+  - Template editor with parameter and part management
+  - Constraints modal
+  - Preview & generate integration
+- 📝 **`frontend/src/pages/Configurator.test.tsx`** - **NEW** (258 lines, 7.5KB, 11+ tests)
+- 📝 **`frontend/src/App.tsx`** - Added Configurator route
+- 📝 **`docs/API.md`** - Added configurator endpoints documentation
+- 📝 **`docs/MODULES.md`** - Added Product Configurator section with workflow and example
+
+### Technical Details
+**Generation Algorithm**:
+1. Load template with model format
+2. Load all parameters (enum values or range min/max)
+3. Generate Cartesian product of all parameter combinations
+4. For each combination:
+   - Replace {param} placeholders in model format → IPN
+   - Build BOM:
+     - Include all parts with `include_all_variants=true`
+     - Include parts where constraints match variant parameters
+   - Append to variants list
+5. Create ECO with all variants
+6. Record generation in configuration_generations table
+
+**Constraint Matching Logic**:
+- **Enum**: `paramValue IN constraintArray`
+- **Range**: `paramValue >= min AND paramValue <= max`
+- **Multiple**: All constraints must pass (AND logic)
+- **Empty**: Always matches (part included in all variants)
+
+### Integration Points
+- **ECO Module**: Generated variants create pending ECO for approval
+- **Parts Module**: Part IPNs validated against parts table
+- **Audit Log**: Template/parameter/part changes logged
+- **Permissions**: Inherits standard user permissions
+
+### Usage Example
+```
+1. Create template "uATS 1.2kVA"
+   - Model format: "PCA-uATS-{voltage}-{amperage}"
+
+2. Add parameters:
+   - voltage: enum ["120V", "208V"]
+   - amperage: enum ["10A", "15A", "20A"]
+
+3. Add parts:
+   - CAP-001 (qty: 2, all variants)
+   - RES-120V (qty: 1, constraint: voltage=120V)
+   - RES-208V (qty: 1, constraint: voltage=208V)
+
+4. Generate → Creates 6 variants:
+   - PCA-uATS-120V-10A, PCA-uATS-120V-15A, PCA-uATS-120V-20A
+   - PCA-uATS-208V-10A, PCA-uATS-208V-15A, PCA-uATS-208V-20A
+
+5. ECO created with all variants as proposed parts
+6. Approve ECO → All parts and BOMs created
+```
+
+### Deliverables Completed
+✅ Migration file for 4 tables  
+✅ handler_configurator.go with all endpoints  
+✅ Generation engine with constraint matching  
+✅ Frontend Configurator page with 3 tabs  
+✅ 34+ backend tests, 11+ frontend tests (all passing)  
+✅ Documentation updated (API.md, MODULES.md, CHANGELOG.md)  
+
+---
+
 ## [2026-02-23] - BOM Editable Functionality with Validation
 
 ### Summary
