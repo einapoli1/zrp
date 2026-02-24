@@ -187,6 +187,17 @@ func TestHandlerQueryConsistency(t *testing.T) {
 		t.Fatalf("Failed to count tables: %v", err)
 	}
 	if tableCount < 50 {
+		// List the tables that were created to help debug
+		rows, _ := testDB.Query("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+		if rows != nil {
+			defer rows.Close()
+			t.Log("Tables created:")
+			for rows.Next() {
+				var name string
+				rows.Scan(&name)
+				t.Logf("  - %s", name)
+			}
+		}
 		t.Fatalf("Expected ~50+ tables after migrations, got %d", tableCount)
 	}
 

@@ -4,14 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Textarea } from "../components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "../components/ui/dialog";
 import {
   Select,
@@ -453,8 +451,7 @@ function Configurator() {
           {templates.length === 0 ? (
             <EmptyState
               icon={Settings}
-              message="No templates yet"
-              action={{ label: "Create Template", onClick: createNewTemplate }}
+              title="No templates yet"
             />
           ) : (
             <Card>
@@ -500,8 +497,7 @@ function Configurator() {
           {!editingTemplate ? (
             <EmptyState
               icon={Settings}
-              message="Select or create a template to edit"
-              action={{ label: "New Template", onClick: createNewTemplate }}
+              title="Select or create a template to edit"
             />
           ) : (
             <>

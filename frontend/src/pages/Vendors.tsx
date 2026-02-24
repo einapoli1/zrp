@@ -532,3 +532,4 @@ export function Vendors() {
     </div>
   );
 }
+export default Vendors;
